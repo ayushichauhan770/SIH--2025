@@ -9,6 +9,7 @@ import { StatusStepper } from "@/components/status-stepper";
 import { BlockchainHashDisplay } from "@/components/blockchain-hash";
 import { RatingComponent } from "@/components/rating-component";
 import { OTPModal } from "@/components/otp-modal";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -75,7 +76,7 @@ export default function ApplicationDetails() {
   const handleVerifyOTP = async (otp: string): Promise<boolean> => {
     try {
       await verifyOTPMutation.mutateAsync(otp);
-      
+
       if (pendingFeedback) {
         await submitFeedbackMutation.mutateAsync(pendingFeedback);
         toast({
@@ -92,8 +93,8 @@ export default function ApplicationDetails() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
-        <header className="border-b">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+        <header className="border-b sticky top-0 bg-white/95 dark:bg-slate-950/95 backdrop-blur z-50">
           <div className="container mx-auto px-4 py-4">
             <Skeleton className="h-8 w-64" />
           </div>
@@ -127,8 +128,8 @@ export default function ApplicationDetails() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+      <header className="border-b sticky top-0 bg-white/95 dark:bg-slate-950/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
             <Link href="/citizen/dashboard">

@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Shield, ArrowLeft, FileText } from "lucide-react";
 import { Link } from "wouter";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function SubmitApplication() {
   const { user } = useAuth();
@@ -46,7 +47,7 @@ export default function SubmitApplication() {
       };
 
       await apiRequest("POST", "/api/applications", data);
-      
+
       await queryClient.invalidateQueries({ queryKey: ["/api/applications/my"] });
 
       toast({
@@ -67,19 +68,22 @@ export default function SubmitApplication() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+      <header className="border-b sticky top-0 bg-white/95 dark:bg-slate-950/95 backdrop-blur z-50">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Link href="/citizen/dashboard">
-              <Button variant="ghost" size="icon" data-testid="button-back">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div className="flex items-center gap-2">
-              <Shield className="h-6 w-6 text-primary" />
-              <span className="font-heading font-bold text-xl">Digital Governance</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link href="/citizen/dashboard">
+                <Button variant="ghost" size="icon" data-testid="button-back">
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+              </Link>
+              <div className="flex items-center gap-2">
+                <Shield className="h-6 w-6 text-primary" />
+                <span className="font-heading font-bold text-xl">Digital Governance</span>
+              </div>
             </div>
+            <ThemeToggle />
           </div>
         </div>
       </header>

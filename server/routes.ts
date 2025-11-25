@@ -116,10 +116,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/register", async (req: Request, res: Response) => {
     try {
       const data = insertUserSchema.parse(req.body);
-      
+
       const existing = await storage.getUserByUsername(data.username);
       if (existing) {
         return res.status(400).json({ error: "Username already exists" });
+      }
+
+      // check for duplicate email or phone
+      if (data.email) {
+        const existingEmail = await storage.getUserByEmail(data.email);
+        if (existingEmail) {
+          return res.status(400).json({ error: "This email is already registered. Please use a different email or mobile number." });
+        }
+      }
+
+      if (data.phone) {
+        const existingPhone = await storage.getUserByPhone(data.phone);
+        if (existingPhone) {
+          return res.status(400).json({ error: "This mobile number is already registered. Please use a different email or mobile number." });
+        }
+      }
+
+      if (data.aadharNumber) {
+        const existingAadhar = await storage.getUserByAadhar(data.aadharNumber);
+        if (existingAadhar) {
+          return res.status(400).json({ error: "This Aadhar number is already used. Please use a different Aadhar number." });
+        }
       }
 
       const hashedPassword = await bcrypt.hash(data.password, 10);
@@ -144,7 +166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/login", async (req: Request, res: Response) => {
     try {
       const data = loginSchema.parse(req.body);
-      
+
       const user = await storage.getUserByUsername(data.username);
       if (!user) {
         return res.status(401).json({ error: "Invalid credentials" });
@@ -155,13 +177,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Invalid credentials" });
       }
 
+      // If user has a phone number registered, use two-step (password + OTP) flow.
+      // Generate and store OTP for purpose 'login' and return the phone (no token).
+      // If no phone is available, fall back to issuing a token for backward compatibility.
+      const { password, ...userWithoutPassword } = user;
+
+      if (user.phone) {
+        const otp = generateOTP();
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+        await storage.createOTP(user.phone, otp, "login", expiresAt);
+        console.log(`Generated login OTP for ${user.phone}: ${otp}`);
+
+        // Return user (without password) and phone so client can show OTP modal
+        return res.json({ user: userWithoutPassword, phone: user.phone });
+      }
+
+      // Fallback: no phone -> immediate login (token)
       const token = jwt.sign(
         { id: user.id, username: user.username, role: user.role },
         JWT_SECRET,
         { expiresIn: "7d" }
       );
 
-      const { password, ...userWithoutPassword } = user;
       res.json({ user: userWithoutPassword, token });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -174,7 +212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         citizenId: req.user!.id,
       });
-      
+
       const application = await storage.createApplication(data);
 
       await storage.createNotification(
@@ -329,7 +367,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         citizenId: req.user!.id,
       });
-      
+
       const feedback = await storage.createFeedback(data);
       res.json(feedback);
     } catch (error: any) {
@@ -342,11 +380,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const data = generateOtpSchema.parse(req.body);
       const otp = generateOTP();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-      
+
       await storage.createOTP(data.phone, otp, data.purpose, expiresAt);
 
       console.log(`Generated OTP for ${data.phone}: ${otp}`);
-      
+
       res.json({ message: "OTP sent successfully", otp });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -372,6 +410,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.verifyOTP(record.id);
       res.json({ message: "OTP verified successfully" });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Issue JWT token after OTP verification. Client should call this after
+  // receiving successful OTP verification for the user's phone/purpose.
+  app.post("/api/auth/token", async (req: Request, res: Response) => {
+    try {
+      const { username } = req.body;
+      if (!username) return res.status(400).json({ error: "username required" });
+
+      const user = await storage.getUserByUsername(username);
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      if (!user.phone) return res.status(400).json({ error: "No phone registered for user" });
+
+      const record = await storage.getOTP(user.phone, "login");
+      if (!record || !record.verified) {
+        return res.status(401).json({ error: "OTP not verified" });
+      }
+
+      const token = jwt.sign(
+        { id: user.id, username: user.username, role: user.role },
+        JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+
+      const { password, ...userWithoutPassword } = user;
+      res.json({ user: userWithoutPassword, token });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }

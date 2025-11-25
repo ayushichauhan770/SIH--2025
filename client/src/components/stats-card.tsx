@@ -14,7 +14,7 @@ interface StatsCardProps {
 
 export function StatsCard({ title, value, description, icon: Icon, trend }: StatsCardProps) {
   return (
-    <Card data-testid={`card-stat-${title.toLowerCase().replace(/\s+/g, '-')}`}>
+    <Card data-testid={`card-stat-${title.toLowerCase().replace(/\s+/g, '-')}`} className="shadow-lg hover:shadow-2xl transition-all bg-white/80 dark:bg-slate-800/60 rounded-lg">
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {title}

@@ -35,7 +35,7 @@ function Router() {
       <Route path="/" component={Landing} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
-      
+
       <Route path="/citizen/dashboard">
         {() => <ProtectedRoute component={CitizenDashboard} allowedRoles={["citizen"]} />}
       </Route>

@@ -2,8 +2,24 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    const contentType = res.headers.get("content-type") || "";
+    let message = res.statusText;
+    try {
+      if (contentType.includes("application/json")) {
+        const json = await res.json();
+        if (json && (json.error || json.message)) {
+          message = json.error || json.message;
+        } else {
+          message = JSON.stringify(json);
+        }
+      } else {
+        message = (await res.text()) || res.statusText;
+      }
+    } catch (e) {
+      message = await res.text() || res.statusText;
+    }
+
+    throw new Error(message);
   }
 }
 
@@ -14,11 +30,11 @@ export async function apiRequest<T = any>(
 ): Promise<T> {
   const token = localStorage.getItem("token");
   const headers: Record<string, string> = {};
-  
+
   if (data) {
     headers["Content-Type"] = "application/json";
   }
-  
+
   const isAuthEndpoint = url.includes("/api/auth/login") || url.includes("/api/auth/register");
   if (token && !isAuthEndpoint) {
     headers["Authorization"] = `Bearer ${token}`;
@@ -32,12 +48,12 @@ export async function apiRequest<T = any>(
   });
 
   await throwIfResNotOk(res);
-  
+
   const contentType = res.headers.get("content-type");
   if (contentType && contentType.includes("application/json")) {
     return res.json();
   }
-  
+
   return undefined as T;
 }
 
@@ -46,26 +62,26 @@ export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
-  async ({ queryKey }) => {
-    const token = localStorage.getItem("token");
-    const headers: Record<string, string> = {};
-    
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
+    async ({ queryKey }) => {
+      const token = localStorage.getItem("token");
+      const headers: Record<string, string> = {};
 
-    const res = await fetch(queryKey.join("/") as string, {
-      headers,
-      credentials: "include",
-    });
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
-    }
+      const res = await fetch(queryKey.join("/") as string, {
+        headers,
+        credentials: "include",
+      });
 
-    await throwIfResNotOk(res);
-    return await res.json();
-  };
+      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+        return null;
+      }
+
+      await throwIfResNotOk(res);
+      return await res.json();
+    };
 
 export const queryClient = new QueryClient({
   defaultOptions: {
