@@ -15,6 +15,9 @@ import { randomUUID } from "crypto";
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByPhone(phone: string): Promise<User | undefined>;
+  getUserByAadhar(aadharNumber: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   getAllOfficials(): Promise<User[]>;
 
@@ -36,6 +39,8 @@ export interface IStorage {
 
   createOTP(phone: string, otp: string, purpose: string, expiresAt: Date): Promise<OTPRecord>;
   getOTP(phone: string, purpose: string): Promise<OTPRecord | undefined>;
+  // returns the latest OTP record for a phone/purpose regardless of verification state
+  getLatestOTPRecord(phone: string, purpose: string): Promise<OTPRecord | undefined>;
   verifyOTP(id: string): Promise<void>;
 
   createBlockchainHash(applicationId: string, hash: string, blockNumber: number): Promise<BlockchainHash>;
@@ -72,6 +77,24 @@ export class MemStorage implements IStorage {
   async getUserByUsername(username: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(
       (user) => user.username === username,
+    );
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => (user.email || "").toLowerCase() === (email || "").toLowerCase(),
+    );
+  }
+
+  async getUserByPhone(phone: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => (user.phone || "") === (phone || ""),
+    );
+  }
+
+  async getUserByAadhar(aadharNumber: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => (user.aadharNumber || "") === (aadharNumber || ""),
     );
   }
 
@@ -246,6 +269,12 @@ export class MemStorage implements IStorage {
   async getOTP(phone: string, purpose: string): Promise<OTPRecord | undefined> {
     return Array.from(this.otpRecords.values())
       .filter(r => r.phone === phone && r.purpose === purpose && !r.verified)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+  }
+
+  async getLatestOTPRecord(phone: string, purpose: string): Promise<OTPRecord | undefined> {
+    return Array.from(this.otpRecords.values())
+      .filter(r => r.phone === phone && r.purpose === purpose)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
   }
 

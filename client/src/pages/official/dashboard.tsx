@@ -116,7 +116,7 @@ export default function OfficialDashboard() {
 
   return (
     <SidebarProvider style={sidebarStyle as React.CSSProperties}>
-      <div className="flex h-screen w-full">
+      <div className="flex h-screen w-full bg-gradient-to-br from-green-50 via-slate-50 to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
         <Sidebar>
           <SidebarContent>
             <SidebarGroup>
@@ -148,7 +148,7 @@ export default function OfficialDashboard() {
         </Sidebar>
 
         <div className="flex flex-col flex-1">
-          <header className="flex items-center justify-between p-4 border-b">
+          <header className="flex items-center justify-between p-4 border-b bg-white/95 dark:bg-slate-950/95 shadow-sm">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
             <div className="flex items-center gap-2">
               <NotificationBell notifications={notifications} onMarkAsRead={handleMarkAsRead} />
@@ -161,8 +161,8 @@ export default function OfficialDashboard() {
 
           <main className="flex-1 overflow-auto p-6 space-y-6">
             <div>
-              <h1 className="text-3xl font-bold font-heading mb-2">Official Dashboard</h1>
-              <p className="text-muted-foreground">Welcome, {user?.fullName}</p>
+              <h1 className="text-3xl font-bold font-heading bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">Official Dashboard</h1>
+              <p className="text-gray-600 dark:text-gray-400">Welcome, {user?.fullName}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -225,7 +225,7 @@ export default function OfficialDashboard() {
                       <ApplicationCard
                         key={app.id}
                         application={app}
-                        onViewDetails={() => {}}
+                        onViewDetails={() => { }}
                         showActions
                         onAccept={() => handleAccept(app.id)}
                       />
@@ -248,7 +248,7 @@ export default function OfficialDashboard() {
                       <ApplicationCard
                         key={app.id}
                         application={app}
-                        onViewDetails={() => {}}
+                        onViewDetails={() => { }}
                         showActions
                         onUpdate={() => setSelectedApp(app)}
                       />

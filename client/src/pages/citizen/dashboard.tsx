@@ -47,13 +47,17 @@ export default function CitizenDashboard() {
   ) || [];
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+      <header className="border-b sticky top-0 bg-white/95 dark:bg-slate-950/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-950/60 z-50 shadow-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Shield className="h-6 w-6 text-primary" />
-              <span className="font-heading font-bold text-xl">Digital Governance</span>
+              <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600">
+                <Shield className="h-6 w-6 text-white" />
+              </div>
+              <span className="font-heading font-bold text-xl bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
+                Digital Governance
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <NotificationBell notifications={notifications} onMarkAsRead={handleMarkAsRead} />
@@ -67,34 +71,34 @@ export default function CitizenDashboard() {
       </header>
 
       <main className="container mx-auto px-4 py-8 space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold font-heading mb-2">
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold font-heading bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
             Welcome, {user?.fullName}
           </h1>
-          <p className="text-muted-foreground">Manage your applications and track their progress</p>
+          <p className="text-gray-600 dark:text-gray-400">Manage your applications and track their progress</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card className="hover-elevate active-elevate-2 cursor-pointer" onClick={() => setLocation("/citizen/submit")} data-testid="card-new-application">
+          <Card className="border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50" onClick={() => setLocation("/citizen/submit")} data-testid="card-new-application">
             <CardHeader className="flex flex-row flex-wrap items-center gap-4 space-y-0">
-              <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary text-primary-foreground">
-                <Plus className="h-6 w-6" />
+              <div className="flex items-center justify-center w-14 h-14 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg">
+                <Plus className="h-7 w-7" />
               </div>
               <div className="flex-1">
-                <CardTitle className="font-heading">New Application</CardTitle>
-                <CardDescription>Submit a new government application</CardDescription>
+                <CardTitle className="font-heading text-blue-900 dark:text-blue-100">New Application</CardTitle>
+                <CardDescription className="text-blue-700 dark:text-blue-300">Submit a new government application</CardDescription>
               </div>
             </CardHeader>
           </Card>
 
-          <Card className="hover-elevate active-elevate-2 cursor-pointer" onClick={() => setLocation("/citizen/track")} data-testid="card-track-application">
+          <Card className="border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50" onClick={() => setLocation("/citizen/track")} data-testid="card-track-application">
             <CardHeader className="flex flex-row flex-wrap items-center gap-4 space-y-0">
-              <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary text-primary-foreground">
-                <Search className="h-6 w-6" />
+              <div className="flex items-center justify-center w-14 h-14 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg">
+                <Search className="h-7 w-7" />
               </div>
               <div className="flex-1">
-                <CardTitle className="font-heading">Track Application</CardTitle>
-                <CardDescription>Search by tracking ID</CardDescription>
+                <CardTitle className="font-heading text-purple-900 dark:text-purple-100">Track Application</CardTitle>
+                <CardDescription className="text-purple-700 dark:text-purple-300">Search by tracking ID</CardDescription>
               </div>
             </CardHeader>
           </Card>
@@ -102,8 +106,10 @@ export default function CitizenDashboard() {
 
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-muted-foreground" />
-            <h2 className="text-2xl font-bold font-heading">Active Applications</h2>
+            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-950/50">
+              <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <h2 className="text-2xl font-bold font-heading text-gray-900 dark:text-gray-100">Active Applications</h2>
           </div>
 
           {applicationsLoading ? (
@@ -147,7 +153,12 @@ export default function CitizenDashboard() {
 
         {completedApplications.length > 0 && (
           <div className="space-y-4">
-            <h2 className="text-2xl font-bold font-heading">Completed Applications</h2>
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-green-100 dark:bg-green-950/50">
+                <FileText className="h-5 w-5 text-green-600 dark:text-green-400" />
+              </div>
+              <h2 className="text-2xl font-bold font-heading text-gray-900 dark:text-gray-100">Completed Applications</h2>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {completedApplications.map(app => (
                 <ApplicationCard

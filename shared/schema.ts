@@ -11,6 +11,7 @@ export const users = pgTable("users", {
   fullName: text("full_name").notNull(),
   email: text("email").notNull(),
   phone: text("phone"),
+  aadharNumber: text("aadhar_number"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

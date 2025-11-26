@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Shield, ArrowLeft, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { ThemeToggle } from "@/components/theme-toggle";
 import type { Application } from "@shared/schema";
 
 export default function TrackApplication() {
@@ -17,7 +18,7 @@ export default function TrackApplication() {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!trackingId.trim()) {
       toast({
         title: "Invalid Input",
@@ -51,8 +52,8 @@ export default function TrackApplication() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+      <header className="border-b sticky top-0 bg-white/95 dark:bg-slate-950/95 backdrop-blur z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
             <Link href="/citizen/dashboard">

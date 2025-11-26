@@ -24,7 +24,9 @@ const statusColors: Record<string, string> = {
 
 export function ApplicationCard({ application, onViewDetails, showActions, onAccept, onUpdate }: ApplicationCardProps) {
   return (
-    <Card className="hover-elevate active-elevate-2 transition-all" data-testid={`card-application-${application.id}`}>
+    <Card
+      className="transition-all transform hover:-translate-y-1 hover:shadow-2xl shadow-lg rounded-lg overflow-hidden bg-white/80 dark:bg-slate-800/60"
+      data-testid={`card-application-${application.id}`}>
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0 pb-2">
         <div className="flex flex-col gap-1">
           <code className="text-sm font-mono font-semibold text-foreground" data-testid={`text-tracking-${application.trackingId}`}>
