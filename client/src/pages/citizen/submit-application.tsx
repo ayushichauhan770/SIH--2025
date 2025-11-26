@@ -66,6 +66,7 @@ export default function SubmitApplication() {
     "Urban Development – Ministry of Housing and Urban Affairs (MoHUA)",
     "Water – Ministry of Jal Shakti",
     "Women & Child Development – Ministry of Women and Child Development",
+    "Other",
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
