@@ -19,13 +19,14 @@ export interface IStorage {
   getUserByPhone(phone: string): Promise<User | undefined>;
   getUserByAadhar(aadharNumber: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  getAllOfficials(): Promise<User[]>;
-
-  createApplication(application: InsertApplication): Promise<Application>;
+  updateUserPassword(id: string, password: string): Promise<void>;
+  createApplication(app: InsertApplication): Promise<Application>;
   getApplication(id: string): Promise<Application | undefined>;
   getApplicationByTrackingId(trackingId: string): Promise<Application | undefined>;
+
   getUserApplications(citizenId: string): Promise<Application[]>;
   getOfficialApplications(officialId?: string): Promise<Application[]>;
+  getAllOfficials(): Promise<User[]>;
   getAllApplications(): Promise<Application[]>;
   updateApplicationStatus(id: string, status: string, updatedBy: string, comment?: string): Promise<Application>;
   assignApplication(id: string, officialId: string): Promise<Application>;
@@ -37,10 +38,10 @@ export interface IStorage {
   getFeedbackByApplicationId(applicationId: string): Promise<Feedback | undefined>;
   verifyFeedback(id: string): Promise<void>;
 
-  createOTP(phone: string, otp: string, purpose: string, expiresAt: Date): Promise<OTPRecord>;
-  getOTP(phone: string, purpose: string): Promise<OTPRecord | undefined>;
-  // returns the latest OTP record for a phone/purpose regardless of verification state
-  getLatestOTPRecord(phone: string, purpose: string): Promise<OTPRecord | undefined>;
+  createOTP(identifier: string, type: "phone" | "email", otp: string, purpose: string, expiresAt: Date): Promise<OTPRecord>;
+  getOTP(identifier: string, type: "phone" | "email", purpose: string): Promise<OTPRecord | undefined>;
+  // returns the latest OTP record for a phone/email/purpose regardless of verification state
+  getLatestOTPRecord(identifier: string, type: "phone" | "email", purpose: string): Promise<OTPRecord | undefined>;
   verifyOTP(id: string): Promise<void>;
 
   createBlockchainHash(applicationId: string, hash: string, blockNumber: number): Promise<BlockchainHash>;
@@ -102,15 +103,20 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const user: User = {
       ...insertUser,
-      id,
+      phone: insertUser.phone ?? null,
+      aadharNumber: insertUser.aadharNumber ?? null,
+      department: insertUser.department ?? null,
       createdAt: new Date(),
+      id,
     };
     this.users.set(id, user);
     return user;
   }
 
-  async getAllOfficials(): Promise<User[]> {
-    return Array.from(this.users.values()).filter(user => user.role === "official");
+  async updateUserPassword(id: string, password: string): Promise<void> {
+    const user = this.users.get(id);
+    if (!user) throw new Error("User not found");
+    this.users.set(id, { ...user, password });
   }
 
   async createApplication(insertApplication: InsertApplication): Promise<Application> {
@@ -157,6 +163,10 @@ export class MemStorage implements IStorage {
         .filter(app => app.officialId === officialId || app.status === "Submitted");
     }
     return Array.from(this.applications.values());
+  }
+
+  async getAllOfficials(): Promise<User[]> {
+    return Array.from(this.users.values()).filter(u => u.role === "official");
   }
 
   async getAllApplications(): Promise<Application[]> {
@@ -230,6 +240,7 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const feedback: Feedback = {
       ...insertFeedback,
+      comment: insertFeedback.comment ?? null,
       id,
       verified: false,
       createdAt: new Date(),
@@ -250,11 +261,12 @@ export class MemStorage implements IStorage {
     }
   }
 
-  async createOTP(phone: string, otp: string, purpose: string, expiresAt: Date): Promise<OTPRecord> {
+  async createOTP(identifier: string, type: "phone" | "email", otp: string, purpose: string, expiresAt: Date): Promise<OTPRecord> {
     const id = randomUUID();
     const record: OTPRecord = {
       id,
-      phone,
+      phone: type === "phone" ? identifier : null,
+      email: type === "email" ? identifier : null,
       otp,
       purpose,
       expiresAt,
@@ -266,15 +278,21 @@ export class MemStorage implements IStorage {
     return record;
   }
 
-  async getOTP(phone: string, purpose: string): Promise<OTPRecord | undefined> {
+  async getOTP(identifier: string, type: "phone" | "email", purpose: string): Promise<OTPRecord | undefined> {
     return Array.from(this.otpRecords.values())
-      .filter(r => r.phone === phone && r.purpose === purpose && !r.verified)
+      .filter(r => {
+        const matchIdentifier = type === "phone" ? r.phone === identifier : r.email === identifier;
+        return matchIdentifier && r.purpose === purpose && !r.verified;
+      })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
   }
 
-  async getLatestOTPRecord(phone: string, purpose: string): Promise<OTPRecord | undefined> {
+  async getLatestOTPRecord(identifier: string, type: "phone" | "email", purpose: string): Promise<OTPRecord | undefined> {
     return Array.from(this.otpRecords.values())
-      .filter(r => r.phone === phone && r.purpose === purpose)
+      .filter(r => {
+        const matchIdentifier = type === "phone" ? r.phone === identifier : r.email === identifier;
+        return matchIdentifier && r.purpose === purpose;
+      })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
   }
 

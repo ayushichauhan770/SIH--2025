@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ApplicationCard } from "@/components/application-card";
 import { NotificationBell } from "@/components/notification-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { FileText, Plus, Search, LogOut, Shield } from "lucide-react";
+import { FileText, Plus, Search, LogOut, Shield, Clock, CheckCircle, XCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Application, Notification } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -46,6 +46,17 @@ export default function CitizenDashboard() {
     ["Approved", "Rejected", "Auto-Approved"].includes(app.status)
   ) || [];
 
+  const stats = {
+    total: applications?.length || 0,
+    pending: activeApplications.length,
+    approved: applications?.filter(app =>
+      ["Approved", "Auto-Approved"].includes(app.status)
+    ).length || 0,
+    rejected: applications?.filter(app =>
+      app.status === "Rejected"
+    ).length || 0
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       <header className="border-b sticky top-0 bg-white/95 dark:bg-slate-950/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-950/60 z-50 shadow-sm">
@@ -76,6 +87,61 @@ export default function CitizenDashboard() {
             Welcome, {user?.fullName}
           </h1>
           <p className="text-gray-600 dark:text-gray-400">Manage your applications and track their progress</p>
+        </div>
+
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white hover:shadow-xl transition-shadow duration-300">
+            <CardHeader className="pb-2">
+              <CardDescription className="text-blue-100 text-xs font-medium">Total Applications</CardDescription>
+              <CardTitle className="text-4xl font-bold">{stats.total}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                <span className="text-sm">All submissions</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-orange-500 to-orange-600 text-white hover:shadow-xl transition-shadow duration-300">
+            <CardHeader className="pb-2">
+              <CardDescription className="text-orange-100 text-xs font-medium">Pending</CardDescription>
+              <CardTitle className="text-4xl font-bold">{stats.pending}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                <span className="text-sm">In progress</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-green-500 to-green-600 text-white hover:shadow-xl transition-shadow duration-300">
+            <CardHeader className="pb-2">
+              <CardDescription className="text-green-100 text-xs font-medium">Approved</CardDescription>
+              <CardTitle className="text-4xl font-bold">{stats.approved}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5" />
+                <span className="text-sm">Completed</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-red-500 to-red-600 text-white hover:shadow-xl transition-shadow duration-300">
+            <CardHeader className="pb-2">
+              <CardDescription className="text-red-100 text-xs font-medium">Rejected</CardDescription>
+              <CardTitle className="text-4xl font-bold">{stats.rejected}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                <XCircle className="h-5 w-5" />
+                <span className="text-sm">Not approved</span>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

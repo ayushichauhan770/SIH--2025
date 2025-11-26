@@ -20,6 +20,52 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const DEPARTMENTS = [
+  "Aadhaar – Unique Identification Authority of India (UIDAI)",
+  "Animal Husbandry & Dairying – Department of Animal Husbandry and Dairying",
+  "Agriculture – Ministry of Agriculture and Farmers Welfare",
+  "CBSE – Central Board of Secondary Education",
+  "Central Public Works Department (CPWD)",
+  "Consumer Affairs – Department of Consumer Affairs",
+  "Corporate Affairs – Ministry of Corporate Affairs",
+  "Education – Ministry of Education",
+  "Electricity – Ministry of Power",
+  "Election Commission of India (ECI)",
+  "Employees’ Provident Fund Organisation (EPFO)",
+  "Employees’ State Insurance Corporation (ESIC)",
+  "Finance – Ministry of Finance",
+  "Food & Civil Supplies – Department of Food and Public Distribution",
+  "Forest – Ministry of Environment, Forest and Climate Change",
+  "Health – Ministry of Health and Family Welfare",
+  "Home Affairs – Ministry of Home Affairs",
+  "Income Tax Department (CBDT)",
+  "Industrial Development – Department for Promotion of Industry and Internal Trade (DPIIT)",
+  "Labour – Ministry of Labour and Employment",
+  "Minority Affairs – Ministry of Minority Affairs",
+  "Municipal Corporation / Urban Local Bodies (ULBs)",
+  "Panchayati Raj – Ministry of Panchayati Raj",
+  "Passport – Ministry of External Affairs (Passport Seva)",
+  "Personnel & Training – Department of Personnel and Training (DoPT)",
+  "Police – State Police Department",
+  "Pollution – Central Pollution Control Board (CPCB)",
+  "Post Office – Department of Posts",
+  "Public Grievances – Department of Administrative Reforms and Public Grievances (DARPG)",
+  "Public Works – Public Works Department (PWD)",
+  "Railways – Ministry of Railways",
+  "Revenue – Department of Revenue (Ministry of Finance)",
+  "Road Transport – Ministry of Road Transport and Highways (MoRTH)",
+  "Rural Development – Ministry of Rural Development",
+  "Science & Technology – Ministry of Science and Technology",
+  "Skills – Ministry of Skill Development and Entrepreneurship",
+  "Social Justice – Ministry of Social Justice and Empowerment",
+  "Telecommunications – Department of Telecommunications (DoT)",
+  "Urban Development – Ministry of Housing and Urban Affairs (MoHUA)",
+  "Water – Ministry of Jal Shakti",
+  "Women & Child Development – Ministry of Women and Child Development",
+  "Other"
+];
 
 export default function Register() {
   const [, setLocation] = useLocation();
@@ -27,7 +73,7 @@ export default function Register() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showOTP, setShowOTP] = useState(false);
-  const [tempUser, setTempUser] = useState<{ user: User; phone: string } | null>(null);
+  const [tempUser, setTempUser] = useState<{ user: User; phone?: string; email?: string; otpMethod?: "phone" | "email" } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
   const [formData, setFormData] = useState({
@@ -38,6 +84,8 @@ export default function Register() {
     email: "",
     phone: "",
     aadharNumber: "",
+    role: "citizen",
+    department: "",
   });
 
   // OTP removed: verification is not required for registration flow
@@ -58,17 +106,42 @@ export default function Register() {
 
     try {
       const { confirmPassword, ...registerData } = formData;
-      const response = await apiRequest<{ user: User; token?: string; phone?: string; otp?: string }>(
-        "POST",
-        "/api/auth/register",
-        { ...registerData, role: "citizen" }
+
+      // Filter out empty optional fields to avoid sending empty strings
+      const cleanedData = Object.fromEntries(
+        Object.entries(registerData).filter(([key, value]) => {
+          // Keep all required fields and non-empty optional fields
+          if (key === 'phone' || key === 'aadharNumber' || key === 'department') {
+            return value && value.trim() !== '';
+          }
+          return true;
+        })
       );
 
-      // If server returned a phone (two-step flow), show OTP modal
-      if (response.phone) {
-        setTempUser({ user: response.user, phone: response.phone });
+      const response = await apiRequest<{ user: User; token?: string; phone?: string; email?: string; otpMethod?: "phone" | "email"; otp?: string }>(
+        "POST",
+        "/api/auth/register",
+        cleanedData
+      );
+
+      if (response.otp) {
+        (window as any).LAST_OTP = response.otp;
+        console.log("OTP exposed for testing:", response.otp);
+      }
+
+      // If server returned a phone or email (two-step flow), show OTP modal
+      if (response.phone || response.email) {
+        setTempUser({
+          user: response.user,
+          phone: response.phone,
+          email: response.email,
+          otpMethod: response.otpMethod
+        });
         setShowOTP(true);
-        toast({ title: "OTP Sent", description: "Check your phone for the verification code" });
+        toast({
+          title: "OTP Sent",
+          description: `Check your ${response.otpMethod === 'email' ? 'email' : 'phone'} for the verification code`
+        });
         return;
       }
 
@@ -109,13 +182,19 @@ export default function Register() {
 
   const handleOTPVerify = async (otp: string): Promise<boolean> => {
     try {
-      await apiRequest<{ message?: string }>("POST", "/api/otp/verify", {
+      await apiRequest<{ message?: string }>("POST", "/api/auth/verify-otp", {
         phone: tempUser?.phone,
+        email: tempUser?.email,
         otp,
         purpose: "register",
       });
 
-      const tokenResp = await apiRequest<{ user: User; token: string }>("POST", "/api/auth/token", { username: tempUser?.user.username, purpose: "register" });
+      const tokenResp = await apiRequest<{ user: User; token: string }>("POST", "/api/auth/token", {
+        username: tempUser?.user.username,
+        phone: tempUser?.phone,
+        email: tempUser?.email,
+        purpose: "register"
+      });
 
       localStorage.setItem("user", JSON.stringify(tokenResp.user));
       localStorage.setItem("token", tokenResp.token);
@@ -125,7 +204,7 @@ export default function Register() {
 
       setShowOTP(false);
       setTempUser(null);
-      setFormData({ username: "", password: "", confirmPassword: "", fullName: "", email: "", phone: "", aadharNumber: "" });
+      setFormData({ username: "", password: "", confirmPassword: "", fullName: "", email: "", phone: "", aadharNumber: "", role: "citizen", department: "" });
 
       const role = tokenResp.user?.role;
       if (role === "admin") {
@@ -174,6 +253,15 @@ export default function Register() {
         <Card className="border border-white/20 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/70 backdrop-blur-2xl shadow-2xl hover:shadow-2xl transition-all duration-300 rounded-3xl w-full max-w-md p-8">
           <div className="flex flex-col items-center justify-center">
             <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent mb-6">Create Account</h2>
+
+            <Tabs defaultValue="citizen" value={formData.role} onValueChange={(val) => setFormData({ ...formData, role: val })} className="w-full mb-6">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="citizen">Citizen</TabsTrigger>
+                <TabsTrigger value="official">Official</TabsTrigger>
+                <TabsTrigger value="admin">Admin</TabsTrigger>
+              </TabsList>
+            </Tabs>
+
             <form onSubmit={handleSubmit} className="space-y-3 w-full bg-white/10 dark:bg-slate-900/20 backdrop-blur-md rounded-2xl p-4">
               <div className="space-y-2">
                 <Label htmlFor="fullName" className="text-sm font-semibold">Full Name</Label>
@@ -202,30 +290,14 @@ export default function Register() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone" className="text-sm font-semibold">Phone Number</Label>
+                <Label htmlFor="phone" className="text-sm font-semibold">Mobile Number (Optional)</Label>
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="Enter your phone number"
+                  placeholder="Enter your mobile number"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   data-testid="input-phone"
-                  className="border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="aadharNumber" className="text-sm font-semibold">Aadhar Number</Label>
-                <Input
-                  id="aadharNumber"
-                  type="text"
-                  placeholder="Enter your 12-digit Aadhar number"
-                  value={formData.aadharNumber}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, "").slice(0, 12);
-                    setFormData({ ...formData, aadharNumber: value });
-                  }}
-                  maxLength={12}
-                  data-testid="input-aadhar"
                   className="border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
                 />
               </div>
@@ -319,6 +391,7 @@ export default function Register() {
           }}
           onVerify={handleOTPVerify}
           phone={tempUser.phone}
+          email={tempUser.email}
           purpose="register"
         />
       )}

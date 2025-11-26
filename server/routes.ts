@@ -5,6 +5,8 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { loginSchema, insertUserSchema, insertApplicationSchema, updateApplicationStatusSchema, insertFeedbackSchema, verifyOtpSchema, generateOtpSchema } from "@shared/schema";
 import type { User } from "@shared/schema";
+import { sendEmailOTP, verifyEmailConfig } from "./email-service";
+import { sendSMSOTP } from "./sms-service";
 
 const JWT_SECRET = process.env.SESSION_SECRET || "dev-secret-key";
 
@@ -113,10 +115,23 @@ class AIMonitoringService {
 const aiService = new AIMonitoringService();
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Verify email configuration on startup
+  verifyEmailConfig().then((success) => {
+    if (!success) {
+      console.warn("WARNING: Email service configuration failed. OTP emails will not be sent.");
+      console.warn("Please check your .env file and ensure SMTP_USER and SMTP_PASS are set correctly.");
+    }
+  });
+
   const isDev = (process.env.NODE_ENV || "development") !== "production";
   app.post("/api/auth/register", async (req: Request, res: Response) => {
     try {
       const data = insertUserSchema.parse(req.body);
+
+      // Validate role
+      if (data.role && !["citizen", "official", "admin"].includes(data.role)) {
+        return res.status(400).json({ error: "Invalid role selected" });
+      }
 
       const existing = await storage.getUserByUsername(data.username);
       if (existing) {
@@ -151,20 +166,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         password: hashedPassword,
       });
 
+      console.log(`User registered: username=${user.username}, phone=${user.phone}, email=${user.email}`);
+
       const { password, ...userWithoutPassword } = user;
 
-      // If phone provided, use two-step verification: generate OTP and return phone
-      // Client should complete OTP verification and then call /api/auth/token with purpose='register'
-      if (user.phone) {
+      // If email provided, use two-step verification: generate OTP and return email
+      if (user.email) {
         const otp = generateOTP();
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-        await storage.createOTP(user.phone, otp, "register", expiresAt);
-        console.log(`Generated register OTP for ${user.phone}: ${otp}`);
+        await storage.createOTP(user.email, "email", otp, "register", expiresAt);
 
-        return res.json({ user: userWithoutPassword, phone: user.phone, ...(isDev ? { otp } : {}) });
+        // Send OTP via email
+        try {
+          await sendEmailOTP(user.email, otp, "register");
+        } catch (error) {
+          console.error("Failed to send email OTP:", error);
+        }
+        console.log(`Generated register OTP for email ${user.email}: ${otp}`);
+
+        return res.json({
+          user: userWithoutPassword,
+          email: user.email,
+          otpMethod: "email",
+          ...(isDev ? { otp } : {})
+        });
       }
 
-      // no phone -> issue token immediately
+      // no phone or email -> issue token immediately
       const token = jwt.sign(
         { id: user.id, username: user.username, role: user.role },
         JWT_SECRET,
@@ -180,64 +208,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/login", async (req: Request, res: Response) => {
     try {
       const data = loginSchema.parse(req.body);
+      let user: User | undefined;
 
-      const user = await storage.getUserByUsername(data.username);
-      if (!user) {
-        return res.status(401).json({ error: "Invalid credentials" });
-      }
+      // 1. Mobile Login
+      if (data.phone) {
+        console.log(`Login attempt with phone: ${data.phone}`);
+        user = await storage.getUserByPhone(data.phone);
+        if (!user) {
+          console.log(`No user found for phone: ${data.phone}`);
+          return res.status(401).json({ error: "Invalid credentials" });
+        }
+        console.log(`User found: username=${user.username}, phone=${user.phone}`);
 
-      const validPassword = await bcrypt.compare(data.password, user.password);
-      if (!validPassword) {
-        return res.status(401).json({ error: "Invalid credentials" });
-      }
+        // If password is provided, validate it
+        if (data.password) {
+          const validPassword = await bcrypt.compare(data.password, user.password);
+          if (!validPassword) {
+            return res.status(401).json({ error: "Invalid credentials" });
+          }
+        }
+        // If no password provided, proceed with OTP-only login
 
-      // If user has a phone number registered, use two-step (password + OTP) flow.
-      // Generate and store OTP for purpose 'login' and return the phone (no token).
-      // If no phone is available, fall back to issuing a token for backward compatibility.
-      const { password, ...userWithoutPassword } = user;
-
-      if (user.phone) {
         const otp = generateOTP();
-        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+        await storage.createOTP(user.phone!, "phone", otp, "login", expiresAt);
 
-        await storage.createOTP(user.phone, otp, "login", expiresAt);
-        console.log(`Generated login OTP for ${user.phone}: ${otp}`);
+        // Send OTP via SMS
+        try {
+          await sendSMSOTP(user.phone!, otp, "login");
+        } catch (error) {
+          console.error("Failed to send SMS OTP:", error);
+        }
+        console.log(`Generated login OTP for phone ${user.phone}: ${otp}`);
 
-        // Return user (without password) and phone so client can show OTP modal
-        // In dev mode, include the OTP in the response to simplify local testing.
-        return res.json({ user: userWithoutPassword, phone: user.phone, ...(isDev ? { otp } : {}) });
+        const { password, ...userWithoutPassword } = user;
+        return res.json({
+          user: userWithoutPassword,
+          phone: user.phone,
+          otpMethod: "phone",
+          ...(isDev ? { otp } : {})
+        });
       }
 
-      // Fallback: no phone -> immediate login (token)
-      const token = jwt.sign(
-        { id: user.id, username: user.username, role: user.role },
-        JWT_SECRET,
-        { expiresIn: "7d" }
-      );
+      // 2. Username/Email Login
+      if (data.username || data.email) {
+        if (data.username) {
+          user = await storage.getUserByUsername(data.username);
+        } else if (data.email) {
+          user = await storage.getUserByEmail(data.email);
+        }
 
-      res.json({ user: userWithoutPassword, token });
+        if (!user) {
+          return res.status(401).json({ error: "Invalid credentials" });
+        }
+
+        // Password is mandatory for email/username login
+        if (!data.password) {
+          return res.status(400).json({ error: "Password is required" });
+        }
+
+        const validPassword = await bcrypt.compare(data.password, user.password);
+        if (!validPassword) {
+          return res.status(401).json({ error: "Invalid credentials" });
+        }
+
+        // Generate Email OTP for both password and passwordless login
+        if (!user.email) {
+          return res.status(400).json({ error: "User has no email for verification" });
+        }
+
+        const otp = generateOTP();
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+        await storage.createOTP(user.email, "email", otp, "login", expiresAt);
+
+        // Send OTP via email
+        try {
+          await sendEmailOTP(user.email, otp, "login");
+        } catch (error) {
+          console.error("Failed to send email OTP:", error);
+        }
+        console.log(`Generated login OTP for email ${user.email}: ${otp}`);
+
+        const { password, ...userWithoutPassword } = user;
+        return res.json({
+          user: userWithoutPassword,
+          email: user.email,
+          otpMethod: "email",
+          ...(isDev ? { otp } : {})
+        });
+      }
+
+      return res.status(400).json({ error: "Missing credentials" });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
   });
 
+  // Application Routes
   app.post("/api/applications", authenticateToken, async (req: Request, res: Response) => {
     try {
-      const data = insertApplicationSchema.parse({
-        ...req.body,
+      const data = insertApplicationSchema.parse(req.body);
+      const application = await storage.createApplication({
+        ...data,
         citizenId: req.user!.id,
       });
-
-      const application = await storage.createApplication(data);
-
-      await storage.createNotification(
-        req.user!.id,
-        "assignment",
-        "Application Submitted",
-        `Your application ${application.trackingId} has been submitted successfully.`,
-        application.id
-      );
-
       res.json(application);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -247,24 +321,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/applications/my", authenticateToken, async (req: Request, res: Response) => {
     try {
       const applications = await storage.getUserApplications(req.user!.id);
-      res.json(applications);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.get("/api/applications/official", authenticateToken, requireRole("official"), async (req: Request, res: Response) => {
-    try {
-      const applications = await storage.getOfficialApplications(req.user!.id);
-      res.json(applications);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.get("/api/applications/all", authenticateToken, requireRole("admin"), async (req: Request, res: Response) => {
-    try {
-      const applications = await storage.getAllApplications();
       res.json(applications);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -304,46 +360,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/applications/:id/blockchain", authenticateToken, async (req: Request, res: Response) => {
+  app.get("/api/applications", authenticateToken, requireRole("official", "admin"), async (req: Request, res: Response) => {
     try {
-      const hash = await storage.getBlockchainHash(req.params.id);
-      res.json(hash || null);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.get("/api/applications/:id/feedback", authenticateToken, async (req: Request, res: Response) => {
-    try {
-      const feedback = await storage.getFeedbackByApplicationId(req.params.id);
-      res.json(feedback || null);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.post("/api/applications/:id/accept", authenticateToken, requireRole("official"), async (req: Request, res: Response) => {
-    try {
-      const application = await storage.assignApplication(req.params.id, req.user!.id);
-
-      const citizen = await storage.getUser(application.citizenId);
-      if (citizen) {
-        await storage.createNotification(
-          citizen.id,
-          "assignment",
-          "Application Assigned",
-          `Your application ${application.trackingId} has been assigned to an official.`,
-          application.id
-        );
+      let applications;
+      if (req.user!.role === "admin") {
+        applications = await storage.getAllApplications();
+      } else {
+        applications = await storage.getOfficialApplications(req.user!.id);
       }
-
-      res.json(application);
+      res.json(applications);
     } catch (error: any) {
-      res.status(400).json({ error: error.message });
+      res.status(500).json({ error: error.message });
     }
   });
 
-  app.patch("/api/applications/:id/status", authenticateToken, requireRole("official"), async (req: Request, res: Response) => {
+  app.patch("/api/applications/:id/status", authenticateToken, requireRole("official", "admin"), async (req: Request, res: Response) => {
     try {
       const data = updateApplicationStatusSchema.parse(req.body);
       const application = await storage.updateApplicationStatus(
@@ -352,72 +383,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.user!.id,
         data.comment
       );
-
-      const citizen = await storage.getUser(application.citizenId);
-      if (citizen) {
-        const messages: Record<string, string> = {
-          "In Progress": "is now being processed",
-          "Approved": "has been approved",
-          "Rejected": "has been rejected",
-        };
-
-        await storage.createNotification(
-          citizen.id,
-          data.status === "Approved" ? "approval" : "assignment",
-          `Application ${data.status}`,
-          `Your application ${application.trackingId} ${messages[data.status] || "status updated"}.`,
-          application.id
-        );
-      }
-
       res.json(application);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
   });
 
-  app.post("/api/feedback", authenticateToken, async (req: Request, res: Response) => {
+  app.post("/api/applications/:id/assign", authenticateToken, requireRole("admin"), async (req: Request, res: Response) => {
     try {
-      const data = insertFeedbackSchema.parse({
-        ...req.body,
+      const { officialId } = req.body;
+      const application = await storage.assignApplication(req.params.id, officialId);
+      res.json(application);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/applications/:id/feedback", authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const data = insertFeedbackSchema.parse(req.body);
+      const feedback = await storage.createFeedback({
+        ...data,
+        applicationId: req.params.id,
         citizenId: req.user!.id,
       });
-
-      const feedback = await storage.createFeedback(data);
       res.json(feedback);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
   });
 
-  app.post("/api/otp/generate", async (req: Request, res: Response) => {
+  app.get("/api/applications/:id/feedback", async (req: Request, res: Response) => {
     try {
-      const data = generateOtpSchema.parse(req.body);
-      const otp = generateOTP();
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-
-      await storage.createOTP(data.phone, otp, data.purpose, expiresAt);
-
-      console.log(`Generated OTP for ${data.phone}: ${otp}`);
-
-      res.json({ message: "OTP sent successfully", otp });
+      const feedback = await storage.getFeedbackByApplicationId(req.params.id);
+      res.json(feedback);
     } catch (error: any) {
-      res.status(400).json({ error: error.message });
+      res.status(500).json({ error: error.message });
     }
   });
 
-  app.post("/api/otp/verify", async (req: Request, res: Response) => {
+  // Verify OTP route
+  app.post("/api/auth/verify-otp", async (req: Request, res: Response) => {
     try {
       const data = verifyOtpSchema.parse(req.body);
-      // fetch the latest unverified OTP record for this phone/purpose
-      const record = await storage.getOTP(data.phone, data.purpose);
+      let identifier = "";
+      let type: "phone" | "email" = "phone";
 
-      console.log(`OTP verify attempt: phone=${data.phone} purpose=${data.purpose} provided=${data.otp}`);
-      if (record) console.log(`Found OTP record id=${record.id} otp=${record.otp} verified=${record.verified} expiresAt=${record.expiresAt.toISOString()}`);
-
-      if (!record) {
-        return res.status(400).json({ error: "Invalid or expired OTP" });
+      if (data.phone) {
+        identifier = data.phone;
+        type = "phone";
+      } else if (data.email) {
+        identifier = data.email;
+        type = "email";
+      } else {
+        return res.status(400).json({ error: "Phone or email is required" });
       }
+
+      const record = await storage.getLatestOTPRecord(identifier, type, data.purpose);
+      if (!record) {
+        return res.status(400).json({ error: "No OTP record found" });
+      }
+
 
       if (record.expiresAt < new Date()) {
         return res.status(400).json({ error: "OTP expired" });
@@ -436,19 +462,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Issue JWT token after OTP verification. Client should call this after
-  // receiving successful OTP verification for the user's phone/purpose.
+  // receiving successful OTP verification.
   app.post("/api/auth/token", async (req: Request, res: Response) => {
     try {
-      const { username, purpose = "login" } = req.body;
-      if (!username) return res.status(400).json({ error: "username required" });
+      const { username, email, phone, purpose = "login" } = req.body;
+      let user: User | undefined;
 
-      const user = await storage.getUserByUsername(username);
+      if (username) {
+        user = await storage.getUserByUsername(username);
+      } else if (email) {
+        user = await storage.getUserByEmail(email);
+      } else if (phone) {
+        user = await storage.getUserByPhone(phone);
+      }
+
       if (!user) return res.status(404).json({ error: "User not found" });
 
-      if (!user.phone) return res.status(400).json({ error: "No phone registered for user" });
+      // Determine verification method based on what was passed or user data
+      // If phone was passed, check phone OTP. If email/username passed, check email OTP (as per login flow).
+      // However, for robustness, we should check what was actually verified.
+      // The client should probably pass the identifier used for verification.
+
+      let identifier = "";
+      let type: "phone" | "email" = "phone";
+
+      if (phone) {
+        identifier = phone;
+        type = "phone";
+      } else if (email || username) {
+        // For username login, we used email for OTP
+        identifier = user.email;
+        type = "email";
+      }
+
+      if (!identifier) return res.status(400).json({ error: "No verification identifier found" });
 
       // check latest record (may have been verified) for requested purpose
-      const record = await storage.getLatestOTPRecord(user.phone, purpose);
+      const record = await storage.getLatestOTPRecord(identifier, type, purpose);
       if (!record || !record.verified) {
         return res.status(401).json({ error: "OTP not verified" });
       }
@@ -461,6 +511,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { password, ...userWithoutPassword } = user;
       res.json({ user: userWithoutPassword, token });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Password Reset endpoint - updates password after OTP verification
+  app.post("/api/auth/reset-password", async (req: Request, res: Response) => {
+    try {
+      const { email, phone, newPassword } = req.body;
+
+      if (!newPassword || newPassword.length < 6) {
+        return res.status(400).json({ error: "Password must be at least 6 characters" });
+      }
+
+      let user: User | undefined;
+      let identifier = "";
+      let type: "phone" | "email" = "email";
+
+      if (email) {
+        user = await storage.getUserByEmail(email);
+        identifier = email;
+        type = "email";
+      } else if (phone) {
+        user = await storage.getUserByPhone(phone);
+        identifier = phone;
+        type = "phone";
+      }
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Verify that OTP was verified for reset-password purpose
+      const record = await storage.getLatestOTPRecord(identifier, type, "reset-password");
+      if (!record || !record.verified) {
+        return res.status(401).json({ error: "Please verify OTP first" });
+      }
+
+      // Hash new password and update
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await storage.updateUserPassword(user.id, hashedPassword);
+
+      res.json({ message: "Password reset successful" });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }

@@ -4,13 +4,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield } from "lucide-react";
+import { Shield, Phone, Mail, User as UserIcon } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { OTPModal } from "@/components/otp-modal";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { SiGoogle } from "react-icons/si";
 import type { User } from "@shared/schema";
 
 export default function Login() {
@@ -19,10 +22,14 @@ export default function Login() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showOTP, setShowOTP] = useState(false);
-  const [tempUser, setTempUser] = useState<{ user: User; phone: string } | null>(null);
+  const [tempUser, setTempUser] = useState<{ user: User; phone?: string; email?: string; otpMethod?: "phone" | "email" } | null>(null);
+  const [activeTab, setActiveTab] = useState("mobile");
+
   const [formData, setFormData] = useState({
     username: "",
     password: "",
+    phone: "",
+    email: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,18 +37,46 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      const response = await apiRequest<{ user: User; phone: string }>(
+      let payload: any = {};
+
+      if (activeTab === "mobile") {
+        if (!formData.phone) throw new Error("Please enter your mobile number");
+        if (!formData.password) throw new Error("Please enter your password");
+        payload = { phone: formData.phone, password: formData.password };
+      } else {
+        // Email/Username tab
+        if (!formData.username && !formData.email) throw new Error("Please enter username or email");
+        if (!formData.password) throw new Error("Please enter your password");
+
+        // Check if input is email or username
+        if (formData.username.includes("@")) {
+          payload = { email: formData.username, password: formData.password };
+        } else {
+          payload = { username: formData.username, password: formData.password };
+        }
+      }
+
+      const response = await apiRequest<{ user: User; phone?: string; email?: string; otpMethod?: "phone" | "email"; otp?: string }>(
         "POST",
         "/api/auth/login",
-        formData
+        payload
       );
+
+      if (response.otp) {
+        (window as any).LAST_OTP = response.otp;
+        console.log("OTP exposed for testing:", response.otp);
+      }
 
       setTempUser(response);
       setShowOTP(true);
 
+      const otpMessage = response.otpMethod === "email"
+        ? "We've sent an OTP to your email. Kindly check your inbox (and spam folder) and enter the OTP to log in."
+        : "An OTP has been sent to your registered mobile number. Please enter it to continue.";
+
       toast({
-        title: "OTP Sent",
-        description: "Check your phone for the verification code",
+        title: "OTP Sent Successfully",
+        description: otpMessage,
       });
     } catch (error: any) {
       toast({
@@ -56,8 +91,9 @@ export default function Login() {
 
   const handleOTPVerify = async (otp: string): Promise<boolean> => {
     try {
-      await apiRequest<{ message?: string }>("POST", "/api/otp/verify", {
+      await apiRequest<{ message?: string }>("POST", "/api/auth/verify-otp", {
         phone: tempUser?.phone,
+        email: tempUser?.email,
         otp,
         purpose: "login",
       });
@@ -66,7 +102,12 @@ export default function Login() {
       const tokenResp = await apiRequest<{ user: User; token: string }>(
         "POST",
         "/api/auth/token",
-        { username: formData.username }
+        {
+          username: tempUser?.user.username,
+          phone: tempUser?.phone,
+          email: tempUser?.email,
+          purpose: "login"
+        }
       );
 
       // persist auth and update context
@@ -79,7 +120,7 @@ export default function Login() {
       // close OTP modal and clear temp state
       setShowOTP(false);
       setTempUser(null);
-      setFormData({ username: "", password: "" });
+      setFormData({ username: "", password: "", phone: "", email: "" });
 
       // navigate based on role
       const role = tokenResp.user?.role;
@@ -97,6 +138,12 @@ export default function Login() {
       toast({ title: "Verification Failed", description: message, variant: "destructive" });
       return false;
     }
+  };
+
+  const handleGoogleLogin = () => {
+    // Redirect to Google Auth endpoint
+    // Note: This requires backend configuration for Google OAuth
+    window.location.href = "/api/auth/google";
   };
 
   return (
@@ -127,48 +174,108 @@ export default function Login() {
           <p className="text-sm text-muted-foreground">Welcome back! Sign in to your account</p>
         </div>
 
-        <Card className="border border-white/20 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/70 backdrop-blur-2xl shadow-2xl hover:shadow-2xl transition-all duration-300 rounded-3xl w-full max-w-md p-8">
+        <Card className="border border-white/20 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/70 backdrop-blur-2xl shadow-2xl hover:shadow-2xl transition-all duration-300 rounded-3xl w-full max-w-md p-6">
           <div className="flex flex-col items-center justify-center">
             <h2 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 dark:from-green-400 dark:to-blue-400 bg-clip-text text-transparent mb-6">Login</h2>
-            <form onSubmit={handleSubmit} className="space-y-4 w-full bg-white/10 dark:bg-slate-900/20 backdrop-blur-md rounded-2xl p-4">
-              <div className="space-y-2">
-                <Label htmlFor="username" className="text-sm font-semibold">Username</Label>
-                <Input
-                  id="username"
-                  type="text"
-                  placeholder="Enter your username"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  required
-                  data-testid="input-username"
-                  className="border-green-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-green-500 focus:ring-green-500/20 dark:border-green-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-semibold">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required
-                  data-testid="input-password"
-                  className="border-green-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-green-500 focus:ring-green-500/20 dark:border-green-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
-                />
-              </div>
-              <Button
-                type="submit"
-                className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-semibold py-2 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50"
-                disabled={isLoading}
-                data-testid="button-login-submit"
-              >
-                {isLoading ? "Logging in..." : "Login"}
-              </Button>
-            </form>
+
+            <Tabs defaultValue="mobile" value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="mobile" className="flex items-center gap-2">
+                  <Phone className="h-4 w-4" /> Mobile
+                </TabsTrigger>
+                <TabsTrigger value="email" className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" /> Email/User
+                </TabsTrigger>
+              </TabsList>
+
+              <form onSubmit={handleSubmit} className="space-y-4 w-full bg-white/10 dark:bg-slate-900/20 backdrop-blur-md rounded-2xl p-4">
+                <TabsContent value="mobile" className="space-y-4 mt-0">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="text-sm font-semibold">Mobile Number</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="Enter your mobile number"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      required={activeTab === "mobile"}
+                      className="border-green-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-green-500 focus:ring-green-500/20 dark:border-green-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="mobile-password" className="text-sm font-semibold">Password</Label>
+                    <Input
+                      id="mobile-password"
+                      type="password"
+                      placeholder="Enter your password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      required={activeTab === "mobile"}
+                      className="border-green-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-green-500 focus:ring-green-500/20 dark:border-green-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
+                    />
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="email" className="space-y-4 mt-0">
+                  <div className="space-y-2">
+                    <Label htmlFor="username" className="text-sm font-semibold">Username or Email</Label>
+                    <Input
+                      id="username"
+                      type="text"
+                      placeholder="Enter username or email"
+                      value={formData.username}
+                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                      required={activeTab === "email"}
+                      className="border-green-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-green-500 focus:ring-green-500/20 dark:border-green-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password" className="text-sm font-semibold">Password</Label>
+                      <Link href="/forgot-password" className="text-xs text-green-600 dark:text-green-400 hover:underline">
+                        Forgot Password?
+                      </Link>
+                    </div>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="Enter password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      required={activeTab === "email"}
+                      className="border-green-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-green-500 focus:ring-green-500/20 dark:border-green-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
+                    />
+                  </div>
+                </TabsContent>
+
+                <Button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-semibold py-2 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 mt-4"
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Processing..." : (activeTab === "mobile" ? "Send OTP" : "Login")}
+                </Button>
+              </form>
+            </Tabs>
+
+            <div className="w-full flex items-center gap-4 my-4">
+              <Separator className="flex-1" />
+              <span className="text-xs text-muted-foreground">OR</span>
+              <Separator className="flex-1" />
+            </div>
+
+            <Button
+              variant="outline"
+              className="w-full flex items-center gap-2 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+              onClick={handleGoogleLogin}
+            >
+              <SiGoogle className="h-4 w-4" />
+              Continue with Google
+            </Button>
+
             <div className="mt-4 text-center text-sm">
               Don't have an account?{" "}
-              <Link href="/register" className="text-green-600 dark:text-green-400 hover:underline font-semibold" data-testid="link-register">
+              <Link href="/register" className="text-green-600 dark:text-green-400 hover:underline font-semibold">
                 Register
               </Link>
             </div>
@@ -177,7 +284,7 @@ export default function Login() {
 
         <div className="text-center">
           <Link href="/">
-            <Button variant="ghost" size="sm" className="text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400" data-testid="button-back-home">
+            <Button variant="ghost" size="sm" className="text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400">
               Back to Home
             </Button>
           </Link>
@@ -191,10 +298,11 @@ export default function Login() {
           onClose={() => {
             setShowOTP(false);
             setTempUser(null);
-            setFormData({ username: "", password: "" });
+            setFormData({ username: "", password: "", phone: "", email: "" });
           }}
           onVerify={handleOTPVerify}
           phone={tempUser.phone}
+          email={tempUser.email}
           purpose="login"
         />
       )}
