@@ -22,6 +22,7 @@ export default function Login() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showOTP, setShowOTP] = useState(false);
+<<<<<<< HEAD
   const [tempUser, setTempUser] = useState<{ user: User; phone?: string; email?: string; otpMethod?: "phone" | "email" } | null>(null);
   const [activeTab, setActiveTab] = useState("mobile");
 
@@ -30,6 +31,13 @@ export default function Login() {
     password: "",
     phone: "",
     email: "",
+=======
+  const [tempUser, setTempUser] = useState<{ user: User; recipient: string } | null>(null);
+  const [formData, setFormData] = useState({
+    username: "",
+    password: "",
+    role: "citizen",
+>>>>>>> e521b45e5e9f988fe7945c688af4ed3bec9b205d
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,6 +45,7 @@ export default function Login() {
     setIsLoading(true);
 
     try {
+<<<<<<< HEAD
       let payload: any = {};
 
       if (activeTab === "mobile") {
@@ -67,6 +76,15 @@ export default function Login() {
         console.log("OTP exposed for testing:", response.otp);
       }
 
+=======
+      // Role is for UI/local purposes only; login API takes username/password
+      const { username, password } = formData;
+      const response = await apiRequest<{ user: User; recipient: string }>(
+        "POST",
+        "/api/auth/login",
+        { username, password }
+      );
+>>>>>>> e521b45e5e9f988fe7945c688af4ed3bec9b205d
       setTempUser(response);
       setShowOTP(true);
 
@@ -75,8 +93,13 @@ export default function Login() {
         : "An OTP has been sent to your registered mobile number. Please enter it to continue.";
 
       toast({
+<<<<<<< HEAD
         title: "OTP Sent Successfully",
         description: otpMessage,
+=======
+        title: "OTP Sent",
+        description: "Check your email or phone for the verification code",
+>>>>>>> e521b45e5e9f988fe7945c688af4ed3bec9b205d
       });
     } catch (error: any) {
       toast({
@@ -91,9 +114,14 @@ export default function Login() {
 
   const handleOTPVerify = async (otp: string): Promise<boolean> => {
     try {
+<<<<<<< HEAD
       await apiRequest<{ message?: string }>("POST", "/api/auth/verify-otp", {
         phone: tempUser?.phone,
         email: tempUser?.email,
+=======
+      await apiRequest<{ message?: string }>("POST", "/api/otp/verify", {
+        recipient: tempUser?.recipient,
+>>>>>>> e521b45e5e9f988fe7945c688af4ed3bec9b205d
         otp,
         purpose: "login",
       });
@@ -120,7 +148,11 @@ export default function Login() {
       // close OTP modal and clear temp state
       setShowOTP(false);
       setTempUser(null);
+<<<<<<< HEAD
       setFormData({ username: "", password: "", phone: "", email: "" });
+=======
+      setFormData({ username: "", password: "", role: "citizen" });
+>>>>>>> e521b45e5e9f988fe7945c688af4ed3bec9b205d
 
       // navigate based on role
       const role = tokenResp.user?.role;
@@ -177,6 +209,7 @@ export default function Login() {
         <Card className="border border-white/20 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/70 backdrop-blur-2xl shadow-2xl hover:shadow-2xl transition-all duration-300 rounded-3xl w-full max-w-md p-6">
           <div className="flex flex-col items-center justify-center">
             <h2 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 dark:from-green-400 dark:to-blue-400 bg-clip-text text-transparent mb-6">Login</h2>
+<<<<<<< HEAD
 
             <Tabs defaultValue="mobile" value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6">
@@ -273,6 +306,58 @@ export default function Login() {
               Continue with Google
             </Button>
 
+=======
+            <form onSubmit={handleSubmit} className="space-y-4 w-full bg-white/10 dark:bg-slate-900/20 backdrop-blur-md rounded-2xl p-4">
+              <div className="space-y-2">
+                <Label htmlFor="username" className="text-sm font-semibold">Username</Label>
+                <Input
+                  id="username"
+                  type="text"
+                  placeholder="Enter your username"
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  required
+                  data-testid="input-username"
+                  className="border-green-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-green-500 focus:ring-green-500/20 dark:border-green-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-sm font-semibold">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  required
+                  data-testid="input-password"
+                  className="border-green-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-green-500 focus:ring-green-500/20 dark:border-green-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="role" className="text-sm font-semibold">Login As</Label>
+                <select
+                  aria-label="Select login role"
+                  id="role"
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  className="w-full border-green-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-green-500 focus:ring-green-500/20 dark:border-green-800/30 dark:focus:bg-slate-900/40 rounded-md p-2"
+                >
+                  <option value="citizen">Citizen</option>
+                  <option value="official">Official</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+              <Button
+                type="submit"
+                className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-semibold py-2 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50"
+                disabled={isLoading}
+                data-testid="button-login-submit"
+              >
+                {isLoading ? "Logging in..." : "Login"}
+              </Button>
+            </form>
+>>>>>>> e521b45e5e9f988fe7945c688af4ed3bec9b205d
             <div className="mt-4 text-center text-sm">
               Don't have an account?{" "}
               <Link href="/register" className="text-green-600 dark:text-green-400 hover:underline font-semibold">
@@ -298,11 +383,18 @@ export default function Login() {
           onClose={() => {
             setShowOTP(false);
             setTempUser(null);
+<<<<<<< HEAD
             setFormData({ username: "", password: "", phone: "", email: "" });
           }}
           onVerify={handleOTPVerify}
           phone={tempUser.phone}
           email={tempUser.email}
+=======
+            setFormData({ username: "", password: "", role: "citizen" });
+          }}
+          onVerify={handleOTPVerify}
+          recipient={tempUser.recipient}
+>>>>>>> e521b45e5e9f988fe7945c688af4ed3bec9b205d
           purpose="login"
         />
       )}

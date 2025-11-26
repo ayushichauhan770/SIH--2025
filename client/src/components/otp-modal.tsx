@@ -10,12 +10,20 @@ interface OTPModalProps {
   open: boolean;
   onClose: () => void;
   onVerify: (otp: string) => Promise<boolean>;
+<<<<<<< HEAD
   phone?: string;
   email?: string;
   purpose: string;
 }
 
 export function OTPModal({ open, onClose, onVerify, phone, email, purpose }: OTPModalProps) {
+=======
+  recipient: string;
+  purpose: string;
+}
+
+export function OTPModal({ open, onClose, onVerify, recipient, purpose }: OTPModalProps) {
+>>>>>>> e521b45e5e9f988fe7945c688af4ed3bec9b205d
   const [otp, setOtp] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -97,8 +105,19 @@ export function OTPModal({ open, onClose, onVerify, phone, email, purpose }: OTP
   const handleResend = async () => {
     if (resendCooldown > 0) return;
     try {
+<<<<<<< HEAD
       await apiRequest("POST", "/api/otp/generate", { phone, email, purpose });
       toast({ title: "OTP Resent", description: `A new code was sent to your ${email ? "email" : "phone"}.` });
+=======
+      const sendToMain = (import.meta as any).env?.VITE_OTP_ROUTE_TO_MAIN === "true";
+      await apiRequest("POST", "/api/otp/generate", { recipient, purpose, sendToMain });
+      toast({
+        title: "OTP Resent",
+        description: sendToMain
+          ? "A new code was sent to the main recipient."
+          : "A new code was sent to your email or phone.",
+      });
+>>>>>>> e521b45e5e9f988fe7945c688af4ed3bec9b205d
       setResendCooldown(30);
       if (cooldownRef.current) window.clearInterval(cooldownRef.current);
       cooldownRef.current = window.setInterval(() => {
@@ -134,7 +153,16 @@ export function OTPModal({ open, onClose, onVerify, phone, email, purpose }: OTP
             <DialogHeader>
               <DialogTitle className="text-white">Verify OTP</DialogTitle>
               <DialogDescription className="text-white/90">
+<<<<<<< HEAD
                 Enter the 6-digit code sent to {email ? email : phone?.replace(/(\d{3})\d{4}(\d{3})/, "$1****$2")}
+=======
+                Enter the 6-digit code sent to {recipient.includes("@") ?
+                  // mask email like jo***@domain.com
+                  recipient.replace(/(.{2})(.*)(@.*)/, (_, a, _b, c) => `${a}***${c}`) :
+                  // mask phone like 123****456
+                  recipient.replace(/(\d{3})\d{4}(\d{3})/, "$1****$2")
+                }
+>>>>>>> e521b45e5e9f988fe7945c688af4ed3bec9b205d
               </DialogDescription>
             </DialogHeader>
           </div>

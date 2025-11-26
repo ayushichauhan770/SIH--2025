@@ -83,8 +83,8 @@ FEEDBACK
   GET    /api/feedback/:applicationId - Get feedback for application
 
 OTP VERIFICATION
-  POST   /api/otp/generate           - Generate OTP for feedback
-  POST   /api/otp/verify             - Verify OTP code
+  POST   /api/otp/generate           - Generate OTP (body: { recipient: string, purpose: string, sendToMain?: boolean })
+  POST   /api/otp/verify             - Verify OTP (body: { recipient: string, otp: string, purpose: string })
 
 APPLICATION WORKFLOW
 ================================================================================
@@ -150,6 +150,10 @@ ENVIRONMENT VARIABLES
 SESSION_SECRET : JWT signing secret (set in Replit secrets)
 NODE_ENV       : development | production (auto-set by npm scripts)
 PORT           : 5000 (default)
+OTP_MAIN_TARGET : optional, central recipient for OTP routing (phone number, e.g., +15555551234, or email address, e.g., ops@example.com)
+OTP_ROUTE_TO_MAIN : optional boolean, set to 'true' to route OTP deliveries to OTP_MAIN_TARGET
+TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM : optional Twilio SMS settings to send real SMS messages; otherwise OTPs are logged to the console
+SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, FROM_EMAIL : optional SMTP configuration to send OTP emails with nodemailer
 
 COMMON COMMANDS
 ================================================================================

@@ -146,8 +146,20 @@ POST /api/feedback
 GET /api/feedback/:applicationId
 
 OTP:
-POST /api/otp/generate
-POST /api/otp/verify
+POST /api/otp/generate  - Accepts { recipient: string, purpose: string, sendToMain?: boolean }
+POST /api/otp/verify    - Accepts { recipient: string, otp: string, purpose: string }
+
+OTP Delivery Configuration
+-------------------------
+The server supports an optional "main" OTP delivery target. Configure these environment variables to route OTPs to a central phone (useful for testing or a central operator):
+
+- `OTP_MAIN_TARGET` - Phone number to receive OTPs when routing is enabled (e.g., +15555551234)
+- `OTP_ROUTE_TO_MAIN` - If set to `true`, OTP deliveries will be routed to `OTP_MAIN_TARGET` instead of the user's phone.
+- `VITE_OTP_ROUTE_TO_MAIN` - (Client side) In development, set this to `true` to make the client request OTPs with the `sendToMain` flag.
+- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` - Optional: When set, the server will send SMS using Twilio; otherwise it logs OTP to console.
+- Email/Sending via SMTP: Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and optional `FROM_EMAIL` to enable sending OTPs via Email using `nodemailer`.
+
+When using a main target, the OTP is still stored under the user's recipient record (email or phone) for verification. The main target acts only as the delivery recipient, not the verification identity.
 
 Notifications:
 GET /api/notifications

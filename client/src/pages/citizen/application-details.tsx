@@ -12,6 +12,7 @@ import { OTPModal } from "@/components/otp-modal";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { useAuth } from "@/contexts/auth-context";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Application, ApplicationHistory, BlockchainHash, Feedback } from "@shared/schema";
 
@@ -19,6 +20,7 @@ export default function ApplicationDetails() {
   const [, params] = useRoute("/citizen/application/:id");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [showOTPModal, setShowOTPModal] = useState(false);
   const [pendingFeedback, setPendingFeedback] = useState<{ rating: number; comment: string } | null>(null);
 
@@ -60,8 +62,13 @@ export default function ApplicationDetails() {
 
   const verifyOTPMutation = useMutation({
     mutationFn: async (otp: string) => {
+<<<<<<< HEAD
       return await apiRequest("POST", "/api/auth/verify-otp", {
         phone: "temp-phone",
+=======
+      return await apiRequest("POST", "/api/otp/verify", {
+        recipient: user?.email || user?.phone,
+>>>>>>> e521b45e5e9f988fe7945c688af4ed3bec9b205d
         otp,
         purpose: "feedback",
       });
@@ -243,11 +250,11 @@ export default function ApplicationDetails() {
         )}
       </main>
 
-      <OTPModal
+        <OTPModal
         open={showOTPModal}
         onClose={() => setShowOTPModal(false)}
         onVerify={handleVerifyOTP}
-        phone="1234567890"
+          recipient={user?.email || user?.phone || ""}
         purpose="feedback"
       />
     </div>

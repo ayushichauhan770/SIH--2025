@@ -48,6 +48,58 @@ function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+async function sendSMS(targetPhone: string, message: string) {
+  // Prefer Twilio if configured; otherwise fall back to console logging
+  const TWILIO_SID = process.env.TWILIO_ACCOUNT_SID;
+  const TWILIO_TOKEN = process.env.TWILIO_AUTH_TOKEN;
+  const TWILIO_FROM = process.env.TWILIO_FROM;
+
+  if (targetPhone.includes("@")) {
+    // treat as email
+    const SMTP_HOST = process.env.SMTP_HOST;
+    const SMTP_PORT = Number(process.env.SMTP_PORT || "587");
+    const SMTP_USER = process.env.SMTP_USER;
+    const SMTP_PASS = process.env.SMTP_PASS;
+    const FROM_EMAIL = process.env.FROM_EMAIL || process.env.TWILIO_FROM || "no-reply@example.com";
+
+    if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
+      try {
+        // @ts-ignore optional dependency
+        const nodemailer = (await import("nodemailer")) as any;
+        const transporter = nodemailer.createTransport({
+          host: SMTP_HOST,
+          port: SMTP_PORT,
+          secure: SMTP_PORT === 465,
+          auth: { user: SMTP_USER, pass: SMTP_PASS },
+        });
+        await transporter.sendMail({ from: FROM_EMAIL, to: targetPhone, subject: "Your OTP Code", text: message });
+        console.log(`Sent email OTP to ${targetPhone}`);
+        return;
+      } catch (err) {
+        console.error("Email send failed, falling back to console: ", err);
+      }
+    }
+  }
+
+  if (TWILIO_SID && TWILIO_TOKEN && TWILIO_FROM) {
+    try {
+      // dynamic import so that the dependency is optional in dev environments
+      // dynamic import - allow missing types in environments without Twilio installed
+      // @ts-ignore - optional dependency
+      const TwilioModule = await import("twilio");
+      const Twilio = (TwilioModule as any).default as any;
+      const client = Twilio(TWILIO_SID, TWILIO_TOKEN) as any;
+      await client.messages.create({ from: TWILIO_FROM, to: targetPhone, body: message });
+      console.log(`Sent SMS via Twilio to ${targetPhone}`);
+    } catch (err) {
+      console.error("Twilio send failed, falling back to console: ", err);
+      console.log(`OTP for ${targetPhone}: ${message}`);
+    }
+  } else {
+    console.log(`OTP for ${targetPhone}: ${message}`);
+  }
+}
+
 class AIMonitoringService {
   async checkDelays() {
     const applications = await storage.getAllApplications();
@@ -170,6 +222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { password, ...userWithoutPassword } = user;
 
+<<<<<<< HEAD
       // If email provided, use two-step verification: generate OTP and return email
       if (user.email) {
         const otp = generateOTP();
@@ -190,6 +243,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           otpMethod: "email",
           ...(isDev ? { otp } : {})
         });
+=======
+      // If phone provided, use two-step verification: generate OTP and return phone
+      // Client should complete OTP verification and then call /api/auth/token with purpose='register'
+
+      // If user has a phone or email, use that as the default recipient.
+      const defaultRecipient = (user.email || user.phone) as string;
+      if (defaultRecipient) {
+        const otp = generateOTP();
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+        await storage.createOTP(defaultRecipient, otp, "register", expiresAt);
+
+        const routeToMain = process.env.OTP_ROUTE_TO_MAIN === "true";
+        const mainTarget = process.env.OTP_MAIN_TARGET;
+        const deliverTo = routeToMain && mainTarget ? mainTarget : defaultRecipient;
+        const deliveryMessage = `Your register OTP is ${otp}. It will expire in 10 minutes.`;
+          if (deliverTo) await sendSMS(deliverTo, deliveryMessage);
+
+        console.log(`Generated register OTP for ${defaultRecipient}: ${otp} (delivered to ${deliverTo})`);
+
+        return res.json({ user: userWithoutPassword, recipient: defaultRecipient, ...(isDev ? { otp } : {}) });
+>>>>>>> e521b45e5e9f988fe7945c688af4ed3bec9b205d
       }
 
       // no phone or email -> issue token immediately
@@ -229,10 +303,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         // If no password provided, proceed with OTP-only login
 
+<<<<<<< HEAD
+=======
+      // If user has a phone number registered, use two-step (password + OTP) flow.
+      // Generate and store OTP for purpose 'login' and return the phone (no token).
+      // If no phone is available, fall back to issuing a token for backward compatibility.
+      const { password, ...userWithoutPassword } = user;
+
+      if (user.phone || user.email) {
+        const defaultRecipient = (user.email || user.phone) as string;
+>>>>>>> e521b45e5e9f988fe7945c688af4ed3bec9b205d
         const otp = generateOTP();
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
         await storage.createOTP(user.phone!, "phone", otp, "login", expiresAt);
 
+<<<<<<< HEAD
         // Send OTP via SMS
         try {
           await sendSMSOTP(user.phone!, otp, "login");
@@ -248,6 +333,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           otpMethod: "phone",
           ...(isDev ? { otp } : {})
         });
+=======
+        await storage.createOTP(defaultRecipient, otp, "login", expiresAt);
+        const routeToMain = process.env.OTP_ROUTE_TO_MAIN === "true";
+        const mainTarget = process.env.OTP_MAIN_TARGET;
+        const deliverTo = routeToMain && mainTarget ? mainTarget : defaultRecipient;
+        const deliveryMessage = `Your login OTP is ${otp}. It will expire in 10 minutes.`;
+          if (deliverTo) await sendSMS(deliverTo, deliveryMessage);
+        console.log(`Generated login OTP for ${defaultRecipient}: ${otp} (delivered to ${deliverTo})`);
+
+        // Return user (without password) and phone so client can show OTP modal
+        // In dev mode, include the OTP in the response to simplify local testing.
+        return res.json({ user: userWithoutPassword, recipient: defaultRecipient, ...(isDev ? { otp } : {}) });
+>>>>>>> e521b45e5e9f988fe7945c688af4ed3bec9b205d
       }
 
       // 2. Username/Email Login
@@ -415,8 +513,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/applications/:id/feedback", async (req: Request, res: Response) => {
     try {
+<<<<<<< HEAD
       const feedback = await storage.getFeedbackByApplicationId(req.params.id);
       res.json(feedback);
+=======
+      const data = generateOtpSchema.parse(req.body);
+      const otp = generateOTP();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+      await storage.createOTP(data.recipient, otp, data.purpose, expiresAt);
+
+      const routeToMain = (data as any).sendToMain || process.env.OTP_ROUTE_TO_MAIN === "true";
+      const mainTarget = process.env.OTP_MAIN_TARGET;
+      const deliverTo = routeToMain && mainTarget ? mainTarget : data.recipient;
+      const deliveryMessage = `Your ${data.purpose} OTP is ${otp}. It will expire in 10 minutes.`;
+
+      // attempt to deliver SMS (Twilio or console fallback)
+        if (deliverTo) await sendSMS(deliverTo, deliveryMessage);
+
+      console.log(`Generated OTP for ${data.recipient}: ${otp} (delivered to ${deliverTo})`);
+
+      res.json({ message: "OTP sent successfully", otp });
+>>>>>>> e521b45e5e9f988fe7945c688af4ed3bec9b205d
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -426,6 +544,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/verify-otp", async (req: Request, res: Response) => {
     try {
       const data = verifyOtpSchema.parse(req.body);
+<<<<<<< HEAD
       let identifier = "";
       let type: "phone" | "email" = "phone";
 
@@ -437,6 +556,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type = "email";
       } else {
         return res.status(400).json({ error: "Phone or email is required" });
+=======
+      // fetch the latest unverified OTP record for this phone/purpose
+      const record = await storage.getOTP(data.recipient, data.purpose);
+
+      console.log(`OTP verify attempt: recipient=${data.recipient} purpose=${data.purpose} provided=${data.otp}`);
+      if (record) console.log(`Found OTP record id=${record.id} otp=${record.otp} verified=${record.verified} expiresAt=${record.expiresAt.toISOString()}`);
+
+      if (!record) {
+        return res.status(400).json({ error: "Invalid or expired OTP" });
+>>>>>>> e521b45e5e9f988fe7945c688af4ed3bec9b205d
       }
 
       const record = await storage.getLatestOTPRecord(identifier, type, data.purpose);
@@ -478,6 +607,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!user) return res.status(404).json({ error: "User not found" });
 
+<<<<<<< HEAD
       // Determine verification method based on what was passed or user data
       // If phone was passed, check phone OTP. If email/username passed, check email OTP (as per login flow).
       // However, for robustness, we should check what was actually verified.
@@ -500,6 +630,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // check latest record (may have been verified) for requested purpose
       const record = await storage.getLatestOTPRecord(identifier, type, purpose);
       if (!record || !record.verified) {
+=======
+      if (!user.phone && !user.email) return res.status(400).json({ error: "No phone or email registered for user" });
+
+      // check latest record (may have been verified) for requested purpose - look up by email then phone
+      const candidates: string[] = [];
+      if (user.email) candidates.push(user.email);
+      if (user.phone) candidates.push(user.phone);
+      let anyVerified = false;
+      for (const r of candidates) {
+        const rec = await storage.getLatestOTPRecord(r, purpose);
+        if (rec && rec.verified) { anyVerified = true; break; }
+      }
+      if (!anyVerified) {
+>>>>>>> e521b45e5e9f988fe7945c688af4ed3bec9b205d
         return res.status(401).json({ error: "OTP not verified" });
       }
 
