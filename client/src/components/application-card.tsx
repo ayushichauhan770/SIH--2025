@@ -68,6 +68,14 @@ export function ApplicationCard({ application, onViewDetails, showActions, onAcc
           </p>
         </div>
         <div className="flex flex-wrap gap-1">
+          {(application.escalationLevel || 0) > 0 && (
+            <div className="flex items-center justify-center mr-1" title="Escalated Application">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+              </span>
+            </div>
+          )}
           <Badge className={`${statusColors[application.status]} shadow-sm`} data-testid={`badge-status-${application.status.toLowerCase().replace(/\s+/g, '-')}`}>
             {application.status}
           </Badge>
@@ -103,6 +111,12 @@ export function ApplicationCard({ application, onViewDetails, showActions, onAcc
             <div className="flex items-center gap-1">
               <FileImage className="h-3 w-3" />
               <span>Image</span>
+            </div>
+          )}
+          {(application as any).rating && (
+            <div className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400 font-medium">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-star"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
+              <span>{(application as any).rating}/5</span>
             </div>
           )}
         </div>

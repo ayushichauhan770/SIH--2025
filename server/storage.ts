@@ -32,16 +32,21 @@ export interface IStorage {
 
   getUserApplications(citizenId: string): Promise<Application[]>;
   getOfficialApplications(officialId?: string): Promise<Application[]>;
+  getUnassignedApplicationsByDepartment(department: string): Promise<Application[]>;
   getAllOfficials(): Promise<User[]>;
   getAllApplications(): Promise<Application[]>;
   updateApplicationStatus(id: string, status: string, updatedBy: string, comment?: string): Promise<Application>;
   assignApplication(id: string, officialId: string): Promise<Application>;
+  getOfficialCurrentWorkload(officialId: string): Promise<number>;
+  getLastAssignmentTime(officialId: string): Promise<Date | null>;
 
   addApplicationHistory(applicationId: string, status: string, updatedBy: string, comment?: string): Promise<ApplicationHistory>;
   getApplicationHistory(applicationId: string): Promise<ApplicationHistory[]>;
 
   createFeedback(feedback: InsertFeedback): Promise<Feedback>;
+  updateFeedback(id: string, rating: number, comment?: string): Promise<Feedback>;
   getFeedbackByApplicationId(applicationId: string): Promise<Feedback | undefined>;
+  getFeedbackByApplicationAndOfficialId(applicationId: string, officialId: string): Promise<Feedback | undefined>;
   getOfficialRatings(officialId: string): Promise<Feedback[]>;
   verifyFeedback(id: string): Promise<void>;
 
@@ -65,6 +70,7 @@ export interface IStorage {
 
   createWarning(warning: InsertWarning): Promise<Warning>;
   getWarnings(officialId: string): Promise<Warning[]>;
+  markWarningAsRead(id: string): Promise<void>;
 
   updateUserStats(userId: string, rating: number, solvedCount: number, assignedCount: number): Promise<User>;
   updateApplicationEscalation(id: string, escalationLevel: number, officialId: string): Promise<Application>;
@@ -94,73 +100,12 @@ export class MemStorage implements IStorage {
     this.departments = new Map();
     this.warnings = new Map();
 
-    // Load persisted data on startup
-    this.loadFromDisk();
+    // Persistence disabled as per user request
+    // this.loadFromDisk();
   }
 
-  private async loadFromDisk() {
-
-
-    try {
-      if (!fs.existsSync(this.dataDir)) {
-        console.log('📁 No persisted data found, starting fresh');
-        return;
-      }
-
-      const loadMap = (filename: string, map: Map<any, any>) => {
-        const filepath = path.join(this.dataDir, filename);
-        if (fs.existsSync(filepath)) {
-          const data = JSON.parse(fs.readFileSync(filepath, 'utf-8'));
-          Object.entries(data).forEach(([key, value]) => {
-            map.set(key, value);
-          });
-          console.log(`✅ Loaded ${map.size} items from ${filename}`);
-        }
-      };
-
-      loadMap('users.json', this.users);
-      loadMap('applications.json', this.applications);
-      loadMap('applicationHistory.json', this.applicationHistory);
-      loadMap('feedback.json', this.feedback);
-      loadMap('blockchainHashes.json', this.blockchainHashes);
-      loadMap('notifications.json', this.notifications);
-      loadMap('departments.json', this.departments);
-      loadMap('warnings.json', this.warnings);
-      // Don't load OTP records as they should expire
-
-      console.log('💾 Data loaded from disk successfully');
-    } catch (error) {
-      console.error('⚠️  Error loading data from disk:', error);
-    }
-  }
-
-  private async saveToDisk() {
-
-
-    try {
-      if (!fs.existsSync(this.dataDir)) {
-        fs.mkdirSync(this.dataDir, { recursive: true });
-      }
-
-      const saveMap = (filename: string, map: Map<any, any>) => {
-        const filepath = path.join(this.dataDir, filename);
-        const data = Object.fromEntries(map.entries());
-        fs.writeFileSync(filepath, JSON.stringify(data, null, 2));
-      };
-
-      saveMap('users.json', this.users);
-      saveMap('applications.json', this.applications);
-      saveMap('applicationHistory.json', this.applicationHistory);
-      saveMap('feedback.json', this.feedback);
-      saveMap('blockchainHashes.json', this.blockchainHashes);
-      saveMap('notifications.json', this.notifications);
-      saveMap('departments.json', this.departments);
-      saveMap('warnings.json', this.warnings);
-      // Don't save OTP records for security
-    } catch (error) {
-      console.error('⚠️  Error saving data to disk:', error);
-    }
-  }
+  // private loadFromDisk() { ... }
+  // private async saveToDisk() { ... }
 
   async getUser(id: string): Promise<User | undefined> {
     return this.users.get(id);
@@ -204,7 +149,7 @@ export class MemStorage implements IStorage {
       id,
     };
     this.users.set(id, user);
-    await this.saveToDisk();
+    // await this.saveToDisk();
     return user;
   }
 
@@ -212,7 +157,7 @@ export class MemStorage implements IStorage {
     const user = this.users.get(id);
     if (!user) throw new Error("User not found");
     this.users.set(id, { ...user, password });
-    await this.saveToDisk();
+    // await this.saveToDisk();
   }
 
   async createApplication(insertApplication: InsertApplication): Promise<Application> {
@@ -251,7 +196,7 @@ export class MemStorage implements IStorage {
 
     this.applications.set(id, application);
     await this.addApplicationHistory(id, "Submitted", insertApplication.citizenId, "Application submitted");
-    await this.saveToDisk();
+    // await this.saveToDisk();
     return application;
   }
 
@@ -271,32 +216,44 @@ export class MemStorage implements IStorage {
 
   async getOfficialApplications(officialId?: string): Promise<Application[]> {
     if (officialId) {
-      // Get the official's department
-      const official = await this.getUser(officialId);
-      let officialDept = official?.department;
-
-      // Normalize official department to match application department format (prefix only)
-      if (officialDept && officialDept.includes("–")) {
-        const match = officialDept.match(/^([^–]+)/);
-        if (match) {
-          officialDept = match[1].trim();
-        }
-      }
-
       return Array.from(this.applications.values())
-        .filter(app => {
-          // Show applications assigned to this official
-          if (app.officialId === officialId) return true;
-
-          // Show unassigned applications matching official's department
-          if (app.status === "Submitted" && officialDept) {
-            return app.department === officialDept;
-          }
-
-          return false;
-        });
+        .filter(app => app.officialId === officialId)
+        .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
     }
     return Array.from(this.applications.values());
+  }
+
+  async getUnassignedApplicationsByDepartment(department: string): Promise<Application[]> {
+    // Normalize department name (handle "Health – Ministry..." vs "Health")
+    const normalizedDept = department.split('–')[0].trim();
+
+    return Array.from(this.applications.values())
+      .filter(app => {
+        // Only unassigned applications (status is "Submitted" and no officialId)
+        if (app.status !== "Submitted" || app.officialId !== null) {
+          return false;
+        }
+
+        // Match department
+        if (!app.department) return false;
+        const appDept = app.department.split('–')[0].trim();
+        return appDept === normalizedDept;
+      })
+      .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+  }
+
+  async getOfficialCurrentWorkload(officialId: string): Promise<number> {
+    return Array.from(this.applications.values())
+      .filter(app => app.officialId === officialId && ["Assigned", "In Progress"].includes(app.status))
+      .length;
+  }
+
+  async getLastAssignmentTime(officialId: string): Promise<Date | null> {
+    const apps = Array.from(this.applications.values())
+      .filter(app => app.officialId === officialId && app.assignedAt)
+      .sort((a, b) => new Date(b.assignedAt!).getTime() - new Date(a.assignedAt!).getTime());
+
+    return apps.length > 0 ? apps[0].assignedAt : null;
   }
 
   async getAllOfficials(): Promise<User[]> {
@@ -328,7 +285,7 @@ export class MemStorage implements IStorage {
       await this.createBlockchainHash(id, hash, blockNumber);
     }
 
-    await this.saveToDisk();
+    // await this.saveToDisk();
     return updated;
   }
 
@@ -346,7 +303,7 @@ export class MemStorage implements IStorage {
 
     this.applications.set(id, updated);
     await this.addApplicationHistory(id, "Assigned", officialId, "Application assigned to official");
-    await this.saveToDisk();
+    // await this.saveToDisk();
     return updated;
   }
 
@@ -385,12 +342,29 @@ export class MemStorage implements IStorage {
     };
 
     this.feedback.set(id, feedback);
-    await this.saveToDisk();
+    // await this.saveToDisk();
     return feedback;
+  }
+
+  async updateFeedback(id: string, rating: number, comment?: string): Promise<Feedback> {
+    const feedback = this.feedback.get(id);
+    if (!feedback) throw new Error("Feedback not found");
+
+    const updated: Feedback = {
+      ...feedback,
+      rating,
+      comment: comment ?? feedback.comment,
+    };
+    this.feedback.set(id, updated);
+    return updated;
   }
 
   async getFeedbackByApplicationId(applicationId: string): Promise<Feedback | undefined> {
     return Array.from(this.feedback.values()).find(f => f.applicationId === applicationId);
+  }
+
+  async getFeedbackByApplicationAndOfficialId(applicationId: string, officialId: string): Promise<Feedback | undefined> {
+    return Array.from(this.feedback.values()).find(f => f.applicationId === applicationId && f.officialId === officialId);
   }
 
   async getOfficialRatings(officialId: string): Promise<Feedback[]> {
@@ -505,7 +479,7 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
     };
     this.departments.set(id, department);
-    await this.saveToDisk();
+    // await this.saveToDisk();
     return department;
   }
 
@@ -526,7 +500,7 @@ export class MemStorage implements IStorage {
       read: false,
     };
     this.warnings.set(id, warning);
-    await this.saveToDisk();
+    // await this.saveToDisk();
     return warning;
   }
 
@@ -536,12 +510,19 @@ export class MemStorage implements IStorage {
       .sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime());
   }
 
+  async markWarningAsRead(id: string): Promise<void> {
+    const warning = this.warnings.get(id);
+    if (warning) {
+      this.warnings.set(id, { ...warning, read: true });
+    }
+  }
+
   async updateUserStats(userId: string, rating: number, solvedCount: number, assignedCount: number): Promise<User> {
     const user = this.users.get(userId);
     if (!user) throw new Error("User not found");
     const updated = { ...user, rating, solvedCount, assignedCount };
     this.users.set(userId, updated);
-    await this.saveToDisk();
+    // await this.saveToDisk();
     return updated;
   }
 
@@ -557,7 +538,7 @@ export class MemStorage implements IStorage {
       lastUpdatedAt: new Date(),
     };
     this.applications.set(id, updated);
-    await this.saveToDisk();
+    // await this.saveToDisk();
     return updated;
   }
 
@@ -570,7 +551,7 @@ export class MemStorage implements IStorage {
       lastUpdatedAt: new Date(),
     };
     this.applications.set(id, updated);
-    await this.saveToDisk();
+    // await this.saveToDisk();
     return updated;
   }
 

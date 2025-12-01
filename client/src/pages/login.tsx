@@ -111,8 +111,8 @@ export default function Login() {
       );
 
       // persist auth and update context
-      localStorage.setItem("user", JSON.stringify(tokenResp.user));
-      localStorage.setItem("token", tokenResp.token);
+      sessionStorage.setItem("user", JSON.stringify(tokenResp.user));
+      sessionStorage.setItem("token", tokenResp.token);
       setUser(tokenResp.user);
 
       toast({ title: "Welcome back!", description: "Logged in successfully" });

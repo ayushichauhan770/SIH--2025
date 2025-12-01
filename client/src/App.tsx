@@ -14,9 +14,14 @@ import TrackApplication from "@/pages/citizen/track-application";
 import ApplicationDetails from "@/pages/citizen/application-details";
 import OfficialDashboard from "@/pages/official/dashboard";
 import AdminDashboard from "@/pages/admin/dashboard";
+import { SessionGuard } from "@/components/session-guard";
 
 function ProtectedRoute({ component: Component, allowedRoles }: { component: React.ComponentType; allowedRoles: string[] }) {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
 
   if (!user) {
     return <Redirect to="/login" />;
@@ -42,6 +47,7 @@ function Router() {
       <Route path="/citizen/submit">
         {() => <ProtectedRoute component={SubmitApplication} allowedRoles={["citizen"]} />}
       </Route>
+      <Route path="/track" component={TrackApplication} />
       <Route path="/citizen/track">
         {() => <ProtectedRoute component={TrackApplication} allowedRoles={["citizen"]} />}
       </Route>
@@ -66,6 +72,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <SessionGuard />
         <TooltipProvider>
           <Toaster />
           <Router />

@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { loginSchema, insertUserSchema, insertApplicationSchema, updateApplicationStatusSchema, insertFeedbackSchema, verifyOtpSchema, generateOtpSchema, insertDepartmentSchema, insertWarningSchema } from "@shared/schema";
-import type { User } from "@shared/schema";
+import type { User, Application } from "@shared/schema";
 import { sendEmailOTP, verifyEmailConfig } from "./email-service";
 import { sendSMSOTP } from "./sms-service";
 
@@ -169,7 +169,7 @@ const aiService = new AIMonitoringService();
 async function autoAssignApplication(applicationId: string, departmentName: string, escalationLevel: number = 0) {
   const officials = await storage.getAllOfficials();
 
-  // Filter by department
+  // 1. Filter by Department
   // Normalize department names (handle "Health – Ministry..." vs "Health")
   const deptOfficials = officials.filter(u => {
     if (!u.department) return false;
@@ -178,44 +178,50 @@ async function autoAssignApplication(applicationId: string, departmentName: stri
     return uDept === appDept;
   });
 
-  if (deptOfficials.length === 0) return null;
-
-  // Determine rating range based on escalation level
-  let minRating = 0;
-  let maxRating = 5;
-
-  if (escalationLevel === 0) {
-    minRating = 0;
-    maxRating = 2.9; // 1-2 (allowing 0 for new officials)
-  } else if (escalationLevel === 1) {
-    minRating = 2.0; // Overlap slightly to ensure coverage
-    maxRating = 3.9; // 2-3
-  } else {
-    minRating = 3.0;
-    maxRating = 5.0; // 4-5
+  if (deptOfficials.length === 0) {
+    console.log(`No officials available for department: ${departmentName}`);
+    return null;
   }
 
-  // Filter by rating
-  let eligibleOfficials = deptOfficials.filter(u => {
-    const rating = u.rating || 0;
-    return rating >= minRating && rating <= maxRating;
+  // 2. Calculate Workload for each official
+  const officialsWithStats = await Promise.all(
+    deptOfficials.map(async (official) => {
+      // Active Workload: Pending + In-Progress
+      const activeWorkload = await storage.getOfficialCurrentWorkload(official.id);
+      // Total Assigned: Lifetime count (already in official object)
+      const totalAssigned = official.assignedCount || 0;
+
+      return {
+        ...official,
+        activeWorkload,
+        totalAssigned
+      };
+    })
+  );
+
+  // 3. Sort Logic (Tie-Breakers)
+  officialsWithStats.sort((a, b) => {
+    // Primary: Lowest Active Workload
+    if (a.activeWorkload !== b.activeWorkload) {
+      return a.activeWorkload - b.activeWorkload;
+    }
+
+    // Secondary: Lowest Total Assigned (History)
+    if (a.totalAssigned !== b.totalAssigned) {
+      return a.totalAssigned - b.totalAssigned;
+    }
+
+    // Tertiary: Earliest Created Date (Seniority/ID)
+    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
   });
 
-  // If no officials in range, fallback to all department officials to ensure assignment
-  if (eligibleOfficials.length === 0) {
-    eligibleOfficials = deptOfficials;
-  }
-
-  // Sort by workload (assignedCount) ASC
-  eligibleOfficials.sort((a, b) => (a.assignedCount || 0) - (b.assignedCount || 0));
-
-  const bestOfficial = eligibleOfficials[0];
+  const bestOfficial = officialsWithStats[0];
 
   if (bestOfficial) {
-    // Assign
+    // 4. Assign
     await storage.assignApplication(applicationId, bestOfficial.id);
 
-    // Update official stats
+    // 5. Update official stats
     await storage.updateUserStats(
       bestOfficial.id,
       bestOfficial.rating || 0,
@@ -226,7 +232,15 @@ async function autoAssignApplication(applicationId: string, departmentName: stri
     // Update escalation level on application
     await storage.updateApplicationEscalation(applicationId, escalationLevel, bestOfficial.id);
 
-    return bestOfficial;
+    return {
+      officialName: bestOfficial.fullName,
+      department: bestOfficial.department,
+      workloadStats: {
+        active: bestOfficial.activeWorkload,
+        total: bestOfficial.totalAssigned
+      },
+      assignedAt: new Date()
+    };
   }
 
   return null;
@@ -249,6 +263,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate role
       if (data.role && !["citizen", "official", "admin"].includes(data.role)) {
         return res.status(400).json({ error: "Invalid role selected" });
+      }
+
+      // Verify Secret Key for Official and Admin
+      if (data.role === "official") {
+        const { secretKey } = req.body;
+        if (secretKey !== "official@2025") {
+          return res.status(403).json({ error: "Invalid Secret Key for Official registration" });
+        }
+      } else if (data.role === "admin") {
+        const { secretKey } = req.body;
+        if (secretKey !== "admin@2025") {
+          return res.status(403).json({ error: "Invalid Secret Key for Admin registration" });
+        }
       }
 
       const existing = await storage.getUserByUsername(data.username);
@@ -443,6 +470,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Application Routes
+  app.get("/api/auth/me", authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser(req.user!.id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/applications", authenticateToken, async (req: Request, res: Response) => {
     try {
       const data = insertApplicationSchema.parse(req.body);
@@ -451,16 +491,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         citizenId: req.user!.id,
       });
 
-      // Trigger Auto-Assignment
-      if (application.department) {
-        const assignedOfficial = await autoAssignApplication(application.id, application.department, 0);
-        if (assignedOfficial) {
-          console.log(`Auto-assigned application ${application.id} to ${assignedOfficial.username}`);
-        } else {
-          console.log(`Could not auto-assign application ${application.id} - no matching officials`);
-        }
-      }
+      // Auto-assignment disabled to keep applications in unassigned pool
+      // Applications will remain visible to all department officials until manually assigned
+      // let assignmentResult = null;
+      // if (application.department) {
+      //   assignmentResult = await autoAssignApplication(application.id, application.department, 0);
+      //   if (assignmentResult) {
+      //     console.log(`✅ Auto-assigned application ${application.id} to ${assignmentResult.officialName}`);
+      //     console.log(`   Stats - Active: ${assignmentResult.workloadStats.active}, Total: ${assignmentResult.workloadStats.total}`);
+      //   } else {
+      //     console.warn(`⚠️ Could not auto-assign application ${application.id} - no matching officials in ${application.department}`);
+      //   }
+      // }
 
+      // Return application
       res.json(application);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -515,7 +559,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.user!.role === "admin") {
         applications = await storage.getAllApplications();
       } else {
-        applications = await storage.getOfficialApplications(req.user!.id);
+        // For officials: return both unassigned applications in their department AND their assigned applications
+        const user = await storage.getUser(req.user!.id);
+        if (!user || !user.department) {
+          return res.status(400).json({ error: "Official has no department assigned" });
+        }
+
+        // Get unassigned applications for the department
+        const unassignedApps = await storage.getUnassignedApplicationsByDepartment(user.department);
+
+        // Get applications assigned to this official
+        const assignedApps = await storage.getOfficialApplications(req.user!.id);
+
+        // Fetch ratings for assigned applications
+        const assignedAppsWithRatings = await Promise.all(assignedApps.map(async (app) => {
+          const feedback = await storage.getFeedbackByApplicationAndOfficialId(app.id, req.user!.id);
+          return { ...app, rating: feedback?.rating };
+        }));
+
+        // Combine both lists (remove duplicates if any)
+        const appMap = new Map<string, any>();
+        unassignedApps.forEach(app => appMap.set(app.id, app));
+        assignedAppsWithRatings.forEach(app => appMap.set(app.id, app));
+
+        applications = Array.from(appMap.values())
+          .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
       }
       res.json(applications);
     } catch (error: any) {
@@ -577,7 +645,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/applications/:id/accept", authenticateToken, requireRole("official", "admin"), async (req: Request, res: Response) => {
     try {
+      console.log(`[Assignment Debug] User ${req.user!.username} (${req.user!.id}) is accepting application ${req.params.id}`);
+
       const application = await storage.assignApplication(req.params.id, req.user!.id);
+
+      console.log(`[Assignment Debug] Application ${application.id} assigned to officialId: ${application.officialId}`);
 
       // Notify the citizen
       const citizen = await storage.getUser(application.citizenId);
@@ -627,16 +699,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if feedback already exists for this application
-      const existingFeedback = await storage.getFeedbackByApplicationId(applicationId);
-      if (existingFeedback) {
-        return res.status(400).json({
-          error: "You have already submitted feedback for this application. Ratings cannot be changed."
-        });
-      }
-
       const application = await storage.getApplication(applicationId);
       if (!application) {
         return res.status(404).json({ error: "Application not found" });
+      }
+
+      // Check if feedback already exists for this application and official
+      if (application.officialId) {
+        const existingFeedback = await storage.getFeedbackByApplicationAndOfficialId(applicationId, application.officialId);
+        if (existingFeedback) {
+          // Update existing feedback
+          await storage.updateFeedback(existingFeedback.id, rating, comment);
+
+          // Recalculate stats
+          const official = await storage.getUser(application.officialId);
+          if (official) {
+            const allRatings = await storage.getOfficialRatings(official.id);
+            const totalRating = allRatings.reduce((sum, r) => sum + r.rating, 0);
+            const avgRating = totalRating / allRatings.length;
+
+            await storage.updateUserStats(
+              official.id,
+              avgRating,
+              official.solvedCount || 0,
+              official.assignedCount || 0
+            );
+          }
+
+          return res.json({ message: "Feedback updated successfully" });
+        }
       }
 
       // Ensure application belongs to the current user
@@ -653,6 +744,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const feedback = await storage.createFeedback(data);
+
+      // Update Official Rating
+      if (application.officialId) {
+        const official = await storage.getUser(application.officialId);
+        if (official) {
+          const allRatings = await storage.getOfficialRatings(official.id);
+          const totalRating = allRatings.reduce((sum, r) => sum + r.rating, 0);
+          const avgRating = totalRating / allRatings.length;
+
+          await storage.updateUserStats(
+            official.id,
+            avgRating,
+            official.solvedCount || 0,
+            official.assignedCount || 0
+          );
+        }
+      }
+
       res.json(feedback);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -662,8 +771,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get feedback by Application ID
   app.get("/api/applications/:id/feedback", async (req: Request, res: Response) => {
     try {
-      const feedback = await storage.getFeedbackByApplicationId(req.params.id);
-      res.json(feedback);
+      const application = await storage.getApplication(req.params.id);
+      let feedback;
+
+      if (application?.officialId) {
+        feedback = await storage.getFeedbackByApplicationAndOfficialId(req.params.id, application.officialId);
+      }
+
+      if (!feedback) {
+        feedback = await storage.getFeedbackByApplicationId(req.params.id);
+      }
+
+      res.json(feedback || null);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -741,16 +860,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Phone or email is required" });
       }
 
+      console.log(`[Verify OTP] Verifying for: ${identifier} (${type}), Purpose: ${data.purpose}, OTP: ${data.otp}`);
+
       const record = await storage.getLatestOTPRecord(identifier, type, data.purpose || "login");
+
       if (!record) {
+        console.log(`[Verify OTP] No record found for ${identifier} purpose=${data.purpose || "login"}`);
+        // Debug: print all records for this identifier to see what's wrong
+        // const allRecords = await storage.getOTP(identifier, type, data.purpose || "login"); 
         return res.status(400).json({ error: "No OTP found" });
       }
 
+      console.log(`[Verify OTP] Found record: id=${record.id}, otp=${record.otp}, expires=${record.expiresAt}, verified=${record.verified}`);
+
       if (record.expiresAt < new Date()) {
+        console.log(`[Verify OTP] Expired. Now: ${new Date()}, Expires: ${record.expiresAt}`);
         return res.status(400).json({ error: "OTP expired" });
       }
 
       if (record.otp !== data.otp.trim()) {
+        console.log(`[Verify OTP] Mismatch. Expected: ${record.otp}, Got: ${data.otp.trim()}`);
         return res.status(400).json({ error: "Invalid OTP" });
       }
 
@@ -923,20 +1052,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Send warning to official
   app.post("/api/warnings", authenticateToken, requireRole("admin"), async (req: Request, res: Response) => {
     try {
-      const data = insertWarningSchema.parse(req.body);
-      const warning = await storage.createWarning(data);
+      console.log("Creating warning with body:", req.body);
+
+      // Manually extract fields to ensure no schema stripping issues
+      const { officialId, message } = req.body;
+
+      if (!officialId || !message) {
+        return res.status(400).json({ error: "officialId and message are required" });
+      }
+
+      const warning = await storage.createWarning({
+        officialId,
+        message,
+      });
+      console.log("Warning created:", warning);
 
       // Also create a notification
       await storage.createNotification(
-        data.officialId,
+        officialId,
         "warning",
         "Performance Warning",
-        data.message
+        message
       );
 
       res.json(warning);
     } catch (error: any) {
+      console.error("Error creating warning:", error);
       res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get warnings for logged-in official
+  app.get("/api/warnings", authenticateToken, requireRole("official"), async (req: Request, res: Response) => {
+    try {
+      console.log(`Fetching warnings for official: ${req.user!.id}`);
+      const warnings = await storage.getWarnings(req.user!.id);
+      console.log(`Found ${warnings.length} warnings`);
+      res.json(warnings);
+    } catch (error: any) {
+      console.error("Error fetching warnings:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Acknowledge warning
+  app.post("/api/warnings/:id/acknowledge", authenticateToken, requireRole("official"), async (req: Request, res: Response) => {
+    try {
+      await storage.markWarningAsRead(req.params.id);
+      res.json({ message: "Warning acknowledged" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 
@@ -956,8 +1121,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Handle Rating
         if (rating && app.officialId) {
           // Check if already rated
-          const existingFeedback = await storage.getFeedbackByApplicationId(app.id);
-          if (!existingFeedback) {
+          // Check if already rated
+          const existingFeedback = await storage.getFeedbackByApplicationAndOfficialId(app.id, app.officialId);
+          if (existingFeedback) {
+            // Update existing feedback
+            await storage.updateFeedback(existingFeedback.id, rating, comment);
+          } else {
+            // Create new feedback
             await storage.createFeedback({
               applicationId: app.id,
               citizenId: req.user!.id,
@@ -965,35 +1135,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
               rating: rating,
               comment: comment
             });
+          }
 
-            // Update Official Rating
-            const official = await storage.getUser(app.officialId);
-            if (official) {
-              const allRatings = await storage.getOfficialRatings(official.id);
-              const totalRating = allRatings.reduce((sum, r) => sum + r.rating, 0);
-              const avgRating = totalRating / allRatings.length;
+          // Update Official Rating (Recalculate for both create and update)
+          const official = await storage.getUser(app.officialId);
+          if (official) {
+            const allRatings = await storage.getOfficialRatings(official.id);
+            const totalRating = allRatings.reduce((sum, r) => sum + r.rating, 0);
+            const avgRating = totalRating / allRatings.length;
 
-              await storage.updateUserStats(
-                official.id,
-                avgRating,
-                (official.solvedCount || 0) + 1,
-                official.assignedCount || 0
-              );
-            }
+            await storage.updateUserStats(
+              official.id,
+              avgRating,
+              (official.solvedCount || 0) + 1,
+              official.assignedCount || 0
+            );
           }
         }
 
         res.json({ message: "Application marked as solved" });
 
       } else {
-        // Not Solved -> Escalate
+        // Not Solved -> Rate previous official (if provided), then Escalate
         const currentLevel = app.escalationLevel || 0;
         const nextLevel = currentLevel + 1;
 
+        // Handle Rating for the previous official
+        // Handle Rating for the previous official
+        if (rating && app.officialId) {
+          const existingFeedback = await storage.getFeedbackByApplicationAndOfficialId(app.id, app.officialId);
+          if (existingFeedback) {
+            await storage.updateFeedback(existingFeedback.id, rating, comment);
+          } else {
+            await storage.createFeedback({
+              applicationId: app.id,
+              citizenId: req.user!.id,
+              officialId: app.officialId,
+              rating: rating,
+              comment: comment
+            });
+          }
+
+          // Update Official Rating
+          const official = await storage.getUser(app.officialId);
+          if (official) {
+            const allRatings = await storage.getOfficialRatings(official.id);
+            const totalRating = allRatings.reduce((sum, r) => sum + r.rating, 0);
+            const avgRating = totalRating / allRatings.length;
+
+            await storage.updateUserStats(
+              official.id,
+              avgRating,
+              official.solvedCount || 0, // Don't increment solvedCount for "Not Solved"
+              official.assignedCount || 0
+            );
+          }
+        }
+
+        // Now escalate and reassign
         if (app.department) {
           const newOfficial = await autoAssignApplication(app.id, app.department, nextLevel);
           if (newOfficial) {
-            res.json({ message: "Application escalated and reassigned", official: newOfficial.username });
+            res.json({ message: "Application escalated and reassigned", official: newOfficial.officialName });
           } else {
             res.json({ message: "Application escalated but no new official found. Pending assignment." });
           }
@@ -1004,6 +1207,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     } catch (error: any) {
       res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/users/officials", authenticateToken, requireRole("admin"), async (req: Request, res: Response) => {
+    try {
+      const officials = await storage.getAllOfficials();
+      res.json(officials);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 
@@ -1022,14 +1234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/users/officials", authenticateToken, requireRole("admin"), async (req: Request, res: Response) => {
-    try {
-      const officials = await storage.getAllOfficials();
-      res.json(officials);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
+
 
   // Get official's rating stats
   app.get("/api/officials/:id/rating", authenticateToken, async (req: Request, res: Response) => {
@@ -1046,6 +1251,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         averageRating: Number(averageRating.toFixed(1)),
         totalRatings: feedbacks.length,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get official's detailed stats (for admin)
+  app.get("/api/officials/:id/stats", authenticateToken, requireRole("admin"), async (req: Request, res: Response) => {
+    try {
+      const official = await storage.getUser(req.params.id);
+      if (!official || official.role !== "official") {
+        return res.status(404).json({ error: "Official not found" });
+      }
+
+      const applications = await storage.getOfficialApplications(req.params.id);
+      const warnings = await storage.getWarnings(req.params.id);
+
+      const approved = applications.filter(app => app.status === "Approved").length;
+      const rejected = applications.filter(app => app.status === "Rejected").length;
+      const solved = applications.filter(app => app.isSolved).length;
+      const assigned = applications.length;
+
+      res.json({
+        approved,
+        rejected,
+        solved,
+        assigned,
+        pending: applications.filter(app => ["Assigned", "In Progress"].includes(app.status)).length,
+        warningsSent: warnings.length,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get department stats for admin
+  app.get("/api/admin/department-stats", authenticateToken, requireRole("admin"), async (req: Request, res: Response) => {
+    try {
+      const admin = await storage.getUser(req.user!.id);
+      if (!admin || !admin.department) {
+        return res.status(400).json({ error: "Admin has no department assigned" });
+      }
+
+      const allApps = await storage.getAllApplications();
+
+      // Filter by department
+      const normalizedDept = admin.department.split('–')[0].trim();
+      const deptApps = allApps.filter(app => {
+        if (!app.department) return false;
+        const appDept = app.department.split('–')[0].trim();
+        return appDept === normalizedDept;
+      });
+
+      // Only count first-time applications (escalationLevel === 0)
+      const firstTimeApps = deptApps.filter(app => app.escalationLevel === 0);
+
+      const assignedCount = deptApps.filter(app => app.status === "Assigned").length;
+      const approvedCount = deptApps.filter(app => app.status === "Approved" || app.status === "Auto-Approved").length;
+      const rejectedCount = deptApps.filter(app => app.status === "Rejected").length;
+      const pendingCount = deptApps.filter(app => ["Submitted", "Assigned", "In Progress"].includes(app.status)).length;
+
+      res.json({
+        totalApplications: firstTimeApps.length,
+        assignedCount,
+        approvedCount,
+        rejectedCount,
+        pendingCount,
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });

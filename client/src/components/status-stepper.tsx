@@ -7,7 +7,7 @@ interface StatusStep {
 
 interface StatusStepperProps {
   currentStatus: string;
-  history: Array<{ status: string; updatedAt: string; comment?: string }>;
+  history: Array<{ status: string; updatedAt: string | Date; comment?: string }>;
 }
 
 const statusOrder = ["Submitted", "Assigned", "In Progress", "Approved"];

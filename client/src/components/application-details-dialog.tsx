@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Clock, User, FileText, Calendar, AlertCircle, CheckCircle2, MessageSquare } from "lucide-react";
+import { Clock, User, FileText, Calendar, AlertCircle, CheckCircle2, MessageSquare, AlertTriangle } from "lucide-react";
 import type { Application, User as UserType, ApplicationHistory } from "@shared/schema";
 import { formatDistanceToNow, format } from "date-fns";
 import { useState, useEffect } from "react";
@@ -115,6 +115,17 @@ export function ApplicationDetailsDialog({ application, open, onClose, canUpdate
                                     <Badge className={priorityColors[application.priority || "Normal"]}>
                                           {application.priority || "Normal"} Priority
                                     </Badge>
+                                    {(application.escalationLevel || 0) > 0 && (
+                                          <>
+                                                <Badge className="bg-red-500 text-white border-red-600 animate-pulse flex items-center gap-1">
+                                                      <AlertTriangle className="h-3 w-3" />
+                                                      Escalated
+                                                </Badge>
+                                                <Badge variant="outline" className="border-red-200 text-red-600 bg-red-50">
+                                                      Reassigned: {application.escalationLevel}x
+                                                </Badge>
+                                          </>
+                                    )}
                               </div>
 
                               <Separator />

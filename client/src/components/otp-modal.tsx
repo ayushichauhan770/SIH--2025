@@ -59,7 +59,7 @@ export function OTPModal({ open, onClose, onVerify, phone, email, purpose }: OTP
         description: "Invalid or expired OTP. Please try again.",
         variant: "destructive",
       });
-      setOtp("");
+      // setOtp(""); // Keep the OTP so user can correct it
     }
   };
 

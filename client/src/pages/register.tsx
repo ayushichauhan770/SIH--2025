@@ -107,16 +107,8 @@ export default function Register() {
     try {
       const { confirmPassword, ...registerData } = formData;
 
-      // Filter out empty optional fields to avoid sending empty strings
-      const cleanedData = Object.fromEntries(
-        Object.entries(registerData).filter(([key, value]) => {
-          // Keep all required fields and non-empty optional fields
-          if (key === 'phone' || key === 'aadharNumber' || key === 'department') {
-            return value && value.trim() !== '';
-          }
-          return true;
-        })
-      );
+      // All fields are now required, so we don't need to filter out empty optional fields
+      const cleanedData = registerData;
 
       const response = await apiRequest<{ user: User; token?: string; phone?: string; email?: string; otpMethod?: "phone" | "email"; otp?: string }>(
         "POST",
@@ -147,8 +139,8 @@ export default function Register() {
 
       // otherwise immediate login (no phone)
       if (response.token) {
-        localStorage.setItem("user", JSON.stringify(response.user));
-        localStorage.setItem("token", response.token);
+        sessionStorage.setItem("user", JSON.stringify(response.user));
+        sessionStorage.setItem("token", response.token);
         setUser(response.user);
 
         toast({ title: "Registration Successful!", description: "Your account has been created" });
@@ -196,8 +188,8 @@ export default function Register() {
         purpose: "register"
       });
 
-      localStorage.setItem("user", JSON.stringify(tokenResp.user));
-      localStorage.setItem("token", tokenResp.token);
+      sessionStorage.setItem("user", JSON.stringify(tokenResp.user));
+      sessionStorage.setItem("token", tokenResp.token);
       setUser(tokenResp.user);
 
       toast({ title: "Registration Complete", description: "Your account is verified and ready" });
@@ -290,35 +282,50 @@ export default function Register() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone" className="text-sm font-semibold">Mobile Number (Optional)</Label>
+                <Label htmlFor="phone" className="text-sm font-semibold">Mobile Number</Label>
                 <Input
                   id="phone"
                   type="tel"
                   placeholder="Enter your mobile number"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  required
                   data-testid="input-phone"
                   className="border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
                 />
               </div>
               <div className="space-y-2">
-                {formData.role === "official" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="department" className="text-sm font-semibold">Department</Label>
-                    <select
-                      id="department"
-                      value={formData.department}
-                      onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                      className="w-full border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30 dark:focus:bg-slate-900/40 rounded-md p-2"
-                      required
-                    >
-                      <option value="">Select Department</option>
-                      {DEPARTMENTS.map((dept) => (
-                        <option key={dept} value={dept}>
-                          {dept}
-                        </option>
-                      ))}
-                    </select>
+                {(formData.role === "official" || formData.role === "admin") && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="department" className="text-sm font-semibold">Department *</Label>
+                      <select
+                        id="department"
+                        value={formData.department}
+                        onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                        className="w-full border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30 dark:focus:bg-slate-900/40 rounded-md p-2"
+                        required
+                      >
+                        <option value="">Select Department</option>
+                        {DEPARTMENTS.map((dept) => (
+                          <option key={dept} value={dept}>
+                            {dept}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="secretKey" className="text-sm font-semibold">Enter Secret Key *</Label>
+                      <Input
+                        id="secretKey"
+                        type="password"
+                        placeholder="Enter Secret Key"
+                        value={(formData as any).secretKey || ""}
+                        onChange={(e) => setFormData({ ...formData, secretKey: e.target.value } as any)}
+                        required
+                        className="border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
+                      />
+                    </div>
                   </div>
                 )}
                 <div className="space-y-2">
@@ -333,6 +340,7 @@ export default function Register() {
                       setFormData({ ...formData, aadharNumber: value });
                     }}
                     maxLength={12}
+                    required
                     data-testid="input-aadhar"
                     className="border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
                   />

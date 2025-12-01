@@ -10,7 +10,7 @@ export const users = pgTable("users", {
   role: text("role").notNull(),
   fullName: text("full_name").notNull(),
   email: text("email").notNull(),
-  phone: text("phone"),
+  phone: text("phone").notNull(),
   aadharNumber: text("aadhar_number"),
   department: text("department"),
   rating: integer("rating").default(0),
@@ -68,7 +68,7 @@ export const applicationHistory = pgTable("application_history", {
 
 export const feedback = pgTable("feedback", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  applicationId: varchar("application_id").notNull().unique(),
+  applicationId: varchar("application_id").notNull(), // Removed unique constraint to allow multiple ratings per application
   citizenId: varchar("citizen_id").notNull(),
   officialId: varchar("official_id"), // Added to track which official is being rated
   rating: integer("rating").notNull(),

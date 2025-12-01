@@ -21,7 +21,10 @@
     "aadharNumber": "123456789127",
     "department": "Aadhaar – Unique Identification Authority of India (UIDAI)",
     "createdAt": "2025-11-27T15:25:13.858Z",
-    "id": "41b24ca3-f900-4d9e-9519-90e1c86112d5"
+    "id": "41b24ca3-f900-4d9e-9519-90e1c86112d5",
+    "rating": 1,
+    "solvedCount": 1,
+    "assignedCount": 2
   },
   "38c03ffd-8be3-4912-b78f-5a5b2d10c390": {
     "username": "tq",
@@ -45,7 +48,10 @@
     "aadharNumber": "123456789123",
     "department": "Aadhaar – Unique Identification Authority of India (UIDAI)",
     "createdAt": "2025-11-27T15:41:26.097Z",
-    "id": "03d9596f-5bee-4bfc-9a26-ed75f8434a05"
+    "id": "03d9596f-5bee-4bfc-9a26-ed75f8434a05",
+    "rating": 0,
+    "solvedCount": 0,
+    "assignedCount": 2
   },
   "5db2f047-b07f-4cae-a9e6-39698ac9b5a5": {
     "username": "aatt",
@@ -81,6 +87,54 @@
     "aadharNumber": "325433333333",
     "department": "Aadhaar – Unique Identification Authority of India (UIDAI)",
     "createdAt": "2025-11-28T13:42:41.881Z",
-    "id": "a892c035-347c-405d-8aa2-7cb2bd967021"
+    "id": "a892c035-347c-405d-8aa2-7cb2bd967021",
+    "rating": 0,
+    "solvedCount": 0,
+    "assignedCount": 1
+  },
+  "3a62e17e-8caa-46d9-b74d-435920616dd6": {
+    "username": "c1",
+    "password": "$2b$10$Q4/nsjIGhBj9PQ.kAoqliesDaBSmy6x58i/F0xCbXtuIEED3rg9PW",
+    "role": "official",
+    "fullName": "Arpit Tripathi",
+    "email": "at052369@outlook.com",
+    "phone": "0079200867",
+    "aadharNumber": "111111111123",
+    "department": "Aadhaar – Unique Identification Authority of India (UIDAI)",
+    "createdAt": "2025-11-29T13:35:52.386Z",
+    "rating": 2,
+    "assignedCount": 1,
+    "solvedCount": 1,
+    "id": "3a62e17e-8caa-46d9-b74d-435920616dd6"
+  },
+  "334d9379-6f6d-43ba-af39-d34bb1be7971": {
+    "username": "ee",
+    "password": "$2b$10$6MfbE.yo7LCQLUsAAdgSx.0JnKyIGLGh8qzNCLsadEa2Nr4FABfWa",
+    "role": "official",
+    "fullName": "a",
+    "email": "sadsddas@gmail",
+    "phone": "3423",
+    "aadharNumber": "231241241241",
+    "department": "Aadhaar – Unique Identification Authority of India (UIDAI)",
+    "createdAt": "2025-11-29T13:39:13.066Z",
+    "rating": 0,
+    "assignedCount": 1,
+    "solvedCount": 0,
+    "id": "334d9379-6f6d-43ba-af39-d34bb1be7971"
+  },
+  "5bb42d06-55ff-49d3-b40a-f74c91a4f6b2": {
+    "username": "tt",
+    "password": "$2b$10$hJIiJ/vERVxUMdM8vS3SeOQfdr7cdyJ2fx0P90o8E.inu7kdv9.4C",
+    "role": "official",
+    "fullName": "a",
+    "email": "sasddas@gmail",
+    "phone": "343",
+    "aadharNumber": "231241241243",
+    "department": "Aadhaar – Unique Identification Authority of India (UIDAI)",
+    "createdAt": "2025-11-29T13:39:55.498Z",
+    "rating": 0,
+    "assignedCount": 1,
+    "solvedCount": 0,
+    "id": "5bb42d06-55ff-49d3-b40a-f74c91a4f6b2"
   }
 }

@@ -199,22 +199,6 @@
     animation: slideInFromRight 0.6s ease-out;
   }
 
-  .animate-slide-in-left {
-    animation: slideInFromLeft 0.6s ease-out;
-  }
-
-  /* Placeholder styling for contentEditable div */
-  [contenteditable][data-placeholder]:empty::before {
-    content: attr(data-placeholder);
-    color: hsl(var(--muted-foreground));
-    pointer-events: none;
-  }
-
-  /* .no-default-hover-elevate/no-default-active-elevate is an escape hatch so consumers of
-   * buttons/badges can remove the automatic brightness adjustment on interactions
-   * and program their own. */
-  .no-default-hover-elevate {}
-
   .no-default-active-elevate {}
 
 

@@ -5,7 +5,7 @@
     "type": "assignment",
     "title": "Application Assigned",
     "message": "Your application APP-2025-000001 has been assigned to an official and is now being processed.",
-    "read": false,
+    "read": true,
     "applicationId": "eb8d8619-bddf-4ba2-a2f8-e45a038e6b03",
     "createdAt": "2025-11-27T15:27:05.583Z"
   },
@@ -15,7 +15,7 @@
     "type": "assignment",
     "title": "Application Assigned",
     "message": "Your application APP-2025-000002 has been assigned to an official and is now being processed.",
-    "read": false,
+    "read": true,
     "applicationId": "351c8f4f-3bcf-40b3-81fc-2b764c757126",
     "createdAt": "2025-11-27T15:31:45.435Z"
   },
@@ -85,7 +85,7 @@
     "type": "assignment",
     "title": "Application Assigned",
     "message": "Your application APP-2025-000010 has been assigned to an official and is now being processed.",
-    "read": false,
+    "read": true,
     "applicationId": "2e5c382b-e88f-47d0-b3b7-9271f6ed2bcd",
     "createdAt": "2025-11-28T04:18:53.108Z"
   },
@@ -135,7 +135,7 @@
     "type": "assignment",
     "title": "Application Assigned",
     "message": "Your application APP-2025-000003 has been assigned to an official and is now being processed.",
-    "read": false,
+    "read": true,
     "applicationId": "fed5e8fd-803f-4c37-907e-5416aafe4a90",
     "createdAt": "2025-11-28T13:37:49.029Z"
   },

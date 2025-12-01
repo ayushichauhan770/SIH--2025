@@ -27,6 +27,7 @@ export default function ApplicationDetails() {
   const { data: application, isLoading } = useQuery<Application>({
     queryKey: ["/api/applications", applicationId],
     enabled: !!applicationId,
+    refetchInterval: 3000, // Auto-refresh every 3 seconds to show latest status
   });
 
   const { data: history = [] } = useQuery<ApplicationHistory[]>({
@@ -63,6 +64,8 @@ export default function ApplicationDetails() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/applications", applicationId] });
       queryClient.invalidateQueries({ queryKey: ["/api/applications", applicationId, "feedback"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users/officials"] }); // Update officials list for admin dashboard
+      queryClient.invalidateQueries({ queryKey: ["/api/officials", application?.officialId, "rating"] }); // Update official's rating
       toast({
         title: "Success",
         description: data?.message || "Your feedback has been submitted successfully"
@@ -79,10 +82,11 @@ export default function ApplicationDetails() {
 
   const handleSolveSelection = (solved: boolean) => {
     setIsSolved(solved);
-    if (!solved) {
-      // Trigger escalation immediately
-      solveMutation.mutate({ isSolved: false });
-    }
+    // Don't immediately trigger for "Not Solved" - wait for rating
+  };
+
+  const handleNotSolvedRatingSubmit = (rating: number, comment: string) => {
+    solveMutation.mutate({ isSolved: false, rating, comment });
   };
 
   const handleRatingSubmit = (rating: number, comment: string) => {
@@ -125,7 +129,17 @@ export default function ApplicationDetails() {
     "Auto-Approved": "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
   };
 
-  const showRating = ["Approved", "Auto-Approved"].includes(application.status) && !feedback && !application.isSolved;
+  const isReApproved = ["Approved", "Auto-Approved"].includes(application.status) && (application.escalationLevel || 0) > 0;
+
+  // Show rating if:
+  // 1. Application is approved/auto-approved AND no feedback exists yet, OR
+  // 2. Application was re-approved (escalated) AND there's a new official assigned AND 
+  //    (no feedback exists OR the existing feedback is for a different official)
+  const showRating = ["Approved", "Auto-Approved"].includes(application.status) && !application.isSolved && (
+    !feedback || // No feedback at all
+    (isReApproved && application.officialId && feedback.officialId !== application.officialId) || // Re-approved with new official and old feedback is for previous official
+    (isReApproved && !feedback.officialId) // Re-approved but old feedback has no official (edge case)
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
@@ -232,12 +246,74 @@ export default function ApplicationDetails() {
                             </span>
                             <span className="text-xs text-yellow-600 dark:text-yellow-400">/ 5.0</span>
                           </div>
-                          isSubmitting={solveMutation.isPending}
-                />
-                          ) : (
-                          <div className="text-center p-4 bg-red-50 text-red-800 rounded-md">
-                            <p>We have noted that your issue is not resolved. The application has been escalated to a higher official.</p>
-                          </div>
-              )}
-                          );
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {blockchainHash && (
+              <div className="pt-4 border-t">
+                <BlockchainHashDisplay hash={blockchainHash} />
+              </div>
+            )}
+
+            <div className="pt-6 border-t">
+              <StatusStepper
+                currentStatus={application.status}
+                history={history.map(h => ({
+                  ...h,
+                  comment: h.comment || undefined
+                }))}
+              />
+            </div>
+
+            {showRating && (
+              <div className="pt-6 border-t">
+                <h3 className="font-medium text-sm text-muted-foreground mb-4">Feedback & Rating</h3>
+                {isSolved === null ? (
+                  <div className="space-y-4">
+                    {(application.escalationLevel || 0) > 0 && (
+                      <div className="p-3 bg-blue-50 text-blue-800 rounded-md text-sm mb-2">
+                        <p>This application has been re-processed and approved. Please verify if your issue is now resolved.</p>
+                      </div>
+                    )}
+                    <p className="text-sm">Has your issue been resolved satisfactorily?</p>
+                    <div className="flex gap-4">
+                      <Button onClick={() => handleSolveSelection(true)} className="gap-2">
+                        <ThumbsUp className="h-4 w-4" />
+                        Yes, Resolved
+                      </Button>
+                      <Button variant="outline" onClick={() => handleSolveSelection(false)} className="gap-2">
+                        <ThumbsDown className="h-4 w-4" />
+                        No, Not Resolved
+                      </Button>
+                    </div>
+                  </div>
+                ) : isSolved ? (
+                  <RatingComponent
+                    onSubmit={handleRatingSubmit}
+                    isSubmitting={solveMutation.isPending}
+                  />
+                ) : (
+                  <div className="space-y-4">
+                    <div className="text-center p-4 bg-orange-50 text-orange-800 rounded-md">
+                      <p className="font-medium">Please rate the official's service before we reassign your application.</p>
+                      <p className="text-sm mt-1">Your feedback helps us improve our services.</p>
+                    </div>
+                    <RatingComponent
+                      onSubmit={handleNotSolvedRatingSubmit}
+                      isSubmitting={solveMutation.isPending}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </main>
+    </div >
+  );
 }

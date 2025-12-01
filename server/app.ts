@@ -73,6 +73,8 @@ app.use((req, res, next) => {
   next();
 });
 
+import { seedData } from "./seed";
+
 export default async function runApp(
   setup: (app: Express, server: Server) => Promise<void>,
 ) {
@@ -85,6 +87,9 @@ export default async function runApp(
     res.status(status).json({ message });
     throw err;
   });
+
+  // Seed data on startup
+  await seedData();
 
   // importantly run the final setup after setting up all the other routes so
   // the catch-all route doesn't interfere with the other routes

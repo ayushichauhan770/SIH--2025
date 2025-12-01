@@ -17,7 +17,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Application, Notification } from "@shared/schema";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import type { Application, Notification, Warning } from "@shared/schema";
 import { ApplicationDetailsDialog } from "@/components/application-details-dialog";
 
 export default function OfficialDashboard() {
@@ -31,7 +32,7 @@ export default function OfficialDashboard() {
 
   const { data: applications, isLoading } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
-    refetchInterval: 30000, // Auto-refresh every 30 seconds
+    refetchInterval: 2000, // Auto-refresh every 2 seconds for near real-time updates
   });
 
   const { data: notifications = [] } = useQuery<Notification[]>({
@@ -45,6 +46,8 @@ export default function OfficialDashboard() {
     refetchInterval: 5000, // Auto-update rating every 5 seconds
   });
 
+  const [activeTab, setActiveTab] = useState("unassigned");
+
   const acceptMutation = useMutation({
     mutationFn: async (id: string) => {
       return await apiRequest("POST", `/api/applications/${id}/accept`, {});
@@ -52,9 +55,10 @@ export default function OfficialDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
       toast({
-        title: "Application Accepted Successfully",
-        description: "This application is now assigned to you. You can view and update its status anytime in My Applications.",
+        title: "Application Accepted",
+        description: `Assigned to ${user?.fullName}. You can view it in My Applications.`,
       });
+      setActiveTab("my-apps");
     },
   });
 
@@ -63,11 +67,64 @@ export default function OfficialDashboard() {
     queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
   };
 
+  const [isWarningDialogOpen, setIsWarningDialogOpen] = useState(false);
+
+  const { data: warnings = [], error: warningError } = useQuery<Warning[]>({
+    queryKey: ["/api/warnings"],
+    refetchInterval: 500, // Check every 0.5 seconds for instant warning alerts
+  });
+
+  // Show error if fetching fails
+  useEffect(() => {
+    if (warningError) {
+      console.error("Failed to fetch warnings:", warningError);
+    }
+  }, [warningError]);
+
+  const unreadWarnings = warnings.filter(w => !w.read);
+
+  // Auto-open warning dialog if there are unread warnings
+  useEffect(() => {
+    if (unreadWarnings.length > 0) {
+      if (!isWarningDialogOpen) {
+        setIsWarningDialogOpen(true);
+        // Play a sound or show a toast for the new warning
+        toast({
+          title: "New Warning Received",
+          description: "You have a new performance warning from the admin.",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [unreadWarnings.length]);
+
+  const handleAcknowledgeWarnings = async () => {
+    try {
+      // Acknowledge all unread warnings
+      await Promise.all(unreadWarnings.map(w =>
+        apiRequest("POST", `/api/warnings/${w.id}/acknowledge`, {})
+      ));
+
+      queryClient.invalidateQueries({ queryKey: ["/api/warnings"] });
+      setIsWarningDialogOpen(false);
+      toast({
+        title: "Acknowledged",
+        description: "You have acknowledged the warnings.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to acknowledge warnings",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleAccept = async (id: string) => {
     await acceptMutation.mutateAsync(id);
   };
 
-  const unassignedApps = applications?.filter(app => app.status === "Submitted") || [];
+  const unassignedApps = applications?.filter(app => app.status === "Submitted" && app.officialId === null) || [];
   const myApps = applications?.filter(app => app.officialId === user?.id) || [];
   const pendingApps = myApps.filter(app => app.status === "Assigned" || app.status === "In Progress");
   const completedToday = myApps.filter(app =>
@@ -103,8 +160,7 @@ export default function OfficialDashboard() {
       if (element) {
         element.scrollIntoView({ behavior: "smooth", block: "start" });
         // Also switch to "my-apps" tab if not already there
-        const myAppsTrigger = document.querySelector('[data-testid="tab-my-applications"]') as HTMLElement;
-        if (myAppsTrigger) myAppsTrigger.click();
+        setActiveTab("my-apps");
       }
     }
   }, [filterStatus]);
@@ -115,12 +171,30 @@ export default function OfficialDashboard() {
         <div className="flex items-center gap-2">
           <h1 className="text-xl font-bold">Official Dashboard</h1>
         </div>
-        <div className="flex items-center gap-2">
-          <NotificationBell notifications={notifications} onMarkAsRead={handleMarkAsRead} />
-          <ThemeToggle />
-          <Button variant="ghost" size="icon" onClick={() => { logout(); setLocation("/"); }}>
-            <LogOut className="h-5 w-5" />
-          </Button>
+        <div className="flex items-center gap-4">
+          <div className="hidden md:flex flex-col items-end text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">
+            <span>Logged in as: <span className="font-mono font-bold text-primary">{user?.username}</span></span>
+            <span>ID: <span className="font-mono">{user?.id?.substring(0, 8)}...</span></span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={unreadWarnings.length > 0 ? "text-red-600 animate-flash hover:bg-red-50 hover:text-red-700" : "text-muted-foreground opacity-50"}
+              onClick={() => unreadWarnings.length > 0 ? setIsWarningDialogOpen(true) : toast({ description: "No active warnings" })}
+            >
+              <AlertTriangle className={unreadWarnings.length > 0 ? "h-6 w-6" : "h-5 w-5"} />
+            </Button>
+            <NotificationBell notifications={notifications} onMarkAsRead={handleMarkAsRead} />
+            <ThemeToggle />
+            <Button variant="ghost" size="icon" onClick={() => {
+              logout();
+              // Force full reload to clear any memory state
+              window.location.href = "/";
+            }}>
+              <LogOut className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -207,7 +281,7 @@ export default function OfficialDashboard() {
           </div>
         </div>
 
-        <Tabs defaultValue="unassigned" className="w-full" id="official-tabs">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" id="official-tabs">
           <TabsList className="bg-white/50 dark:bg-slate-800/50 p-1 rounded-xl border border-gray-200 dark:border-gray-700">
             <TabsTrigger
               value="unassigned"
@@ -288,7 +362,7 @@ export default function OfficialDashboard() {
             )}
           </TabsContent>
         </Tabs>
-      </main>
+      </main >
 
       <ApplicationDetailsDialog
         application={selectedApp}
@@ -296,6 +370,56 @@ export default function OfficialDashboard() {
         onClose={() => setSelectedApp(null)}
         canUpdateStatus={selectedApp?.officialId === user?.id}
       />
-    </div>
+
+      {/* Fixed Warning Icon on Right Side */}
+      {
+        unreadWarnings.length > 0 && (
+          <div className="fixed right-4 top-24 z-50 animate-bounce">
+            <Button
+              variant="destructive"
+              size="lg"
+              className="rounded-full h-16 w-16 shadow-2xl border-4 border-white dark:border-slate-950 animate-flash bg-red-600 hover:bg-red-700"
+              onClick={() => setIsWarningDialogOpen(true)}
+            >
+              <AlertTriangle className="h-8 w-8" />
+            </Button>
+          </div>
+        )
+      }
+
+      <Dialog open={isWarningDialogOpen} onOpenChange={setIsWarningDialogOpen}>
+        <DialogContent className="sm:max-w-md border-2 border-red-500">
+          <DialogHeader>
+            <DialogTitle className="text-red-600 flex items-center gap-2 text-xl">
+              <AlertTriangle className="h-6 w-6" />
+              Performance Warning
+            </DialogTitle>
+            <DialogDescription className="text-base font-medium text-gray-700 dark:text-gray-300">
+              You have received the following warning(s) from the administration. Please review and acknowledge.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+            {unreadWarnings.map(warning => (
+              <div key={warning.id} className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 p-4 rounded-lg shadow-sm">
+                <p className="font-bold text-red-800 dark:text-red-300 mb-2">Message from Admin:</p>
+                <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{warning.message}</p>
+                <p className="text-xs text-red-600 dark:text-red-400 mt-3 text-right font-mono">
+                  {new Date(warning.sentAt).toLocaleString()}
+                </p>
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-6 text-lg"
+              onClick={handleAcknowledgeWarnings}
+            >
+              I Understand & Acknowledge
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+    </div >
   );
 }
