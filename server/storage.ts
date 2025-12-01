@@ -179,7 +179,8 @@ export class MemStorage implements IStorage {
       ...insertApplication,
       id,
       trackingId,
-      department,
+      department: insertApplication.department || department,
+      subDepartment: insertApplication.subDepartment || null,
       status: "Submitted",
       priority: insertApplication.priority ?? "Normal",
       remarks: insertApplication.remarks ?? null,
@@ -561,4 +562,7 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import { MongoDBStorage } from "./mongodb-storage";
+
+// Use MongoDB storage instead of in-memory storage
+export const storage = new MongoDBStorage();

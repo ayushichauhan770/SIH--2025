@@ -166,20 +166,29 @@ class AIMonitoringService {
 
 const aiService = new AIMonitoringService();
 
-async function autoAssignApplication(applicationId: string, departmentName: string, escalationLevel: number = 0) {
+async function autoAssignApplication(applicationId: string, departmentName: string, subDepartmentName: string | null = null, escalationLevel: number = 0) {
   const officials = await storage.getAllOfficials();
+  const application = await storage.getApplication(applicationId);
 
   // 1. Filter by Department
   // Normalize department names (handle "Health – Ministry..." vs "Health")
-  const deptOfficials = officials.filter(u => {
+  let deptOfficials = officials.filter(u => {
     if (!u.department) return false;
     const uDept = u.department.split('–')[0].trim();
     const appDept = departmentName.split('–')[0].trim();
     return uDept === appDept;
   });
 
+  // 2. Filter by Sub-Department if available
+  if (subDepartmentName && subDepartmentName.trim()) {
+    deptOfficials = deptOfficials.filter(u => {
+      if (!u.subDepartment) return false;
+      return u.subDepartment === subDepartmentName;
+    });
+  }
+
   if (deptOfficials.length === 0) {
-    console.log(`No officials available for department: ${departmentName}`);
+    console.log(`No officials available for department: ${departmentName}${subDepartmentName ? `, sub-department: ${subDepartmentName}` : ''}`);
     return null;
   }
 
@@ -565,8 +574,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ error: "Official has no department assigned" });
         }
 
-        // Get unassigned applications for the department
-        const unassignedApps = await storage.getUnassignedApplicationsByDepartment(user.department);
+        // Get unassigned applications for the department and sub-department
+        const allUnassignedApps = await storage.getUnassignedApplicationsByDepartment(user.department);
+        
+        // Filter by sub-department if official has one assigned
+        let unassignedApps = allUnassignedApps;
+        if (user.subDepartment) {
+          unassignedApps = allUnassignedApps.filter(app => 
+            app.subDepartment === user.subDepartment || !app.subDepartment
+          );
+        }
 
         // Get applications assigned to this official
         const assignedApps = await storage.getOfficialApplications(req.user!.id);

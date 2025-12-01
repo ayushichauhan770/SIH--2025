@@ -13,6 +13,7 @@ export const users = pgTable("users", {
   phone: text("phone").notNull(),
   aadharNumber: text("aadhar_number"),
   department: text("department"),
+  subDepartment: text("sub_department"),
   rating: integer("rating").default(0),
   assignedCount: integer("assigned_count").default(0),
   solvedCount: integer("solved_count").default(0),
@@ -40,6 +41,7 @@ export const applications = pgTable("applications", {
   trackingId: text("tracking_id").notNull().unique(),
   applicationType: text("application_type").notNull(),
   department: text("department"),
+  subDepartment: text("sub_department"),
   description: text("description").notNull(),
   status: text("status").notNull(),
   priority: text("priority").default("Normal").notNull(), // High, Medium, Normal

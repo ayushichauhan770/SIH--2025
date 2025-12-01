@@ -12,6 +12,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Shield, ArrowLeft, FileText } from "lucide-react";
 import { Link } from "wouter";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { getSubDepartmentsForDepartment, getAllDepartmentNames } from "@shared/sub-departments";
 
 export default function SubmitApplication() {
   const { user } = useAuth();
@@ -19,6 +20,8 @@ export default function SubmitApplication() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
+    department: "",
+    subDepartment: "",
     applicationType: "",
     description: "",
     additionalInfo: "",
@@ -100,50 +103,7 @@ export default function SubmitApplication() {
     }
   };
 
-  const applicationTypes = [
-    "Aadhaar – Unique Identification Authority of India (UIDAI)",
-    "Animal Husbandry & Dairying – Department of Animal Husbandry and Dairying",
-    "Agriculture – Ministry of Agriculture and Farmers Welfare",
-    "CBSE – Central Board of Secondary Education",
-    "Central Public Works Department (CPWD)",
-    "Consumer Affairs – Department of Consumer Affairs",
-    "Corporate Affairs – Ministry of Corporate Affairs",
-    "Education – Ministry of Education",
-    "Electricity – Ministry of Power",
-    "Election Commission of India (ECI)",
-    "Employees’ Provident Fund Organisation (EPFO)",
-    "Employees’ State Insurance Corporation (ESIC)",
-    "Finance – Ministry of Finance",
-    "Food & Civil Supplies – Department of Food and Public Distribution",
-    "Forest – Ministry of Environment, Forest and Climate Change",
-    "Health – Ministry of Health and Family Welfare",
-    "Home Affairs – Ministry of Home Affairs",
-    "Income Tax Department (CBDT)",
-    "Industrial Development – Department for Promotion of Industry and Internal Trade (DPIIT)",
-    "Labour – Ministry of Labour and Employment",
-    "Minority Affairs – Ministry of Minority Affairs",
-    "Municipal Corporation / Urban Local Bodies (ULBs)",
-    "Panchayati Raj – Ministry of Panchayati Raj",
-    "Passport – Ministry of External Affairs (Passport Seva)",
-    "Personnel & Training – Department of Personnel and Training (DoPT)",
-    "Police – State Police Department",
-    "Pollution – Central Pollution Control Board (CPCB)",
-    "Post Office – Department of Posts",
-    "Public Grievances – Department of Administrative Reforms and Public Grievances (DARPG)",
-    "Public Works – Public Works Department (PWD)",
-    "Railways – Ministry of Railways",
-    "Revenue – Department of Revenue (Ministry of Finance)",
-    "Road Transport – Ministry of Road Transport and Highways (MoRTH)",
-    "Rural Development – Ministry of Rural Development",
-    "Science & Technology – Ministry of Science and Technology",
-    "Skills – Ministry of Skill Development and Entrepreneurship",
-    "Social Justice – Ministry of Social Justice and Empowerment",
-    "Telecommunications – Department of Telecommunications (DoT)",
-    "Urban Development – Ministry of Housing and Urban Affairs (MoHUA)",
-    "Water – Ministry of Jal Shakti",
-    "Women & Child Development – Ministry of Women and Child Development",
-    "Other",
-  ];
+  const departments = getAllDepartmentNames();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -151,7 +111,9 @@ export default function SubmitApplication() {
 
     try {
       const data = {
-        applicationType: formData.applicationType,
+        applicationType: formData.subDepartment || formData.department || formData.applicationType,
+        department: formData.department,
+        subDepartment: formData.subDepartment,
         description: formData.description,
         citizenId: user!.id,
         data: JSON.stringify({ additionalInfo: formData.additionalInfo }),
@@ -220,24 +182,49 @@ export default function SubmitApplication() {
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="applicationType">Application Type *</Label>
+                  <Label htmlFor="department">Department *</Label>
                   <Select
-                    value={formData.applicationType}
-                    onValueChange={(value) => setFormData({ ...formData, applicationType: value })}
+                    value={formData.department}
+                    onValueChange={(value) => setFormData({ ...formData, department: value, subDepartment: "" })}
                     required
                   >
-                    <SelectTrigger data-testid="select-application-type">
-                      <SelectValue placeholder="Select application type" />
+                    <SelectTrigger data-testid="select-department">
+                      <SelectValue placeholder="Select department" />
                     </SelectTrigger>
                     <SelectContent>
-                      {applicationTypes.map(type => (
-                        <SelectItem key={type} value={type}>
-                          {type}
+                      {departments.map(dept => (
+                        <SelectItem key={dept} value={dept}>
+                          {dept}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+
+                {formData.department && (
+                  <div className="space-y-2">
+                    <Label htmlFor="subDepartment">Sub-Department / Issue Type *</Label>
+                    <Select
+                      value={formData.subDepartment}
+                      onValueChange={(value) => setFormData({ ...formData, subDepartment: value })}
+                      required
+                    >
+                      <SelectTrigger data-testid="select-sub-department">
+                        <SelectValue placeholder="Select sub-department or issue type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getSubDepartmentsForDepartment(formData.department).map(subDept => (
+                          <SelectItem key={subDept.name} value={subDept.name}>
+                            {subDept.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Select the specific sub-department or issue type for your application
+                    </p>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="description">Description *</Label>

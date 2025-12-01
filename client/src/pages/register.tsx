@@ -21,51 +21,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getSubDepartmentsForDepartment, getAllDepartmentNames } from "@shared/sub-departments";
 
-const DEPARTMENTS = [
-  "Aadhaar – Unique Identification Authority of India (UIDAI)",
-  "Animal Husbandry & Dairying – Department of Animal Husbandry and Dairying",
-  "Agriculture – Ministry of Agriculture and Farmers Welfare",
-  "CBSE – Central Board of Secondary Education",
-  "Central Public Works Department (CPWD)",
-  "Consumer Affairs – Department of Consumer Affairs",
-  "Corporate Affairs – Ministry of Corporate Affairs",
-  "Education – Ministry of Education",
-  "Electricity – Ministry of Power",
-  "Election Commission of India (ECI)",
-  "Employees’ Provident Fund Organisation (EPFO)",
-  "Employees’ State Insurance Corporation (ESIC)",
-  "Finance – Ministry of Finance",
-  "Food & Civil Supplies – Department of Food and Public Distribution",
-  "Forest – Ministry of Environment, Forest and Climate Change",
-  "Health – Ministry of Health and Family Welfare",
-  "Home Affairs – Ministry of Home Affairs",
-  "Income Tax Department (CBDT)",
-  "Industrial Development – Department for Promotion of Industry and Internal Trade (DPIIT)",
-  "Labour – Ministry of Labour and Employment",
-  "Minority Affairs – Ministry of Minority Affairs",
-  "Municipal Corporation / Urban Local Bodies (ULBs)",
-  "Panchayati Raj – Ministry of Panchayati Raj",
-  "Passport – Ministry of External Affairs (Passport Seva)",
-  "Personnel & Training – Department of Personnel and Training (DoPT)",
-  "Police – State Police Department",
-  "Pollution – Central Pollution Control Board (CPCB)",
-  "Post Office – Department of Posts",
-  "Public Grievances – Department of Administrative Reforms and Public Grievances (DARPG)",
-  "Public Works – Public Works Department (PWD)",
-  "Railways – Ministry of Railways",
-  "Revenue – Department of Revenue (Ministry of Finance)",
-  "Road Transport – Ministry of Road Transport and Highways (MoRTH)",
-  "Rural Development – Ministry of Rural Development",
-  "Science & Technology – Ministry of Science and Technology",
-  "Skills – Ministry of Skill Development and Entrepreneurship",
-  "Social Justice – Ministry of Social Justice and Empowerment",
-  "Telecommunications – Department of Telecommunications (DoT)",
-  "Urban Development – Ministry of Housing and Urban Affairs (MoHUA)",
-  "Water – Ministry of Jal Shakti",
-  "Women & Child Development – Ministry of Women and Child Development",
-  "Other"
-];
+const DEPARTMENTS = getAllDepartmentNames();
 
 export default function Register() {
   const [, setLocation] = useLocation();
@@ -86,6 +44,7 @@ export default function Register() {
     aadharNumber: "",
     role: "citizen",
     department: "",
+    subDepartment: "",
   });
 
   // OTP removed: verification is not required for registration flow
@@ -97,6 +56,16 @@ export default function Register() {
       toast({
         title: "Password Mismatch",
         description: "Passwords do not match",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate sub-department for officials
+    if (formData.role === "official" && !formData.subDepartment) {
+      toast({
+        title: "Sub-Department Required",
+        description: "Please select a sub-department for official registration",
         variant: "destructive",
       });
       return;
@@ -302,7 +271,7 @@ export default function Register() {
                       <select
                         id="department"
                         value={formData.department}
-                        onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                        onChange={(e) => setFormData({ ...formData, department: e.target.value, subDepartment: "" })}
                         className="w-full border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30 dark:focus:bg-slate-900/40 rounded-md p-2"
                         required
                       >
@@ -314,6 +283,28 @@ export default function Register() {
                         ))}
                       </select>
                     </div>
+                    {formData.department && formData.role === "official" && (
+                      <div className="space-y-2">
+                        <Label htmlFor="subDepartment" className="text-sm font-semibold">Sub-Department *</Label>
+                        <select
+                          id="subDepartment"
+                          value={formData.subDepartment}
+                          onChange={(e) => setFormData({ ...formData, subDepartment: e.target.value })}
+                          className="w-full border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30 dark:focus:bg-slate-900/40 rounded-md p-2"
+                          required
+                        >
+                          <option value="">Select Sub-Department</option>
+                          {getSubDepartmentsForDepartment(formData.department).map((subDept) => (
+                            <option key={subDept.name} value={subDept.name}>
+                              {subDept.name}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-xs text-muted-foreground">
+                          Select the sub-department you will handle. You will only receive applications matching this sub-department.
+                        </p>
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <Label htmlFor="secretKey" className="text-sm font-semibold">Enter Secret Key *</Label>
                       <Input
