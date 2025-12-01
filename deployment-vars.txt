@@ -1,0 +1,3 @@
+﻿mongodb+srv://at0585969_db_user:4R5FjzZlrMVYyuyK@cluster0.jcqqyv4.mongodb.net/smart_india_project?retryWrites=true&w=majority
+iNb9ae+NeOZmgdfOPydweT2rCwt6bklmX8aJUoLiu/Q=
+production

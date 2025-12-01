@@ -143,10 +143,9 @@ const WarningSchema = new mongoose.Schema<Warning>({
 }, { _id: false });
 
 // Create indexes for better performance
-UserSchema.index({ username: 1 });
+// Note: unique: true already creates indexes for id, username, trackingId, etc.
 UserSchema.index({ email: 1 });
 UserSchema.index({ phone: 1 });
-ApplicationSchema.index({ trackingId: 1 });
 ApplicationSchema.index({ citizenId: 1 });
 ApplicationSchema.index({ officialId: 1 });
 ApplicationSchema.index({ department: 1 });

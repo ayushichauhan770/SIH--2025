@@ -68,7 +68,7 @@ export class MongoDBStorage implements IStorage {
       solvedCount: 0,
       id,
     };
-    await UserModel.create(user);
+    await new UserModel(user).save();
     return user;
   }
 
@@ -113,7 +113,7 @@ export class MongoDBStorage implements IStorage {
       escalationLevel: 0,
     };
 
-    await ApplicationModel.create(application);
+    await new ApplicationModel(application).save();
     await this.addApplicationHistory(id, "Submitted", insertApplication.citizenId, "Application submitted");
     return application;
   }
@@ -219,7 +219,7 @@ export class MongoDBStorage implements IStorage {
       updatedBy,
       updatedAt: new Date(),
     };
-    await ApplicationHistoryModel.create(history);
+    await new ApplicationHistoryModel(history).save();
     return history;
   }
 
@@ -238,7 +238,7 @@ export class MongoDBStorage implements IStorage {
       verified: false,
       createdAt: new Date(),
     };
-    await FeedbackModel.create(newFeedback);
+    await new FeedbackModel(newFeedback).save();
     return newFeedback;
   }
 
@@ -280,7 +280,7 @@ export class MongoDBStorage implements IStorage {
       verified: false,
       createdAt: new Date(),
     };
-    await OTPRecordModel.create(record);
+    await new OTPRecordModel(record).save();
     return record;
   }
 
@@ -319,7 +319,7 @@ export class MongoDBStorage implements IStorage {
       blockNumber,
       timestamp: new Date(),
     };
-    await BlockchainHashModel.create(blockchainHash);
+    await new BlockchainHashModel(blockchainHash).save();
     return blockchainHash;
   }
 
@@ -340,7 +340,7 @@ export class MongoDBStorage implements IStorage {
       applicationId: applicationId || null,
       createdAt: new Date(),
     };
-    await NotificationModel.create(notification);
+    await new NotificationModel(notification).save();
     return notification;
   }
 
@@ -362,7 +362,7 @@ export class MongoDBStorage implements IStorage {
       id,
       createdAt: new Date(),
     };
-    await DepartmentModel.create(department);
+    await new DepartmentModel(department).save();
     return department;
   }
 
@@ -384,7 +384,7 @@ export class MongoDBStorage implements IStorage {
       sentAt: new Date(),
       read: false,
     };
-    await WarningModel.create(newWarning);
+    await new WarningModel(newWarning).save();
     return newWarning;
   }
 
