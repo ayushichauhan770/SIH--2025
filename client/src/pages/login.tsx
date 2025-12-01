@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield, Phone, Mail, User as UserIcon } from "lucide-react";
+import { Shield, Phone, Mail, User as UserIcon, Crown } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +14,7 @@ import { OTPModal } from "@/components/otp-modal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { SiGoogle } from "react-icons/si";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { User } from "@shared/schema";
 
 
@@ -23,6 +24,7 @@ export default function Login() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showOTP, setShowOTP] = useState(false);
+  const [loginRole, setLoginRole] = useState<"citizen" | "official" | "admin">("citizen");
   const [tempUser, setTempUser] = useState<{ user: User; phone?: string; email?: string; otpMethod?: "phone" | "email" } | null>(null);
   const [activeTab, setActiveTab] = useState("mobile");
 
@@ -122,11 +124,10 @@ export default function Login() {
       setTempUser(null);
       setFormData({ username: "", password: "", phone: "", email: "" });
 
-      // navigate based on role
-      const role = tokenResp.user?.role;
-      if (role === "admin") {
+      // Navigate based on selected login role
+      if (loginRole === "admin") {
         setLocation("/admin/dashboard");
-      } else if (role === "official") {
+      } else if (loginRole === "official") {
         setLocation("/official/dashboard");
       } else {
         setLocation("/citizen/dashboard");
@@ -247,6 +248,44 @@ export default function Login() {
                   </div>
                 </TabsContent>
 
+                {/* Role Selection - Common for both tabs */}
+                <div className="space-y-2 mt-4">
+                  <Label htmlFor="login-role" className="text-sm font-semibold">
+                    Login As
+                  </Label>
+                  <Select value={loginRole} onValueChange={(value: "citizen" | "official" | "admin") => setLoginRole(value)}>
+                    <SelectTrigger 
+                      id="login-role"
+                      className="w-full border-green-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-green-500 focus:ring-green-500/20 dark:border-green-800/30"
+                    >
+                      <SelectValue placeholder="Select your role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="citizen">
+                        <div className="flex items-center gap-2">
+                          <UserIcon className="h-4 w-4" />
+                          <span>Citizen</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="official">
+                        <div className="flex items-center gap-2">
+                          <Shield className="h-4 w-4" />
+                          <span>Official</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="admin">
+                        <div className="flex items-center gap-2">
+                          <Crown className="h-4 w-4" />
+                          <span>Admin</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Select the dashboard you want to access after login
+                  </p>
+                </div>
+
                 <Button
                   type="submit"
                   className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-semibold py-2 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 mt-4"
@@ -304,6 +343,7 @@ export default function Login() {
           purpose="login"
         />
       )}
+
     </div>
   );
 }
