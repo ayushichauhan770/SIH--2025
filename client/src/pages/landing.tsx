@@ -1,10 +1,44 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Shield, Bell, Award, Clock, CheckCircle } from "lucide-react";
+import { FileText, Shield, Bell, Award, Clock, CheckCircle, Star } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useAuth } from "@/contexts/auth-context";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+
+interface DepartmentRating {
+  department_id: string;
+  department_name: string;
+  averageRating: number;
+  totalRatings: number;
+  officialCount: number;
+}
+
+interface RatingsData {
+  websiteRating: number;
+  totalRatings: number;
+  departments: DepartmentRating[];
+}
 
 export default function Landing() {
+  const [, setLocation] = useLocation();
+  const { user } = useAuth();
+
+  const { data: ratingsData, isLoading: ratingsLoading } = useQuery<RatingsData>({
+    queryKey: ["/api/public/ratings"],
+    queryFn: () => apiRequest<RatingsData>("GET", "/api/public/ratings"),
+  });
+
+  const handleSubmitApplication = () => {
+    if (user && user.role === "citizen") {
+      // User is logged in as citizen, go to submit page
+      setLocation("/citizen/submit");
+    } else {
+      // User is not logged in or not a citizen, redirect to citizen registration
+      setLocation("/register?role=citizen");
+    }
+  };
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900">
       <header className="border-b sticky top-0 bg-white/95 dark:bg-slate-950/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-950/60 z-50 shadow-sm">
@@ -49,11 +83,14 @@ export default function Landing() {
               blockchain verification, and guaranteed 30-day processing
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
-              <Link href="/register">
-                <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all" data-testid="button-submit-application">
-                  Submit Application
-                </Button>
-              </Link>
+              <Button 
+                size="lg" 
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all" 
+                data-testid="button-submit-application"
+                onClick={handleSubmitApplication}
+              >
+                Submit Application
+              </Button>
               <Link href="/track">
                 <Button size="lg" variant="outline" className="border-purple-300 hover:bg-purple-50 dark:border-purple-700 dark:hover:bg-purple-950" data-testid="button-track-application">
                   Track Application
@@ -151,46 +188,89 @@ export default function Landing() {
       <section className="py-16 bg-gradient-to-br from-slate-100/50 to-slate-200/50 dark:from-slate-800/50 dark:to-slate-900/50">
         <div className="container mx-auto px-4">
           <h2 className="text-4xl font-bold font-heading text-center mb-12 bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
-            Public Dashboard
+            Department Ratings
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50 hover:shadow-xl transition-all">
-              <CardHeader>
-                <CardTitle className="font-heading text-4xl text-center bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-400 dark:to-blue-500 bg-clip-text text-transparent">
-                  12,450+
-                </CardTitle>
-                <CardDescription className="text-center text-gray-600 dark:text-gray-400">
-                  Applications Processed
-                </CardDescription>
-              </CardHeader>
-            </Card>
-            <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50 hover:shadow-xl transition-all">
-              <CardHeader>
-                <CardTitle className="font-heading text-4xl text-center bg-gradient-to-r from-purple-600 to-purple-700 dark:from-purple-400 dark:to-purple-500 bg-clip-text text-transparent">
-                  18 Days
-                </CardTitle>
-                <CardDescription className="text-center text-gray-600 dark:text-gray-400">
-                  Average Resolution Time
-                </CardDescription>
-              </CardHeader>
-            </Card>
-            <Card className="border-0 shadow-lg bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-950/50 dark:to-pink-900/50 hover:shadow-xl transition-all">
-              <CardHeader>
-                <CardTitle className="font-heading text-4xl text-center bg-gradient-to-r from-pink-600 to-pink-700 dark:from-pink-400 dark:to-pink-500 bg-clip-text text-transparent">
-                  4.7/5
-                </CardTitle>
-                <CardDescription className="text-center text-gray-600 dark:text-gray-400">
-                  Citizen Satisfaction
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </div>
+
+          {/* Website Overall Rating */}
+          {ratingsData && (
+            <div className="max-w-2xl mx-auto mb-12">
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/50 dark:to-purple-950/50 hover:shadow-xl transition-all">
+                <CardHeader className="text-center">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Star className="h-8 w-8 text-yellow-500 fill-yellow-500" />
+                    <CardTitle className="font-heading text-5xl bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
+                      {`${ratingsData.websiteRating.toFixed(1)}/5.0`}
+                    </CardTitle>
+                  </div>
+                  <CardDescription className="text-lg font-semibold">
+                    Overall Website Rating
+                  </CardDescription>
+                  <CardDescription className="text-sm text-muted-foreground">
+                    Based on {ratingsData.totalRatings} ratings from all officials
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </div>
+          )}
+
+          {/* Department Ratings */}
+          {ratingsLoading ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Loading ratings...</p>
+            </div>
+          ) : ratingsData && ratingsData.departments.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-w-7xl mx-auto">
+              {ratingsData.departments.map((dept) => (
+                <Card
+                  key={dept.department_id}
+                  className={`border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 ${
+                    dept.averageRating > 0
+                      ? "bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50"
+                      : "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950/50 dark:to-gray-900/50 opacity-75"
+                  }`}
+                >
+                  <CardHeader>
+                    <div className="flex items-center justify-between mb-2">
+                      <Star className={`h-5 w-5 ${dept.averageRating > 0 ? "text-yellow-500 fill-yellow-500" : "text-gray-400"}`} />
+                      <CardTitle className={`font-heading text-xl ${
+                        dept.averageRating > 0
+                          ? "bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-400 dark:to-blue-500 bg-clip-text text-transparent"
+                          : "text-gray-400 dark:text-gray-500"
+                      }`}>
+                        {`${dept.averageRating.toFixed(1)}/5.0`}
+                      </CardTitle>
+                    </div>
+                    <CardTitle className={`font-semibold text-base line-clamp-3 ${
+                      dept.averageRating > 0
+                        ? "text-blue-900 dark:text-blue-100"
+                        : "text-gray-600 dark:text-gray-400"
+                    }`}>
+                      {dept.department_name}
+                    </CardTitle>
+                    <CardDescription className={`text-xs mt-2 ${
+                      dept.averageRating > 0
+                        ? "text-blue-700 dark:text-blue-300"
+                        : "text-gray-500 dark:text-gray-500"
+                    }`}>
+                      {dept.totalRatings > 0 ? (
+                        <>
+                          {dept.totalRatings} rating{dept.totalRatings !== 1 ? "s" : ""} • {dept.officialCount} official{dept.officialCount !== 1 ? "s" : ""}
+                        </>
+                      ) : (
+                        `${dept.officialCount} official${dept.officialCount !== 1 ? "s" : ""}`
+                      )}
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          ) : null}
         </div>
       </section>
 
       <footer className="border-t py-8 bg-slate-50 dark:bg-slate-950">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>© 2024 Digital Governance Platform. All rights reserved.</p>
+          <p>© 2025 Digital Governance Platform. All rights reserved.</p>
         </div>
       </footer>
     </div>

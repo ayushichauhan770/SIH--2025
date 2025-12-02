@@ -50,6 +50,7 @@ const UserSchema = new mongoose.Schema<User>({
   rating: { type: Number, default: 0 },
   assignedCount: { type: Number, default: 0 },
   solvedCount: { type: Number, default: 0 },
+  notSolvedCount: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
 }, { _id: false });
 

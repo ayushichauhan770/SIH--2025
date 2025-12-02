@@ -1308,11 +1308,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const totalRating = allRatings.reduce((sum, r) => sum + r.rating, 0);
                 const avgRating = totalRating / allRatings.length;
 
+                // Only increment solvedCount if the application wasn't already approved
+                // (Approved applications already have solvedCount incremented in updateApplicationStatus)
+                const wasAlreadyApproved = app.status === "Approved" || app.status === "Auto-Approved";
+                const newSolvedCount = wasAlreadyApproved 
+                  ? (official.solvedCount || 0)
+                  : (official.solvedCount || 0) + 1;
+
                 await storage.updateUserStats(
                   official.id,
                   avgRating,
-                  (official.solvedCount || 0) + 1,
-                  official.assignedCount || 0
+                  newSolvedCount,
+                  official.assignedCount || 0,
+                  official.notSolvedCount || 0
                 );
               }
             }
@@ -1386,7 +1394,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     official.id,
                     avgRating,
                     official.solvedCount || 0, // Don't increment solvedCount for "Not Solved"
-                    official.assignedCount || 0
+                    official.assignedCount || 0,
+                    official.notSolvedCount || 0
                   );
                 }
               }
@@ -1497,15 +1506,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const applications = await storage.getOfficialApplications(req.params.id);
       const warnings = await storage.getWarnings(req.params.id);
 
-      const approved = applications.filter(app => app.status === "Approved").length;
+      const approved = applications.filter(app => app.status === "Approved" || app.status === "Auto-Approved").length;
       const rejected = applications.filter(app => app.status === "Rejected").length;
-      const solved = applications.filter(app => app.isSolved).length;
+      const solved = official.solvedCount || 0; // Use official's solvedCount
+      const notSolved = official.notSolvedCount || 0; // Use official's notSolvedCount
       const assigned = applications.length;
 
       res.json({
         approved,
         rejected,
         solved,
+        notSolved,
         assigned,
         pending: applications.filter(app => ["Assigned", "In Progress"].includes(app.status)).length,
         warningsSent: warnings.length,
@@ -1547,6 +1558,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
         approvedCount,
         rejectedCount,
         pendingCount,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get department ratings and overall website rating (public endpoint)
+  app.get("/api/public/ratings", async (req: Request, res: Response) => {
+    try {
+      // Fetch all departments from the database
+      const allDepartments = await storage.getAllDepartments();
+      const allOfficials = await storage.getAllOfficials();
+      const allOfficialRatings: number[] = [];
+
+      // Calculate ratings for each department
+      const departmentRatingsArray = await Promise.all(
+        allDepartments.map(async (dept) => {
+          // Get all officials belonging to this department
+          // Match by department name (handle full name like "Health – Ministry..." or just "Health")
+          const deptOfficials = allOfficials.filter((official) => {
+            if (!official.department) return false;
+            // Check if official's department matches (exact match or starts with department name)
+            const officialDept = official.department.trim();
+            const deptName = dept.name.trim();
+            return officialDept === deptName || officialDept.startsWith(deptName) || deptName.startsWith(officialDept.split('–')[0].trim());
+          });
+
+          if (deptOfficials.length === 0) {
+            // No officials in this department
+            return {
+              department_id: dept.id,
+              department_name: dept.name,
+              averageRating: 0,
+              totalRatings: 0,
+              officialCount: 0,
+            };
+          }
+
+          // Calculate average rating for all officials in this department
+          const officialRatings: number[] = [];
+          let totalRatingsCount = 0;
+
+          for (const official of deptOfficials) {
+            // Get official's average rating (from stored rating or calculate from feedbacks)
+            let officialAvgRating = 0;
+            const feedbacks = await storage.getOfficialRatings(official.id);
+            
+            if (official.rating && official.rating > 0) {
+              // Use stored rating if available
+              officialAvgRating = official.rating;
+            } else if (feedbacks.length > 0) {
+              // Calculate from feedbacks
+              officialAvgRating = feedbacks.reduce((sum, f) => sum + f.rating, 0) / feedbacks.length;
+            }
+
+            if (officialAvgRating > 0) {
+              officialRatings.push(officialAvgRating);
+              totalRatingsCount += feedbacks.length;
+              allOfficialRatings.push(officialAvgRating);
+            }
+          }
+
+          // Calculate department average rating
+          const averageRating = officialRatings.length > 0
+            ? Number((officialRatings.reduce((sum, r) => sum + r, 0) / officialRatings.length).toFixed(1))
+            : 0;
+
+          return {
+            department_id: dept.id,
+            department_name: dept.name,
+            averageRating,
+            totalRatings: totalRatingsCount,
+            officialCount: deptOfficials.length,
+          };
+        })
+      );
+
+      // Sort by department_name in ascending order
+      departmentRatingsArray.sort((a, b) => a.department_name.localeCompare(b.department_name));
+
+      // Calculate overall website rating (average of all officials' ratings)
+      const websiteRating = allOfficialRatings.length > 0
+        ? Number((allOfficialRatings.reduce((sum, r) => sum + r, 0) / allOfficialRatings.length).toFixed(1))
+        : 0;
+
+      res.json({
+        websiteRating,
+        totalRatings: departmentRatingsArray.reduce((sum, d) => sum + d.totalRatings, 0),
+        departments: departmentRatingsArray,
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });

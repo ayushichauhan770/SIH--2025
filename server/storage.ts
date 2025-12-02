@@ -72,7 +72,7 @@ export interface IStorage {
   getWarnings(officialId: string): Promise<Warning[]>;
   markWarningAsRead(id: string): Promise<void>;
 
-  updateUserStats(userId: string, rating: number, solvedCount: number, assignedCount: number): Promise<User>;
+  updateUserStats(userId: string, rating: number, solvedCount: number, assignedCount: number, notSolvedCount?: number): Promise<User>;
   updateApplicationEscalation(id: string, escalationLevel: number, officialId: string): Promise<Application>;
   markApplicationSolved(id: string, isSolved: boolean): Promise<Application>;
   clearAllData(): Promise<void>;
@@ -147,6 +147,7 @@ export class MemStorage implements IStorage {
       rating: 0,
       assignedCount: 0,
       solvedCount: 0,
+      notSolvedCount: 0,
       id,
     };
     this.users.set(id, user);
@@ -271,15 +272,64 @@ export class MemStorage implements IStorage {
     const app = this.applications.get(id);
     if (!app) throw new Error("Application not found");
 
+    const previousStatus = app.status;
+    const previousIsSolved = app.isSolved;
+
+    // Set solved status based on application status
+    let isSolved = app.isSolved; // Keep existing value by default
+    if (status === "Approved" || status === "Auto-Approved") {
+      isSolved = true; // Approved applications are always solved
+    } else if (status === "Rejected") {
+      isSolved = false; // Rejected applications are not solved
+    }
+    // For other statuses (Submitted, Assigned, In Progress), keep existing isSolved value
+
     const updated: Application = {
       ...app,
       status,
+      isSolved,
       lastUpdatedAt: new Date(),
       approvedAt: ["Approved", "Auto-Approved", "Rejected"].includes(status) ? new Date() : app.approvedAt,
     };
 
     this.applications.set(id, updated);
     await this.addApplicationHistory(id, status, updatedBy, comment);
+
+    // Update official counts if application has an official assigned
+    if (app.officialId) {
+      const official = await this.getUser(app.officialId);
+      if (official && official.role === "official") {
+        let newSolvedCount = official.solvedCount || 0;
+        let newNotSolvedCount = official.notSolvedCount || 0;
+
+        // Handle status change to Rejected
+        if (status === "Rejected" && previousStatus !== "Rejected") {
+          // Only increment if it wasn't already rejected
+          newNotSolvedCount = (official.notSolvedCount || 0) + 1;
+        }
+
+        // Handle status change from Rejected to Approved
+        if ((status === "Approved" || status === "Auto-Approved") && previousStatus === "Rejected") {
+          // Decrease notSolvedCount and increase solvedCount
+          newNotSolvedCount = Math.max(0, (official.notSolvedCount || 0) - 1);
+          newSolvedCount = (official.solvedCount || 0) + 1;
+        }
+        // Handle status change to Approved (not from Rejected)
+        else if ((status === "Approved" || status === "Auto-Approved") && previousStatus !== "Rejected" && !previousIsSolved) {
+          // Only increment if it wasn't already solved
+          newSolvedCount = (official.solvedCount || 0) + 1;
+        }
+
+        // Update official stats
+        await this.updateUserStats(
+          official.id,
+          official.rating || 0,
+          newSolvedCount,
+          official.assignedCount || 0,
+          newNotSolvedCount
+        );
+      }
+    }
 
     if (status === "Approved" || status === "Auto-Approved") {
       const hash = this.generateHash(id);
@@ -519,10 +569,16 @@ export class MemStorage implements IStorage {
     }
   }
 
-  async updateUserStats(userId: string, rating: number, solvedCount: number, assignedCount: number): Promise<User> {
+  async updateUserStats(userId: string, rating: number, solvedCount: number, assignedCount: number, notSolvedCount?: number): Promise<User> {
     const user = this.users.get(userId);
     if (!user) throw new Error("User not found");
-    const updated = { ...user, rating, solvedCount, assignedCount };
+    const updated = { 
+      ...user, 
+      rating, 
+      solvedCount, 
+      assignedCount,
+      notSolvedCount: notSolvedCount !== undefined ? notSolvedCount : (user.notSolvedCount || 0)
+    };
     this.users.set(userId, updated);
     // await this.saveToDisk();
     return updated;

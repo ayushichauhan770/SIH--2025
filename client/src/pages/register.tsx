@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield } from "lucide-react";
+import { Shield, User as UserIcon, Crown, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
@@ -20,7 +20,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getSubDepartmentsForDepartment, getAllDepartmentNames } from "@shared/sub-departments";
 
 const DEPARTMENTS = getAllDepartmentNames();
@@ -34,6 +33,7 @@ export default function Register() {
   const [tempUser, setTempUser] = useState<{ user: User; phone?: string; email?: string; otpMethod?: "phone" | "email" } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
+  const [selectedRole, setSelectedRole] = useState<"citizen" | "official" | "admin" | null>(null);
   const [formData, setFormData] = useState({
     username: "",
     password: "",
@@ -46,6 +46,16 @@ export default function Register() {
     department: "",
     subDepartment: "",
   });
+
+  // Check for role query parameter in URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const roleParam = urlParams.get("role");
+    if (roleParam && ["citizen", "official", "admin"].includes(roleParam)) {
+      setSelectedRole(roleParam as "citizen" | "official" | "admin");
+      setFormData(prev => ({ ...prev, role: roleParam as "citizen" | "official" | "admin" }));
+    }
+  }, []);
 
   // OTP removed: verification is not required for registration flow
 
@@ -183,6 +193,151 @@ export default function Register() {
     }
   };
 
+  const handleRoleSelect = (role: "citizen" | "official" | "admin") => {
+    setSelectedRole(role);
+    setFormData({ ...formData, role });
+  };
+
+  const handleBackToRoleSelection = () => {
+    setSelectedRole(null);
+    setFormData({ ...formData, role: "citizen", department: "", subDepartment: "" });
+  };
+
+  // Role Selection Step
+  if (!selectedRole) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4 relative overflow-hidden">
+        <div className="fixed top-4 left-4 z-50">
+          <ThemeToggle />
+        </div>
+        {/* Animated background elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }}></div>
+
+          {/* Circular decorative boxes */}
+          <div className="absolute top-20 right-10 w-32 h-32 border-2 border-blue-300/30 rounded-full animate-spin" style={{ animationDuration: "20s" }}></div>
+          <div className="absolute bottom-20 left-10 w-40 h-40 border-2 border-purple-300/30 rounded-full animate-pulse"></div>
+          <div className="absolute top-1/3 left-20 w-24 h-24 border-2 border-pink-300/30 rounded-full" style={{ animationName: "none" }}></div>
+          <div className="absolute bottom-1/4 right-1/4 w-28 h-28 border-2 border-blue-300/20 rounded-full animate-bounce"></div>
+        </div>
+
+        <div className="w-full max-w-4xl space-y-6 relative z-10 animate-slide-in-right">
+          <div className="flex flex-col items-center gap-2 text-center">
+            <div className="p-3 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 animate-bounce">
+              <Shield className="h-10 w-10 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold font-heading bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
+              Digital Governance
+            </h1>
+            <p className="text-sm text-muted-foreground">Select your role to get started</p>
+          </div>
+
+          <Card className="border border-white/20 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/70 backdrop-blur-2xl shadow-2xl hover:shadow-2xl transition-all duration-300 rounded-3xl w-full p-8">
+            <div className="flex flex-col items-center justify-center">
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent mb-8">
+                Register As
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
+                {/* Citizen Card */}
+                <Card 
+                  className="cursor-pointer border-2 hover:border-green-500 dark:hover:border-green-400 transition-all duration-300 hover:shadow-xl hover:scale-105 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm"
+                  onClick={() => handleRoleSelect("citizen")}
+                >
+                  <CardContent className="flex flex-col items-center justify-center p-6 space-y-4">
+                    <div className="p-4 rounded-full bg-gradient-to-br from-green-400 to-green-600">
+                      <UserIcon className="h-8 w-8 text-white" />
+                    </div>
+                    <h3 className="text-xl font-bold text-center">Citizen</h3>
+                    <p className="text-sm text-muted-foreground text-center">
+                      Submit and track your applications
+                    </p>
+                    <Button 
+                      className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRoleSelect("citizen");
+                      }}
+                    >
+                      Register as Citizen
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Official Card */}
+                <Card 
+                  className="cursor-pointer border-2 hover:border-blue-500 dark:hover:border-blue-400 transition-all duration-300 hover:shadow-xl hover:scale-105 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm"
+                  onClick={() => handleRoleSelect("official")}
+                >
+                  <CardContent className="flex flex-col items-center justify-center p-6 space-y-4">
+                    <div className="p-4 rounded-full bg-gradient-to-br from-blue-400 to-blue-600">
+                      <Shield className="h-8 w-8 text-white" />
+                    </div>
+                    <h3 className="text-xl font-bold text-center">Official</h3>
+                    <p className="text-sm text-muted-foreground text-center">
+                      Process and manage applications
+                    </p>
+                    <Button 
+                      className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRoleSelect("official");
+                      }}
+                    >
+                      Register as Official
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Admin Card */}
+                <Card 
+                  className="cursor-pointer border-2 hover:border-purple-500 dark:hover:border-purple-400 transition-all duration-300 hover:shadow-xl hover:scale-105 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm"
+                  onClick={() => handleRoleSelect("admin")}
+                >
+                  <CardContent className="flex flex-col items-center justify-center p-6 space-y-4">
+                    <div className="p-4 rounded-full bg-gradient-to-br from-purple-400 to-purple-600">
+                      <Crown className="h-8 w-8 text-white" />
+                    </div>
+                    <h3 className="text-xl font-bold text-center">Admin</h3>
+                    <p className="text-sm text-muted-foreground text-center">
+                      Monitor system and analytics
+                    </p>
+                    <Button 
+                      className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRoleSelect("admin");
+                      }}
+                    >
+                      Register as Admin
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="mt-6 text-center text-sm">
+                Already have an account?{" "}
+                <Link href="/login" className="text-purple-600 dark:text-purple-400 hover:underline font-semibold">
+                  Login
+                </Link>
+              </div>
+            </div>
+          </Card>
+
+          <div className="text-center">
+            <Link href="/">
+              <Button variant="ghost" size="sm" className="text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400">
+                Back to Home
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Registration Form Step
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4 relative overflow-hidden">
       <div className="fixed top-4 left-4 z-50">
@@ -213,15 +368,24 @@ export default function Register() {
 
         <Card className="border border-white/20 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/70 backdrop-blur-2xl shadow-2xl hover:shadow-2xl transition-all duration-300 rounded-3xl w-full max-w-md p-8">
           <div className="flex flex-col items-center justify-center">
+            <div className="flex items-center justify-between w-full mb-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleBackToRoleSelection}
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back
+              </Button>
+              <div className="flex items-center gap-2">
+                {selectedRole === "citizen" && <UserIcon className="h-5 w-5 text-green-600 dark:text-green-400" />}
+                {selectedRole === "official" && <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />}
+                {selectedRole === "admin" && <Crown className="h-5 w-5 text-purple-600 dark:text-purple-400" />}
+                <span className="text-sm font-semibold capitalize">{selectedRole}</span>
+              </div>
+            </div>
             <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent mb-6">Create Account</h2>
-
-            <Tabs defaultValue="citizen" value={formData.role} onValueChange={(val) => setFormData({ ...formData, role: val })} className="w-full mb-6">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="citizen">Citizen</TabsTrigger>
-                <TabsTrigger value="official">Official</TabsTrigger>
-                <TabsTrigger value="admin">Admin</TabsTrigger>
-              </TabsList>
-            </Tabs>
 
             <form onSubmit={handleSubmit} className="space-y-3 w-full bg-white/10 dark:bg-slate-900/20 backdrop-blur-md rounded-2xl p-4">
               <div className="space-y-2">

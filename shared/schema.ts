@@ -17,6 +17,7 @@ export const users = pgTable("users", {
   rating: integer("rating").default(0),
   assignedCount: integer("assigned_count").default(0),
   solvedCount: integer("solved_count").default(0),
+  notSolvedCount: integer("not_solved_count").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
