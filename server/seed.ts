@@ -2,63 +2,50 @@ import { storage } from "./storage";
 import bcrypt from "bcryptjs";
 
 export async function seedData() {
-      const users = await storage.getAllOfficials();
-      const admin = await storage.getUserByUsername("admin");
+      // Always clear all data first to ensure fresh start
+      await storage.clearAllData();
 
-      if (users.length > 0 && admin) {
-            console.log("Data already exists, skipping seed.");
-            return;
-      }
-
-      console.log("Seeding initial data...");
+      console.log("🌱 Seeding fresh initial data...");
 
       const hashedPassword = await bcrypt.hash("password123", 10);
 
-      // 1. Create Admin if not exists
-      if (!admin) {
-            await storage.createUser({
-                  username: "admin",
-                  password: hashedPassword,
-                  fullName: "System Admin",
-                  email: "admin@example.com",
-                  phone: "9999999999",
-                  role: "admin",
-                  department: "Administration",
-                  aadharNumber: "000000000000"
-            });
-            console.log("Created admin user");
-      }
+      // 1. Create Admin
+      await storage.createUser({
+            username: "admin",
+            password: hashedPassword,
+            fullName: "System Admin",
+            email: "admin@example.com",
+            phone: "9999999999",
+            role: "admin",
+            department: "Administration",
+            aadharNumber: "000000000000"
+      });
+      console.log("Created admin user");
 
       // 1.1 Create Department Admins
-      const healthAdmin = await storage.getUserByUsername("health_admin");
-      if (!healthAdmin) {
-            await storage.createUser({
-                  username: "health_admin",
-                  password: hashedPassword,
-                  fullName: "Health Admin",
-                  email: "health.admin@example.com",
-                  phone: "9999999991",
-                  role: "admin",
-                  department: "Health",
-                  aadharNumber: "000000000001"
-            });
-            console.log("Created health_admin user");
-      }
+      await storage.createUser({
+            username: "health_admin",
+            password: hashedPassword,
+            fullName: "Health Admin",
+            email: "health.admin@example.com",
+            phone: "9999999991",
+            role: "admin",
+            department: "Health",
+            aadharNumber: "000000000001"
+      });
+      console.log("Created health_admin user");
 
-      const policeAdmin = await storage.getUserByUsername("police_admin");
-      if (!policeAdmin) {
-            await storage.createUser({
-                  username: "police_admin",
-                  password: hashedPassword,
-                  fullName: "Police Admin",
-                  email: "police.admin@example.com",
-                  phone: "9999999992",
-                  role: "admin",
-                  department: "Police",
-                  aadharNumber: "000000000002"
-            });
-            console.log("Created police_admin user");
-      }
+      await storage.createUser({
+            username: "police_admin",
+            password: hashedPassword,
+            fullName: "Police Admin",
+            email: "police.admin@example.com",
+            phone: "9999999992",
+            role: "admin",
+            department: "Police",
+            aadharNumber: "000000000002"
+      });
+      console.log("Created police_admin user");
 
       // 2. Create Departments
       const departments = [
@@ -70,8 +57,6 @@ export async function seedData() {
       ];
 
       for (const dept of departments) {
-            // Check if department exists (simple check by name if we had a getByName, but we'll just try to create or ignore)
-            // Since we are in-memory and fresh, we just create.
             await storage.createDepartment({
                   name: dept.name,
                   description: dept.description,
@@ -103,5 +88,5 @@ export async function seedData() {
       }
       console.log("Created officials");
 
-      console.log("Seeding complete!");
+      console.log("✅ Seeding complete! Fresh data ready.");
 }

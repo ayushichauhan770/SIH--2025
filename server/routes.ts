@@ -170,25 +170,42 @@ async function autoAssignApplication(applicationId: string, departmentName: stri
   const officials = await storage.getAllOfficials();
   const application = await storage.getApplication(applicationId);
 
+  // Validate and normalize department name
+  if (!departmentName || typeof departmentName !== 'string') {
+    console.error('Invalid department name:', departmentName);
+    return null;
+  }
+
+  // Validate and normalize sub-department name
+  let normalizedSubDept: string | null = null;
+  if (subDepartmentName) {
+    if (typeof subDepartmentName === 'string' && subDepartmentName.trim()) {
+      normalizedSubDept = subDepartmentName.trim();
+    } else {
+      // If it's not a valid string, set to null
+      normalizedSubDept = null;
+    }
+  }
+
   // 1. Filter by Department
   // Normalize department names (handle "Health – Ministry..." vs "Health")
   let deptOfficials = officials.filter(u => {
-    if (!u.department) return false;
+    if (!u.department || typeof u.department !== 'string') return false;
     const uDept = u.department.split('–')[0].trim();
     const appDept = departmentName.split('–')[0].trim();
     return uDept === appDept;
   });
 
   // 2. Filter by Sub-Department if available
-  if (subDepartmentName && subDepartmentName.trim()) {
+  if (normalizedSubDept) {
     deptOfficials = deptOfficials.filter(u => {
-      if (!u.subDepartment) return false;
-      return u.subDepartment === subDepartmentName;
+      if (!u.subDepartment || typeof u.subDepartment !== 'string') return false;
+      return u.subDepartment === normalizedSubDept;
     });
   }
 
   if (deptOfficials.length === 0) {
-    console.log(`No officials available for department: ${departmentName}${subDepartmentName ? `, sub-department: ${subDepartmentName}` : ''}`);
+    console.log(`No officials available for department: ${departmentName}${normalizedSubDept ? `, sub-department: ${normalizedSubDept}` : ''}`);
     return null;
   }
 
@@ -227,29 +244,35 @@ async function autoAssignApplication(applicationId: string, departmentName: stri
   const bestOfficial = officialsWithStats[0];
 
   if (bestOfficial) {
-    // 4. Assign
-    await storage.assignApplication(applicationId, bestOfficial.id);
+    try {
+      // 4. Assign
+      await storage.assignApplication(applicationId, bestOfficial.id);
 
-    // 5. Update official stats
-    await storage.updateUserStats(
-      bestOfficial.id,
-      bestOfficial.rating || 0,
-      bestOfficial.solvedCount || 0,
-      (bestOfficial.assignedCount || 0) + 1
-    );
+      // 5. Update official stats
+      await storage.updateUserStats(
+        bestOfficial.id,
+        bestOfficial.rating || 0,
+        bestOfficial.solvedCount || 0,
+        (bestOfficial.assignedCount || 0) + 1
+      );
 
-    // Update escalation level on application
-    await storage.updateApplicationEscalation(applicationId, escalationLevel, bestOfficial.id);
+      // Update escalation level on application
+      await storage.updateApplicationEscalation(applicationId, escalationLevel, bestOfficial.id);
 
-    return {
-      officialName: bestOfficial.fullName,
-      department: bestOfficial.department,
-      workloadStats: {
-        active: bestOfficial.activeWorkload,
-        total: bestOfficial.totalAssigned
-      },
-      assignedAt: new Date()
-    };
+      return {
+        officialName: bestOfficial.fullName,
+        department: bestOfficial.department,
+        workloadStats: {
+          active: bestOfficial.activeWorkload,
+          total: bestOfficial.totalAssigned
+        },
+        assignedAt: new Date()
+      };
+    } catch (error: any) {
+      console.error('Error assigning application to official:', error);
+      // Return null if assignment fails, but don't throw
+      return null;
+    }
   }
 
   return null;
@@ -693,13 +716,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Application not found" });
       }
 
-      const data = insertFeedbackSchema.parse(req.body);
-      const feedback = await storage.createFeedback({
-        ...data,
+      // Ensure application belongs to the current user
+      if (application.citizenId !== req.user!.id) {
+        return res.status(403).json({ error: "You can only rate your own applications" });
+      }
+
+      // Determine which official should receive this rating
+      let targetOfficialId = application.officialId;
+      
+      // If no official is assigned but department exists, find an official from that department
+      if (!targetOfficialId && application.department) {
+        const allOfficials = await storage.getAllOfficials();
+        const normalizedDept = application.department.split('–')[0].trim();
+        
+        let deptOfficials = allOfficials.filter(u => {
+          if (!u.department) return false;
+          const uDept = u.department.split('–')[0].trim();
+          return uDept === normalizedDept;
+        });
+
+        // If sub-department exists, prefer officials with matching sub-department
+        if (application.subDepartment && deptOfficials.length > 0) {
+          const subDeptOfficials = deptOfficials.filter(u => 
+            u.subDepartment === application.subDepartment
+          );
+          if (subDeptOfficials.length > 0) {
+            deptOfficials = subDeptOfficials;
+          }
+        }
+
+        if (deptOfficials.length > 0) {
+          targetOfficialId = deptOfficials[0].id;
+        }
+      }
+
+      const data = insertFeedbackSchema.parse({
+        ...req.body,
         applicationId: req.params.id,
         citizenId: req.user!.id,
-        officialId: application.officialId, // Include the official who handled the application
+        officialId: targetOfficialId, // Include the official who handled the application/department
       });
+      
+      const feedback = await storage.createFeedback(data);
+
+      // Update Official Rating
+      if (targetOfficialId) {
+        const official = await storage.getUser(targetOfficialId);
+        if (official) {
+          const allRatings = await storage.getOfficialRatings(official.id);
+          if (allRatings.length > 0) {
+            const totalRating = allRatings.reduce((sum, r) => sum + r.rating, 0);
+            const avgRating = totalRating / allRatings.length;
+
+            await storage.updateUserStats(
+              official.id,
+              avgRating,
+              official.solvedCount || 0,
+              official.assignedCount || 0
+            );
+          }
+        }
+      }
+
       res.json(feedback);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -752,31 +830,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "You can only rate your own applications" });
       }
 
+      // Determine which official should receive this rating
+      // Priority: 1. Assigned official, 2. Find official from department
+      let targetOfficialId = application.officialId;
+      
+      // If no official is assigned but department exists, find an official from that department
+      if (!targetOfficialId && application.department) {
+        const allOfficials = await storage.getAllOfficials();
+        const normalizedDept = application.department.split('–')[0].trim();
+        
+        // Find officials matching the department
+        let deptOfficials = allOfficials.filter(u => {
+          if (!u.department) return false;
+          const uDept = u.department.split('–')[0].trim();
+          return uDept === normalizedDept;
+        });
+
+        // If sub-department exists, prefer officials with matching sub-department
+        if (application.subDepartment && deptOfficials.length > 0) {
+          const subDeptOfficials = deptOfficials.filter(u => 
+            u.subDepartment === application.subDepartment
+          );
+          if (subDeptOfficials.length > 0) {
+            deptOfficials = subDeptOfficials;
+          }
+        }
+
+        // Select the first available official from the department
+        if (deptOfficials.length > 0) {
+          targetOfficialId = deptOfficials[0].id;
+          console.log(`Rating will be attributed to official ${deptOfficials[0].fullName} from department ${application.department}`);
+        }
+      }
+
       const data = insertFeedbackSchema.parse({
         applicationId,
         citizenId: req.user!.id,
-        officialId: application.officialId,
+        officialId: targetOfficialId, // Use the determined official ID
         rating,
         comment,
       });
 
       const feedback = await storage.createFeedback(data);
 
-      // Update Official Rating
-      if (application.officialId) {
-        const official = await storage.getUser(application.officialId);
+      // Update Official Rating - ensure rating goes to the official who handled this department
+      if (targetOfficialId) {
+        const official = await storage.getUser(targetOfficialId);
         if (official) {
           const allRatings = await storage.getOfficialRatings(official.id);
-          const totalRating = allRatings.reduce((sum, r) => sum + r.rating, 0);
-          const avgRating = totalRating / allRatings.length;
+          if (allRatings.length > 0) {
+            const totalRating = allRatings.reduce((sum, r) => sum + r.rating, 0);
+            const avgRating = totalRating / allRatings.length;
 
-          await storage.updateUserStats(
-            official.id,
-            avgRating,
-            official.solvedCount || 0,
-            official.assignedCount || 0
-          );
+            await storage.updateUserStats(
+              official.id,
+              avgRating,
+              official.solvedCount || 0,
+              official.assignedCount || 0
+            );
+            
+            console.log(`Updated rating for official ${official.fullName}: ${avgRating.toFixed(1)}/5.0 (${allRatings.length} ratings)`);
+          }
         }
+      } else {
+        console.warn(`Warning: No official found for application ${applicationId} in department ${application.department}. Rating saved without official attribution.`);
       }
 
       res.json(feedback);
@@ -1135,38 +1252,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Mark as solved
         await storage.markApplicationSolved(app.id, true);
 
-        // Handle Rating
-        if (rating && app.officialId) {
-          // Check if already rated
-          // Check if already rated
-          const existingFeedback = await storage.getFeedbackByApplicationAndOfficialId(app.id, app.officialId);
-          if (existingFeedback) {
-            // Update existing feedback
-            await storage.updateFeedback(existingFeedback.id, rating, comment);
-          } else {
-            // Create new feedback
-            await storage.createFeedback({
-              applicationId: app.id,
-              citizenId: req.user!.id,
-              officialId: app.officialId,
-              rating: rating,
-              comment: comment
+        // Handle Rating - ensure rating goes to the official who handled this department
+        if (rating) {
+          // Determine which official should receive this rating
+          let targetOfficialId = app.officialId;
+          
+          // If no official is assigned but department exists, find an official from that department
+          if (!targetOfficialId && app.department) {
+            const allOfficials = await storage.getAllOfficials();
+            const normalizedDept = app.department.split('–')[0].trim();
+            
+            let deptOfficials = allOfficials.filter(u => {
+              if (!u.department) return false;
+              const uDept = u.department.split('–')[0].trim();
+              return uDept === normalizedDept;
             });
+
+            // If sub-department exists, prefer officials with matching sub-department
+            if (app.subDepartment && deptOfficials.length > 0) {
+              const subDeptOfficials = deptOfficials.filter(u => 
+                u.subDepartment === app.subDepartment
+              );
+              if (subDeptOfficials.length > 0) {
+                deptOfficials = subDeptOfficials;
+              }
+            }
+
+            if (deptOfficials.length > 0) {
+              targetOfficialId = deptOfficials[0].id;
+            }
           }
 
-          // Update Official Rating (Recalculate for both create and update)
-          const official = await storage.getUser(app.officialId);
-          if (official) {
-            const allRatings = await storage.getOfficialRatings(official.id);
-            const totalRating = allRatings.reduce((sum, r) => sum + r.rating, 0);
-            const avgRating = totalRating / allRatings.length;
+          if (targetOfficialId) {
+            // Check if already rated
+            const existingFeedback = await storage.getFeedbackByApplicationAndOfficialId(app.id, targetOfficialId);
+            if (existingFeedback) {
+              // Update existing feedback
+              await storage.updateFeedback(existingFeedback.id, rating, comment);
+            } else {
+              // Create new feedback
+              await storage.createFeedback({
+                applicationId: app.id,
+                citizenId: req.user!.id,
+                officialId: targetOfficialId,
+                rating: rating,
+                comment: comment
+              });
+            }
 
-            await storage.updateUserStats(
-              official.id,
-              avgRating,
-              (official.solvedCount || 0) + 1,
-              official.assignedCount || 0
-            );
+            // Update Official Rating (Recalculate for both create and update)
+            const official = await storage.getUser(targetOfficialId);
+            if (official) {
+              const allRatings = await storage.getOfficialRatings(official.id);
+              if (allRatings.length > 0) {
+                const totalRating = allRatings.reduce((sum, r) => sum + r.rating, 0);
+                const avgRating = totalRating / allRatings.length;
+
+                await storage.updateUserStats(
+                  official.id,
+                  avgRating,
+                  (official.solvedCount || 0) + 1,
+                  official.assignedCount || 0
+                );
+              }
+            }
           }
         }
 
@@ -1177,48 +1326,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const currentLevel = app.escalationLevel || 0;
         const nextLevel = currentLevel + 1;
 
-        // Handle Rating for the previous official
-        // Handle Rating for the previous official
-        if (rating && app.officialId) {
-          const existingFeedback = await storage.getFeedbackByApplicationAndOfficialId(app.id, app.officialId);
-          if (existingFeedback) {
-            await storage.updateFeedback(existingFeedback.id, rating, comment);
-          } else {
-            await storage.createFeedback({
-              applicationId: app.id,
-              citizenId: req.user!.id,
-              officialId: app.officialId,
-              rating: rating,
-              comment: comment
-            });
-          }
+        // Handle Rating for the previous official - ensure rating goes to the official who handled this department
+        let ratingSaved = false;
+        if (rating) {
+          try {
+            // Determine which official should receive this rating
+            let targetOfficialId = app.officialId;
+            
+            // If no official is assigned but department exists, find an official from that department
+            if (!targetOfficialId && app.department) {
+              const allOfficials = await storage.getAllOfficials();
+              const normalizedDept = app.department.split('–')[0].trim();
+              
+              let deptOfficials = allOfficials.filter(u => {
+                if (!u.department) return false;
+                const uDept = u.department.split('–')[0].trim();
+                return uDept === normalizedDept;
+              });
 
-          // Update Official Rating
-          const official = await storage.getUser(app.officialId);
-          if (official) {
-            const allRatings = await storage.getOfficialRatings(official.id);
-            const totalRating = allRatings.reduce((sum, r) => sum + r.rating, 0);
-            const avgRating = totalRating / allRatings.length;
+              // If sub-department exists, prefer officials with matching sub-department
+              if (app.subDepartment && deptOfficials.length > 0) {
+                const subDeptOfficials = deptOfficials.filter(u => 
+                  u.subDepartment === app.subDepartment
+                );
+                if (subDeptOfficials.length > 0) {
+                  deptOfficials = subDeptOfficials;
+                }
+              }
 
-            await storage.updateUserStats(
-              official.id,
-              avgRating,
-              official.solvedCount || 0, // Don't increment solvedCount for "Not Solved"
-              official.assignedCount || 0
-            );
+              if (deptOfficials.length > 0) {
+                targetOfficialId = deptOfficials[0].id;
+              }
+            }
+
+            if (targetOfficialId) {
+              const existingFeedback = await storage.getFeedbackByApplicationAndOfficialId(app.id, targetOfficialId);
+              if (existingFeedback) {
+                await storage.updateFeedback(existingFeedback.id, rating, comment);
+              } else {
+                await storage.createFeedback({
+                  applicationId: app.id,
+                  citizenId: req.user!.id,
+                  officialId: targetOfficialId,
+                  rating: rating,
+                  comment: comment
+                });
+              }
+              ratingSaved = true;
+
+              // Update Official Rating
+              const official = await storage.getUser(targetOfficialId);
+              if (official) {
+                const allRatings = await storage.getOfficialRatings(official.id);
+                if (allRatings.length > 0) {
+                  const totalRating = allRatings.reduce((sum, r) => sum + r.rating, 0);
+                  const avgRating = totalRating / allRatings.length;
+
+                  await storage.updateUserStats(
+                    official.id,
+                    avgRating,
+                    official.solvedCount || 0, // Don't increment solvedCount for "Not Solved"
+                    official.assignedCount || 0
+                  );
+                }
+              }
+            }
+          } catch (ratingError: any) {
+            console.error('Error saving rating:', ratingError);
+            // Continue with escalation even if rating fails
           }
         }
 
         // Now escalate and reassign
-        if (app.department) {
-          const newOfficial = await autoAssignApplication(app.id, app.department, nextLevel);
-          if (newOfficial) {
-            res.json({ message: "Application escalated and reassigned", official: newOfficial.officialName });
+        try {
+          if (app.department && typeof app.department === 'string') {
+            // Ensure subDepartment is a string or null
+            const subDept = (app.subDepartment && typeof app.subDepartment === 'string' && app.subDepartment.trim()) ? app.subDepartment.trim() : null;
+            const dept = app.department.trim();
+            const newOfficial = await autoAssignApplication(app.id, dept, subDept, nextLevel);
+            if (newOfficial) {
+              res.json({ 
+                message: ratingSaved ? "Your feedback has been recorded. Application escalated and reassigned" : "Application escalated and reassigned",
+                official: newOfficial.officialName,
+                ratingSubmitted: ratingSaved 
+              });
+            } else {
+              res.json({ 
+                message: ratingSaved ? "Your feedback has been recorded. Application escalated but no new official found. Pending assignment." : "Application escalated but no new official found. Pending assignment.",
+                ratingSubmitted: ratingSaved 
+              });
+            }
           } else {
-            res.json({ message: "Application escalated but no new official found. Pending assignment." });
+            // Rating was saved successfully, but escalation failed due to missing department
+            res.json({ 
+              message: ratingSaved ? "Your feedback has been recorded successfully. Application will be reviewed." : "Application will be reviewed.",
+              ratingSubmitted: ratingSaved 
+            });
           }
-        } else {
-          res.status(400).json({ error: "Application has no department" });
+        } catch (escalationError: any) {
+          // Rating was saved successfully, but escalation encountered an error
+          console.error('Error during escalation after rating:', escalationError);
+          res.json({ 
+            message: ratingSaved ? "Your feedback has been recorded successfully. Application escalation encountered an issue but your rating was saved." : "Application escalation encountered an issue.",
+            ratingSubmitted: ratingSaved,
+            warning: ratingSaved ? "Please contact support if the application status doesn't update." : undefined
+          });
         }
       }
 

@@ -74,14 +74,10 @@ app.use((req, res, next) => {
 });
 
 import { seedData } from "./seed";
-import { connectMongoDB } from "./mongodb";
 
 export default async function runApp(
   setup: (app: Express, server: Server) => Promise<void>,
 ) {
-  // Connect to MongoDB first
-  await connectMongoDB();
-
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

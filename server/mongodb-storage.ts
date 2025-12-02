@@ -419,5 +419,19 @@ export class MongoDBStorage implements IStorage {
     if (!app) throw new Error("Application not found");
     return app;
   }
+
+  async clearAllData(): Promise<void> {
+    console.log("🗑️  Clearing all data from database...");
+    await UserModel.deleteMany({});
+    await ApplicationModel.deleteMany({});
+    await ApplicationHistoryModel.deleteMany({});
+    await FeedbackModel.deleteMany({});
+    await OTPRecordModel.deleteMany({});
+    await BlockchainHashModel.deleteMany({});
+    await NotificationModel.deleteMany({});
+    await DepartmentModel.deleteMany({});
+    await WarningModel.deleteMany({});
+    console.log("✅ All data cleared successfully!");
+  }
 }
 

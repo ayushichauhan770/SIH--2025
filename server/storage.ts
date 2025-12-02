@@ -75,6 +75,7 @@ export interface IStorage {
   updateUserStats(userId: string, rating: number, solvedCount: number, assignedCount: number): Promise<User>;
   updateApplicationEscalation(id: string, escalationLevel: number, officialId: string): Promise<Application>;
   markApplicationSolved(id: string, isSolved: boolean): Promise<Application>;
+  clearAllData(): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -556,13 +557,25 @@ export class MemStorage implements IStorage {
     return updated;
   }
 
+  async clearAllData(): Promise<void> {
+    console.log("🗑️  Clearing all data from memory...");
+    this.users.clear();
+    this.applications.clear();
+    this.applicationHistory.clear();
+    this.feedback.clear();
+    this.otpRecords.clear();
+    this.blockchainHashes.clear();
+    this.notifications.clear();
+    this.departments.clear();
+    this.warnings.clear();
+    console.log("✅ All data cleared successfully!");
+  }
+
   private generateHash(data: string): string {
 
     return createHash('sha256').update(data + Date.now()).digest('hex');
   }
 }
 
-import { MongoDBStorage } from "./mongodb-storage";
-
-// Use MongoDB storage instead of in-memory storage
-export const storage = new MongoDBStorage();
+// Use in-memory storage (data resets on server restart)
+export const storage = new MemStorage();

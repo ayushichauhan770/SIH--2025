@@ -174,6 +174,8 @@ export default function OfficialDashboard() {
         <div className="flex items-center gap-4">
           <div className="hidden md:flex flex-col items-end text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">
             <span>Logged in as: <span className="font-mono font-bold text-primary">{user?.username}</span></span>
+            {user?.department && <span>Dept: <span className="font-semibold">{user.department}</span></span>}
+            {user?.subDepartment && <span>Sub-Dept: <span className="font-semibold">{user.subDepartment}</span></span>}
             <span>ID: <span className="font-mono">{user?.id?.substring(0, 8)}...</span></span>
           </div>
           <div className="flex items-center gap-2">
@@ -209,6 +211,13 @@ export default function OfficialDashboard() {
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
                   <span className="text-sm font-medium text-white">
                     {user.department}
+                  </span>
+                </div>
+              )}
+              {user?.subDepartment && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
+                  <span className="text-sm font-medium text-white">
+                    {user.subDepartment}
                   </span>
                 </div>
               )}
