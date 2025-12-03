@@ -932,21 +932,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Generate OTP endpoint - creates and sends OTP
-  app.post("/api/otp/generate", authenticateToken, async (req: Request, res: Response) => {
+  // Generate OTP endpoint - creates and sends OTP (no auth required for login/register flows)
+  app.post("/api/otp/generate", async (req: Request, res: Response) => {
     try {
+      console.log("[OTP Generate] Request body:", req.body);
       const data = generateOtpSchema.parse(req.body);
       const otp = generateOTP();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
       if (data.email) {
+        console.log(`[OTP Generate] Creating OTP for email: ${data.email}`);
         await storage.createOTP(data.email, "email", otp, data.purpose, expiresAt);
 
         try {
           await sendEmailOTP(data.email, otp, data.purpose);
-          console.log(`Generated OTP for email ${data.email}: ${otp}`);
+          console.log(`[OTP Generate] ✅ Generated OTP for email ${data.email}: ${otp}`);
         } catch (error) {
-          console.error("Failed to send email OTP:", error);
+          console.error("[OTP Generate] Failed to send email OTP:", error);
         }
 
         const isDev = (process.env.NODE_ENV || "development") !== "production";
@@ -955,13 +957,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ...(isDev ? { otp } : {})
         });
       } else if (data.phone) {
+        console.log(`[OTP Generate] Creating OTP for phone: ${data.phone}`);
         await storage.createOTP(data.phone, "phone", otp, data.purpose, expiresAt);
 
         try {
           await sendSMSOTP(data.phone, otp, data.purpose);
-          console.log(`Generated OTP for phone ${data.phone}: ${otp}`);
+          console.log(`[OTP Generate] ✅ Generated OTP for phone ${data.phone}: ${otp}`);
         } catch (error) {
-          console.error("Failed to send SMS OTP:", error);
+          console.error("[OTP Generate] Failed to send SMS OTP:", error);
         }
 
         const isDev = (process.env.NODE_ENV || "development") !== "production";
@@ -971,8 +974,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      console.log("[OTP Generate] ❌ No phone or email provided");
       return res.status(400).json({ error: "Phone or email is required" });
     } catch (error: any) {
+      console.error("[OTP Generate] ❌ Error:", error);
       res.status(400).json({ error: error.message });
     }
   });

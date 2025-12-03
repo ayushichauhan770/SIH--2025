@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield, User as UserIcon, Crown, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { Shield, User as UserIcon, Crown, ArrowLeft, Eye, EyeOff, FileText } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +21,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getSubDepartmentsForDepartment, getAllDepartmentNames } from "@shared/sub-departments";
 
 const DEPARTMENTS = getAllDepartmentNames();
@@ -38,6 +39,16 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showSecretKey, setShowSecretKey] = useState(false);
+
+  // Check for role parameter in URL and auto-select the role
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const roleParam = params.get("role");
+    if (roleParam === "citizen" || roleParam === "official" || roleParam === "admin") {
+      setSelectedRole(roleParam);
+      setFormData(prev => ({ ...prev, role: roleParam }));
+    }
+  }, []);
   const [formData, setFormData] = useState({
     username: "",
     password: "",
@@ -45,6 +56,7 @@ export default function Register() {
     fullName: "",
     email: "",
     phone: "",
+    documentType: "aadhaar",
     aadharNumber: "",
     role: "citizen",
     department: "",
@@ -362,10 +374,15 @@ export default function Register() {
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="Enter your mobile number"
+                  placeholder="Enter your 10-digit mobile number"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setFormData({ ...formData, phone: value });
+                  }}
                   required
+                  maxLength={10}
+                  pattern="[0-9]{10}"
                   data-testid="input-phone"
                   className="border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
                 />
@@ -436,17 +453,82 @@ export default function Register() {
                   </div>
                 )}
                 <div className="space-y-2">
-                  <Label htmlFor="aadharNumber" className="text-sm font-semibold">Aadhar Number</Label>
+                  <Label htmlFor="documentType" className="text-sm font-semibold">Document Type</Label>
+                  <Select 
+                    value={formData.documentType} 
+                    onValueChange={(value) => {
+                      setFormData({ ...formData, documentType: value, aadharNumber: "" });
+                    }}
+                  >
+                    <SelectTrigger 
+                      id="documentType"
+                      className="border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30"
+                    >
+                      <SelectValue placeholder="Select document type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="aadhaar">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          <span>Aadhaar Card</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="pan">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          <span>PAN Card</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="voter">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          <span>Voter ID</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="driving">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          <span>Driving License</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="passport">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          <span>Passport</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="aadharNumber" className="text-sm font-semibold">
+                    {formData.documentType === "aadhaar" && "Aadhaar Number"}
+                    {formData.documentType === "pan" && "PAN Number"}
+                    {formData.documentType === "voter" && "Voter ID Number"}
+                    {formData.documentType === "driving" && "Driving License Number"}
+                    {formData.documentType === "passport" && "Passport Number"}
+                  </Label>
                   <Input
                     id="aadharNumber"
                     type="text"
-                    placeholder="Enter your 12-digit Aadhar number"
+                    placeholder={
+                      formData.documentType === "aadhaar" ? "Enter your 12-digit Aadhaar number" :
+                      formData.documentType === "pan" ? "Enter your 10-character PAN number" :
+                      formData.documentType === "voter" ? "Enter your Voter ID number" :
+                      formData.documentType === "driving" ? "Enter your Driving License number" :
+                      "Enter your Passport number"
+                    }
                     value={formData.aadharNumber}
                     onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, "").slice(0, 12);
+                      let value = e.target.value;
+                      if (formData.documentType === "aadhaar") {
+                        value = value.replace(/\D/g, "").slice(0, 12);
+                      } else if (formData.documentType === "pan") {
+                        value = value.toUpperCase().slice(0, 10);
+                      }
                       setFormData({ ...formData, aadharNumber: value });
                     }}
-                    maxLength={12}
+                    maxLength={formData.documentType === "aadhaar" ? 12 : formData.documentType === "pan" ? 10 : undefined}
                     required
                     data-testid="input-aadhar"
                     className="border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"

@@ -53,11 +53,7 @@ export default function Landing() {
   });
 
   const handleSubmitApplication = () => {
-    if (user && user.role === "citizen") {
-      setLocation("/citizen/submit");
-    } else {
-      setLocation("/register?role=citizen");
-    }
+    setLocation("/login?role=citizen");
   };
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900">
@@ -120,7 +116,7 @@ export default function Landing() {
             <div className="flex flex-wrap items-center justify-center gap-6 pt-8 text-sm">
               <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-50 dark:bg-blue-950/50">
                 <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                <span className="text-blue-900 dark:text-blue-100">30-Day Auto-Approval</span>
+                <span className="text-blue-900 dark:text-blue-100">30-Day Auto-Assign</span>
               </div>
               <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-50 dark:bg-purple-950/50">
                 <Bell className="h-4 w-4 text-purple-600 dark:text-purple-400" />

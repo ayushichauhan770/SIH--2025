@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,6 @@ import { OTPModal } from "@/components/otp-modal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { SiGoogle } from "react-icons/si";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { User } from "@shared/schema";
 
 
@@ -29,6 +28,16 @@ export default function Login() {
   const [tempUser, setTempUser] = useState<{ user: User; phone?: string; email?: string; otpMethod?: "phone" | "email" } | null>(null);
   const [activeTab, setActiveTab] = useState("mobile");
   const [showPassword, setShowPassword] = useState(false);
+
+  // Check for role parameter in URL and auto-select the role
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const roleParam = params.get("role");
+    if (roleParam === "citizen" || roleParam === "official" || roleParam === "admin") {
+      setSelectedRole(roleParam);
+      setLoginRole(roleParam);
+    }
+  }, []);
 
   const [formData, setFormData] = useState({
     username: "",
@@ -310,10 +319,15 @@ export default function Login() {
                     <Input
                       id="phone"
                       type="tel"
-                      placeholder="Enter your mobile number"
+                      placeholder="Enter your 10-digit mobile number"
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                        setFormData({ ...formData, phone: value });
+                      }}
                       required={activeTab === "mobile"}
+                      maxLength={10}
+                      pattern="[0-9]{10}"
                       className="border-green-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-green-500 focus:ring-green-500/20 dark:border-green-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
                     />
                   </div>
@@ -379,44 +393,6 @@ export default function Login() {
                     </div>
                   </div>
                 </TabsContent>
-
-                {/* Role Selection - Common for both tabs */}
-                <div className="space-y-2 mt-4">
-                  <Label htmlFor="login-role" className="text-sm font-semibold">
-                    Login As
-                  </Label>
-                  <Select value={loginRole} onValueChange={(value: "citizen" | "official" | "admin") => setLoginRole(value)}>
-                    <SelectTrigger 
-                      id="login-role"
-                      className="w-full border-green-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-green-500 focus:ring-green-500/20 dark:border-green-800/30"
-                    >
-                      <SelectValue placeholder="Select your role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="citizen">
-                        <div className="flex items-center gap-2">
-                          <UserIcon className="h-4 w-4" />
-                          <span>Citizen</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="official">
-                        <div className="flex items-center gap-2">
-                          <Shield className="h-4 w-4" />
-                          <span>Official</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="admin">
-                        <div className="flex items-center gap-2">
-                          <Crown className="h-4 w-4" />
-                          <span>Admin</span>
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Select the dashboard you want to access after login
-                  </p>
-                </div>
 
                 <Button
                   type="submit"
