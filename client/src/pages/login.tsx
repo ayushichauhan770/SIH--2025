@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield, Phone, Mail, User as UserIcon, Crown, ArrowLeft } from "lucide-react";
+import { Shield, Phone, Mail, User as UserIcon, Crown, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +14,7 @@ import { OTPModal } from "@/components/otp-modal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { SiGoogle } from "react-icons/si";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { User } from "@shared/schema";
 
 
@@ -27,6 +28,7 @@ export default function Login() {
   const [loginRole, setLoginRole] = useState<"citizen" | "official" | "admin">("citizen");
   const [tempUser, setTempUser] = useState<{ user: User; phone?: string; email?: string; otpMethod?: "phone" | "email" } | null>(null);
   const [activeTab, setActiveTab] = useState("mobile");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     username: "",
@@ -157,28 +159,21 @@ export default function Login() {
     setFormData({ username: "", password: "", phone: "", email: "" });
   };
 
-  // Role Selection Step
+  // Step 1: Role Selection
   if (!selectedRole) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4 relative overflow-hidden">
         <div className="fixed top-4 left-4 z-50">
           <ThemeToggle />
         </div>
-        {/* Animated background elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-green-400/20 to-blue-400/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }}></div>
-
-          {/* Circular decorative boxes */}
-          <div className="absolute top-20 left-10 w-32 h-32 border-2 border-green-300/30 rounded-full animate-spin" style={{ animationDuration: "20s", animationDirection: "reverse" }}></div>
-          <div className="absolute bottom-20 right-10 w-40 h-40 border-2 border-blue-300/30 rounded-full animate-pulse"></div>
-          <div className="absolute top-1/2 right-20 w-24 h-24 border-2 border-purple-300/30 rounded-full" style={{ animationName: "none" }}></div>
-          <div className="absolute bottom-1/3 left-1/4 w-28 h-28 border-2 border-green-300/20 rounded-full animate-bounce"></div>
         </div>
 
-        <div className="w-full max-w-4xl space-y-6 relative z-10 animate-slide-in-left">
+        <div className="w-full max-w-4xl space-y-6 relative z-10">
           <div className="flex flex-col items-center gap-2 text-center">
-            <div className="p-3 rounded-full bg-gradient-to-br from-green-500 to-blue-600 animate-bounce">
+            <div className="p-3 rounded-full bg-gradient-to-br from-green-500 to-blue-600">
               <Shield className="h-10 w-10 text-white" />
             </div>
             <h1 className="text-3xl font-bold font-heading bg-gradient-to-r from-green-600 to-blue-600 dark:from-green-400 dark:to-blue-400 bg-clip-text text-transparent">
@@ -187,85 +182,49 @@ export default function Login() {
             <p className="text-sm text-muted-foreground">Select your role to continue</p>
           </div>
 
-          <Card className="border border-white/20 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/70 backdrop-blur-2xl shadow-2xl hover:shadow-2xl transition-all duration-300 rounded-3xl w-full p-8">
+          <Card className="border border-white/20 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/70 backdrop-blur-2xl shadow-2xl rounded-3xl w-full p-8">
             <div className="flex flex-col items-center justify-center">
               <h2 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 dark:from-green-400 dark:to-blue-400 bg-clip-text text-transparent mb-8">
                 Login As
               </h2>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
-                {/* Citizen Card */}
                 <Card 
-                  className="cursor-pointer border-2 hover:border-green-500 dark:hover:border-green-400 transition-all duration-300 hover:shadow-xl hover:scale-105 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm"
+                  className="cursor-pointer border-2 hover:border-green-500 transition-all hover:shadow-xl hover:scale-105"
                   onClick={() => handleRoleSelect("citizen")}
                 >
                   <CardContent className="flex flex-col items-center justify-center p-6 space-y-4">
                     <div className="p-4 rounded-full bg-gradient-to-br from-green-400 to-green-600">
                       <UserIcon className="h-8 w-8 text-white" />
                     </div>
-                    <h3 className="text-xl font-bold text-center">Citizen</h3>
-                    <p className="text-sm text-muted-foreground text-center">
-                      Submit and track your applications
-                    </p>
-                    <Button 
-                      className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRoleSelect("citizen");
-                      }}
-                    >
-                      Continue as Citizen
-                    </Button>
+                    <h3 className="text-xl font-bold">Citizen</h3>
+                    <p className="text-sm text-muted-foreground text-center">Submit and track applications</p>
                   </CardContent>
                 </Card>
 
-                {/* Official Card */}
                 <Card 
-                  className="cursor-pointer border-2 hover:border-blue-500 dark:hover:border-blue-400 transition-all duration-300 hover:shadow-xl hover:scale-105 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm"
+                  className="cursor-pointer border-2 hover:border-blue-500 transition-all hover:shadow-xl hover:scale-105"
                   onClick={() => handleRoleSelect("official")}
                 >
                   <CardContent className="flex flex-col items-center justify-center p-6 space-y-4">
                     <div className="p-4 rounded-full bg-gradient-to-br from-blue-400 to-blue-600">
                       <Shield className="h-8 w-8 text-white" />
                     </div>
-                    <h3 className="text-xl font-bold text-center">Official</h3>
-                    <p className="text-sm text-muted-foreground text-center">
-                      Process and manage applications
-                    </p>
-                    <Button 
-                      className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRoleSelect("official");
-                      }}
-                    >
-                      Continue as Official
-                    </Button>
+                    <h3 className="text-xl font-bold">Official</h3>
+                    <p className="text-sm text-muted-foreground text-center">Process applications</p>
                   </CardContent>
                 </Card>
 
-                {/* Admin Card */}
                 <Card 
-                  className="cursor-pointer border-2 hover:border-purple-500 dark:hover:border-purple-400 transition-all duration-300 hover:shadow-xl hover:scale-105 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm"
+                  className="cursor-pointer border-2 hover:border-purple-500 transition-all hover:shadow-xl hover:scale-105"
                   onClick={() => handleRoleSelect("admin")}
                 >
                   <CardContent className="flex flex-col items-center justify-center p-6 space-y-4">
                     <div className="p-4 rounded-full bg-gradient-to-br from-purple-400 to-purple-600">
                       <Crown className="h-8 w-8 text-white" />
                     </div>
-                    <h3 className="text-xl font-bold text-center">Admin</h3>
-                    <p className="text-sm text-muted-foreground text-center">
-                      Monitor system and analytics
-                    </p>
-                    <Button 
-                      className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRoleSelect("admin");
-                      }}
-                    >
-                      Continue as Admin
-                    </Button>
+                    <h3 className="text-xl font-bold">Admin</h3>
+                    <p className="text-sm text-muted-foreground text-center">Monitor system</p>
                   </CardContent>
                 </Card>
               </div>
@@ -281,9 +240,7 @@ export default function Login() {
 
           <div className="text-center">
             <Link href="/">
-              <Button variant="ghost" size="sm" className="text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400">
-                Back to Home
-              </Button>
+              <Button variant="ghost" size="sm">Back to Home</Button>
             </Link>
           </div>
         </div>
@@ -291,7 +248,7 @@ export default function Login() {
     );
   }
 
-  // Login Form Step
+  // Step 2: Login Form
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4 relative overflow-hidden">
       <div className="fixed top-4 left-4 z-50">
@@ -323,19 +280,14 @@ export default function Login() {
         <Card className="border border-white/20 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/70 backdrop-blur-2xl shadow-2xl hover:shadow-2xl transition-all duration-300 rounded-3xl w-full max-w-md p-6">
           <div className="flex flex-col items-center justify-center">
             <div className="flex items-center justify-between w-full mb-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleBackToRoleSelection}
-                className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-              >
+              <Button variant="ghost" size="sm" onClick={handleBackToRoleSelection} className="flex items-center gap-2">
                 <ArrowLeft className="h-4 w-4" />
                 Back
               </Button>
               <div className="flex items-center gap-2">
-                {selectedRole === "citizen" && <UserIcon className="h-5 w-5 text-green-600 dark:text-green-400" />}
-                {selectedRole === "official" && <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />}
-                {selectedRole === "admin" && <Crown className="h-5 w-5 text-purple-600 dark:text-purple-400" />}
+                {selectedRole === "citizen" && <UserIcon className="h-5 w-5 text-green-600" />}
+                {selectedRole === "official" && <Shield className="h-5 w-5 text-blue-600" />}
+                {selectedRole === "admin" && <Crown className="h-5 w-5 text-purple-600" />}
                 <span className="text-sm font-semibold capitalize">{selectedRole}</span>
               </div>
             </div>
@@ -367,14 +319,23 @@ export default function Login() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="mobile-password" className="text-sm font-semibold">Password</Label>
-                    <Input
-                      id="mobile-password"
-                      type="password"
-                      placeholder="Enter your password"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className="border-green-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-green-500 focus:ring-green-500/20 dark:border-green-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
-                    />
+                    <div className="relative">
+                      <Input
+                        id="mobile-password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Enter your password"
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        className="border-green-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-green-500 focus:ring-green-500/20 dark:border-green-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
                 </TabsContent>
 
@@ -398,17 +359,64 @@ export default function Login() {
                         Forgot Password?
                       </Link>
                     </div>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="Enter password"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      required={activeTab === "email"}
-                      className="border-green-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-green-500 focus:ring-green-500/20 dark:border-green-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
-                    />
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Enter password"
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        required={activeTab === "email"}
+                        className="border-green-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-green-500 focus:ring-green-500/20 dark:border-green-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
                 </TabsContent>
+
+                {/* Role Selection - Common for both tabs */}
+                <div className="space-y-2 mt-4">
+                  <Label htmlFor="login-role" className="text-sm font-semibold">
+                    Login As
+                  </Label>
+                  <Select value={loginRole} onValueChange={(value: "citizen" | "official" | "admin") => setLoginRole(value)}>
+                    <SelectTrigger 
+                      id="login-role"
+                      className="w-full border-green-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-green-500 focus:ring-green-500/20 dark:border-green-800/30"
+                    >
+                      <SelectValue placeholder="Select your role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="citizen">
+                        <div className="flex items-center gap-2">
+                          <UserIcon className="h-4 w-4" />
+                          <span>Citizen</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="official">
+                        <div className="flex items-center gap-2">
+                          <Shield className="h-4 w-4" />
+                          <span>Official</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="admin">
+                        <div className="flex items-center gap-2">
+                          <Crown className="h-4 w-4" />
+                          <span>Admin</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Select the dashboard you want to access after login
+                  </p>
+                </div>
 
                 <Button
                   type="submit"
