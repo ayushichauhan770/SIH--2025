@@ -11,8 +11,8 @@ const emailConfig = {
   },
 };
 
-// Create reusable transporter
-const transporter = nodemailer.createTransport(emailConfig);
+// Create reusable transporter (mutable so we can swap to a test account in dev)
+let transporter = nodemailer.createTransport(emailConfig);
 
 // Email templates
 const generateOTPEmailHTML = (otp: string, purpose: string) => {
@@ -117,8 +117,13 @@ export async function sendEmailOTP(email: string, otp: string, purpose: string):
     };
 
     console.log(`📧 Attempting to send OTP email for ${purpose} to: ${email}`);
-    await transporter.sendMail(mailOptions);
+    const info = await transporter.sendMail(mailOptions);
     console.log(`✅ Email OTP sent successfully to ${email} for ${purpose}`);
+    // If using Ethereal (dev test account), log preview URL
+    const previewUrl = nodemailer.getTestMessageUrl(info);
+    if (previewUrl) {
+      console.log(`🔎 Preview email at: ${previewUrl}`);
+    }
   } catch (error: any) {
     console.error('❌ Failed to send email OTP:', error);
     console.error('Error details:', error.message);
@@ -146,6 +151,28 @@ export async function verifyEmailConfig(): Promise<boolean> {
     return true;
   } catch (error) {
     console.error('Email server verification failed:', error);
+
+    // In development, automatically create an Ethereal test account as a safe fallback
+    if (process.env.NODE_ENV !== 'production') {
+      try {
+        console.log('Creating Ethereal test account for local email testing...');
+        const testAccount = await nodemailer.createTestAccount();
+        transporter = nodemailer.createTransport({
+          host: testAccount.smtp.host,
+          port: testAccount.smtp.port,
+          secure: testAccount.smtp.secure,
+          auth: {
+            user: testAccount.user,
+            pass: testAccount.pass,
+          },
+        });
+        console.log('Ethereal test account created. Emails will be previewable via a URL in the console.');
+        return true;
+      } catch (err) {
+        console.error('Failed to create Ethereal test account:', err);
+      }
+    }
+
     return false;
   }
 }
