@@ -1,12 +1,13 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Shield, Bell, Award, Clock, CheckCircle, Star, Phone, Mail } from "lucide-react";
+import { FileText, Shield, Bell, Award, Clock, CheckCircle, Star, Phone, Mail, CheckCircle2, ChevronRight } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/contexts/auth-context";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import FundingTransparency from "@/components/FundingTransparency";
+import PoliticianRatingSection from "@/components/PoliticianRatingSection";
 import { getAllDepartmentNames } from "@shared/sub-departments";
 
 interface DepartmentRating {
@@ -61,10 +62,10 @@ export default function Landing() {
       <header className="border-b sticky top-0 bg-white/95 dark:bg-slate-950/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-950/60 z-50 shadow-sm">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600">
+            {/* <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500">
               <Shield className="h-6 w-6 text-white" />
-            </div>
-            <span className="font-heading font-bold text-xl bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
+            </div> */}
+            <span className="font-heading font-bold text-xl bg-gradient-to-r from-blue-600 to-cyan-500 dark:from-blue-400 dark:to-cyan-300 bg-clip-text text-transparent">
               Accountability
             </span>
           </div>
@@ -76,7 +77,7 @@ export default function Landing() {
               </Button>
             </Link>
             <Link href="/register">
-              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white" data-testid="button-register">
+              <Button className="bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white shadow-md hover:shadow-lg transition-all" data-testid="button-register">
                 Get Started
               </Button>
             </Link>
@@ -85,14 +86,14 @@ export default function Landing() {
       </header>
 
       <section className="relative py-20 md:py-32 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-purple-50/30 to-pink-50/20 dark:from-blue-950/20 dark:via-purple-950/10 dark:to-pink-950/10" />
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/80 via-cyan-50/50 to-sky-50/30 dark:from-blue-950/30 dark:via-cyan-950/20 dark:to-sky-950/10" />
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-blue-400/30 to-purple-400/30 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-purple-400/30 to-pink-400/30 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }}></div>
+          <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-sky-400/20 to-blue-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }}></div>
         </div>
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-3xl mx-auto text-center space-y-6">
-            <h1 className="text-5xl md:text-7xl font-bold font-heading bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent animate-pulse">
+            <h1 className="text-5xl md:text-7xl font-extrabold font-heading text-slate-900 dark:text-white tracking-tight leading-tight">
               Transparent Digital Governance
             </h1>
             <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300">
@@ -102,7 +103,7 @@ export default function Landing() {
             <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
               <Button 
                 size="lg" 
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all" 
+                className="bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white shadow-lg hover:shadow-xl transition-all" 
                 data-testid="button-submit-application"
                 onClick={handleSubmitApplication}
               >
@@ -125,13 +126,13 @@ export default function Landing() {
                 <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 <span className="text-blue-900 dark:text-blue-100">30-Day Auto-Assign</span>
               </div>
-              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-50 dark:bg-purple-950/50">
-                <Bell className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                <span className="text-purple-900 dark:text-purple-100">AI-Monitored</span>
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-cyan-50 dark:bg-cyan-950/50 border border-cyan-100 dark:border-cyan-900/50">
+                <Bell className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
+                <span className="text-cyan-900 dark:text-cyan-100">AI-Monitored</span>
               </div>
-              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-pink-50 dark:bg-pink-950/50">
-                <Shield className="h-4 w-4 text-pink-600 dark:text-pink-400" />
-                <span className="text-pink-900 dark:text-pink-100">Blockchain Verified</span>
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-sky-50 dark:bg-sky-950/50 border border-sky-100 dark:border-sky-900/50">
+                <Shield className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                <span className="text-sky-900 dark:text-sky-100">Blockchain Verified</span>
               </div>
             </div>
           </div>
@@ -140,7 +141,7 @@ export default function Landing() {
 
       <section className="py-16 bg-gradient-to-br from-slate-100/50 to-slate-200/50 dark:from-slate-800/50 dark:to-slate-900/50">
         <div className="container mx-auto px-4">
-          <h2 className="text-4xl font-bold font-heading text-center mb-12 bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
+          <h2 className="text-4xl font-bold font-heading text-center mb-12 bg-gradient-to-r from-blue-600 to-cyan-500 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">
             Key Features
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -155,24 +156,24 @@ export default function Landing() {
                 </CardDescription>
               </CardHeader>
             </Card>
-            <Card className="border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50">
+            <Card className="glass-card border-0 bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-950/30 dark:to-cyan-900/30">
               <CardHeader>
-                <div className="p-3 rounded-lg bg-purple-500 text-white w-fit mb-3">
+                <div className="p-3 rounded-lg bg-cyan-500 text-white w-fit mb-3 shadow-md">
                   <Bell className="h-6 w-6" />
                 </div>
-                <CardTitle className="font-heading text-purple-900 dark:text-purple-100">AI Monitoring</CardTitle>
-                <CardDescription className="text-purple-700 dark:text-purple-300">
+                <CardTitle className="font-heading text-cyan-900 dark:text-cyan-100">AI Monitoring</CardTitle>
+                <CardDescription className="text-cyan-700 dark:text-cyan-300">
                   Advanced AI detects delays and automatically escalates to ensure timely processing
                 </CardDescription>
               </CardHeader>
             </Card>
-            <Card className="border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-950/50 dark:to-pink-900/50">
+            <Card className="glass-card border-0 bg-gradient-to-br from-sky-50 to-sky-100 dark:from-sky-950/30 dark:to-sky-900/30">
               <CardHeader>
-                <div className="p-3 rounded-lg bg-pink-500 text-white w-fit mb-3">
+                <div className="p-3 rounded-lg bg-sky-500 text-white w-fit mb-3 shadow-md">
                   <Shield className="h-6 w-6" />
                 </div>
-                <CardTitle className="font-heading text-pink-900 dark:text-pink-100">Secure Feedback</CardTitle>
-                <CardDescription className="text-pink-700 dark:text-pink-300">
+                <CardTitle className="font-heading text-sky-900 dark:text-sky-100">Secure Feedback</CardTitle>
+                <CardDescription className="text-sky-700 dark:text-sky-300">
                   OTP-verified feedback system ensures authentic ratings and improves service quality
                 </CardDescription>
               </CardHeader>
@@ -200,8 +201,8 @@ export default function Landing() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {[
               { step: 1, icon: FileText, title: "Submit", desc: "Fill out your application online", color: "from-blue-500 to-blue-600" },
-              { step: 2, icon: Award, title: "Assign", desc: "AI assigns to available official", color: "from-purple-500 to-purple-600" },
-              { step: 3, icon: Bell, title: "Monitor", desc: "Receive real-time status updates", color: "from-pink-500 to-pink-600" },
+              { step: 2, icon: Award, title: "Assign", desc: "AI assigns to available official", color: "from-cyan-500 to-cyan-600" },
+              { step: 3, icon: Bell, title: "Monitor", desc: "Receive real-time status updates", color: "from-sky-500 to-sky-600" },
               { step: 4, icon: CheckCircle, title: "Approve", desc: "Get verified blockchain certificate", color: "from-green-500 to-green-600" },
             ].map(({ step, icon: Icon, title, desc, color }) => (
               <div key={step} className="text-center space-y-3 group hover:scale-105 transition-all duration-300">
@@ -243,7 +244,7 @@ export default function Landing() {
       <section className="py-20 bg-white dark:bg-slate-950">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-end mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold font-heading bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
+            <h2 className="text-3xl md:text-4xl font-bold font-heading bg-gradient-to-r from-blue-600 to-cyan-500 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">
               Popular Services
             </h2>
             <Button variant="link" className="text-blue-600 dark:text-blue-400 font-semibold">
@@ -298,6 +299,10 @@ export default function Landing() {
           </div>
 
           <FundingTransparency />
+          
+          <div className="my-12">
+            <PoliticianRatingSection />
+          </div>
 
           <div className="grid md:grid-cols-2 gap-8">
              <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl flex flex-col md:flex-row gap-6 hover:shadow-xl transition-shadow border border-slate-100 dark:border-slate-700">
@@ -328,88 +333,107 @@ export default function Landing() {
 
       <section className="py-16 bg-gradient-to-br from-slate-100/50 to-slate-200/50 dark:from-slate-800/50 dark:to-slate-900/50">
         <div className="container mx-auto px-4">
-          <h2 className="text-4xl font-bold font-heading text-center mb-12 bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
+          <h2 className="text-4xl font-bold font-heading text-center mb-12 bg-gradient-to-r from-blue-600 to-cyan-500 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">
             Public Dashboard
           </h2>
 
-          {/* Website Overall Rating */}
-          <div className="max-w-2xl mx-auto mb-12">
-            <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/50 dark:to-purple-950/50 hover:shadow-xl transition-all">
-              <CardHeader className="text-center">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <Star className="h-8 w-8 text-yellow-500 fill-yellow-500" />
-                  <CardTitle className="font-heading text-5xl bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
-                    {ratingsData ? `${ratingsData.websiteRating.toFixed(1)}/5.0` : "0.0/5.0"}
-                  </CardTitle>
-                </div>
-                <CardDescription className="text-lg font-semibold">
-                  Overall Website Rating
-                </CardDescription>
-                <CardDescription className="text-sm text-muted-foreground">
-                  Based on {ratingsData?.totalRatings || 0} ratings from all officials
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </div>
-
-          {/* Department Ratings */}
-          <h3 className="text-2xl font-bold font-heading text-center mb-8 text-gray-700 dark:text-gray-300">
-            Department Ratings
-          </h3>
-          {ratingsLoading ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">Loading department ratings...</p>
-            </div>
-          ) : (
-            <div className="max-w-6xl mx-auto bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-md p-5 h-[600px] overflow-y-auto">
-              {displayDepartments.map((dept, index) => (
-                <div
-                  key={dept.department_id}
-                  className={`flex items-center justify-between py-3 px-4 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors cursor-pointer rounded-lg ${
-                    index !== displayDepartments.length - 1 ? "border-b border-gray-200 dark:border-gray-700" : ""
-                  }`}
-                >
-                  {/* Left: Star + Rating */}
-                  <div className="flex items-center gap-3 min-w-[140px]">
-                    <Star className={`h-5 w-5 flex-shrink-0 ${dept.averageRating > 0 ? "text-yellow-500 fill-yellow-500" : "text-gray-400"}`} />
-                    <span className={`font-bold text-lg ${
-                      dept.averageRating > 0
-                        ? "text-blue-600 dark:text-blue-400"
-                        : "text-gray-400 dark:text-gray-500"
-                    }`}>
-                      {dept.averageRating.toFixed(1)}/5.0
+          <div className="grid lg:grid-cols-12 gap-8 max-w-6xl mx-auto items-start">
+            {/* Left Column: Overall Rating */}
+            <div className="lg:col-span-4 space-y-6 sticky top-24">
+              <Card className="glass-card border-0 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/50 dark:to-purple-950/50 hover:shadow-xl transition-all rounded-[32px] overflow-hidden relative">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500"></div>
+                <CardHeader className="text-center py-8 px-6">
+                  <div className="flex items-center justify-center gap-2 mb-4">
+                    <Star className="h-12 w-12 text-yellow-400 fill-yellow-400 drop-shadow-sm" />
+                  </div>
+                  <div className="mb-2">
+                    <span className="font-heading text-6xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                      {ratingsData ? `${ratingsData.websiteRating.toFixed(1)}` : "0.0"}
                     </span>
+                    <span className="text-2xl text-slate-400 font-medium">/5.0</span>
                   </div>
+                  <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-2">
+                    Overall Performance
+                  </CardTitle>
+                  <CardDescription className="text-sm text-slate-500 dark:text-slate-400">
+                    Based on {ratingsData?.totalRatings || 0} verified citizen ratings
+                  </CardDescription>
+                </CardHeader>
+              </Card>
 
-                  {/* Center: Department Name */}
-                  <div className="flex-1 px-4">
-                    <h4 className={`font-semibold text-base ${
-                      dept.averageRating > 0
-                        ? "text-gray-900 dark:text-gray-100"
-                        : "text-gray-600 dark:text-gray-400"
-                    }`}>
-                      {dept.department_name}
-                    </h4>
-                  </div>
-
-                  {/* Right: Status/Info */}
-                  <div className="flex items-center gap-4 min-w-[220px] justify-end">
-                    {(dept.totalRatings > 0 || dept.officialCount > 0) && (
-                      <span className="text-sm text-muted-foreground">
-                        {dept.totalRatings > 0 ? (
-                          <>
-                            {dept.totalRatings} rating{dept.totalRatings !== 1 ? "s" : ""} • {dept.officialCount} official{dept.officialCount !== 1 ? "s" : ""}
-                          </>
-                        ) : (
-                          `${dept.officialCount} official${dept.officialCount !== 1 ? "s" : ""}`
-                        )}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-3xl border border-blue-100 dark:border-blue-800/50">
+                <h4 className="font-bold text-blue-900 dark:text-blue-100 mb-2 flex items-center gap-2">
+                  <Shield size={18} /> Why Ratings Matter?
+                </h4>
+                <p className="text-sm text-blue-700 dark:text-blue-300 leading-relaxed">
+                  Department ratings directly impact funding allocation and official performance reviews. Your feedback drives real change.
+                </p>
+              </div>
             </div>
-          )}
+
+            {/* Right Column: Department List */}
+            <div className="lg:col-span-8">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-2xl font-bold font-heading text-slate-900 dark:text-white">
+                  Department Ratings
+                </h3>
+                <div className="text-sm text-slate-500 dark:text-slate-400">
+                  {displayDepartments.length} Departments Listed
+                </div>
+              </div>
+
+              {ratingsLoading ? (
+                <div className="text-center py-12 bg-slate-50 dark:bg-slate-900/50 rounded-3xl">
+                  <p className="text-muted-foreground animate-pulse">Loading ratings data...</p>
+                </div>
+              ) : (
+                <div className="space-y-3 h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                  {displayDepartments.map((dept, index) => (
+                    <div
+                      key={dept.department_id}
+                      className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-800 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 bg-white dark:bg-slate-800 group cursor-pointer"
+                    >
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-base shrink-0 ${
+                        dept.averageRating > 0 
+                          ? "bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900 dark:to-blue-800 text-blue-600 dark:text-blue-400"
+                          : "bg-slate-100 dark:bg-slate-700 text-slate-400"
+                      }`}>
+                        {dept.department_name.charAt(0)}
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-center mb-1">
+                          <h4 className="font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate pr-4">
+                            {dept.department_name}
+                          </h4>
+                          <div className={`flex items-center gap-1 px-2 py-1 rounded-lg font-bold text-xs shrink-0 ${
+                            dept.averageRating > 0
+                              ? "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400"
+                              : "bg-slate-100 dark:bg-slate-800 text-slate-400"
+                          }`}>
+                            {dept.averageRating.toFixed(1)} <Star size={10} fill="currentColor" />
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                          <span className="flex items-center gap-1">
+                            <CheckCircle2 size={12} className={dept.totalRatings > 0 ? "text-green-600 dark:text-green-400" : "text-slate-400"} /> 
+                            {dept.totalRatings} Ratings
+                          </span>
+                          <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span>
+                          <span>{dept.officialCount} Officials</span>
+                        </div>
+                      </div>
+                      
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                        <ChevronRight size={18} className="text-slate-300 dark:text-slate-600" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </section>
 
