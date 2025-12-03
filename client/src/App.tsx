@@ -14,6 +14,7 @@ import TrackApplication from "@/pages/citizen/track-application";
 import ApplicationDetails from "@/pages/citizen/application-details";
 import OfficialDashboard from "@/pages/official/dashboard";
 import AdminDashboard from "@/pages/admin/dashboard";
+import CandidateSelection from "@/pages/candidate-selection";
 import { SessionGuard } from "@/components/session-guard";
 
 function ProtectedRoute({ component: Component, allowedRoles }: { component: React.ComponentType; allowedRoles: string[] }) {
@@ -40,6 +41,7 @@ function Router() {
       <Route path="/" component={Landing} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
+      <Route path="/election/candidates" component={CandidateSelection} />
 
       <Route path="/citizen/dashboard">
         {() => <ProtectedRoute component={CitizenDashboard} allowedRoles={["citizen"]} />}

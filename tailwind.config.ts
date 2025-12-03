@@ -6,9 +6,9 @@ export default {
   theme: {
     extend: {
       borderRadius: {
-        lg: ".5625rem", /* 9px */
-        md: ".375rem", /* 6px */
-        sm: ".1875rem", /* 3px */
+        lg: "0.75rem", /* 12px - softer corners */
+        md: "0.5rem", /* 8px */
+        sm: "0.25rem", /* 4px */
       },
       colors: {
         // Flat / base colors (regular buttons)
@@ -83,9 +83,10 @@ export default {
         },
       },
       fontFamily: {
-        sans: ["Inter", "sans-serif"],
-        heading: ["Poppins", "sans-serif"],
-        mono: ["JetBrains Mono", "monospace"],
+        // Apple-style system font stack with Inter as primary web font
+        sans: ["Inter", "-apple-system", "BlinkMacSystemFont", "San Francisco", "Segoe UI", "Roboto", "Helvetica Neue", "sans-serif"],
+        heading: ["Inter", "-apple-system", "BlinkMacSystemFont", "San Francisco", "sans-serif"],
+        mono: ["JetBrains Mono", "ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "monospace"],
       },
       keyframes: {
         "accordion-down": {

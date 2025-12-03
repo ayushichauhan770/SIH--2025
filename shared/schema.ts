@@ -203,3 +203,17 @@ export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
 
 export type Warning = typeof warnings.$inferSelect;
 export type InsertWarning = z.infer<typeof insertWarningSchema>;
+
+// Election Candidate Selection Types
+export interface Candidate {
+  id: string;
+  name: string;
+  party: string;
+  age: number;
+  education: string;
+  background: string;
+  criminalRecords: number;
+  netWorth: string;
+  manifestoSummary: string;
+  votes: number;
+}
