@@ -16,6 +16,7 @@ import OfficialDashboard from "@/pages/official/dashboard";
 import AdminDashboard from "@/pages/admin/dashboard";
 import CandidateSelection from "@/pages/candidate-selection";
 import { SessionGuard } from "@/components/session-guard";
+import { ChatbotWidget } from "@/components/chatbot-widget";
 
 function ProtectedRoute({ component: Component, allowedRoles }: { component: React.ComponentType; allowedRoles: string[] }) {
   const { user, isLoading } = useAuth();
@@ -77,6 +78,7 @@ export default function App() {
         <SessionGuard />
         <TooltipProvider>
           <Toaster />
+          <ChatbotWidget />
           <Router />
         </TooltipProvider>
       </AuthProvider>

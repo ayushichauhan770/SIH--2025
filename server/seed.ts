@@ -1,5 +1,6 @@
 import { storage } from "./storage";
 import bcrypt from "bcryptjs";
+import { getAllDepartmentNames } from "@shared/sub-departments";
 
 export async function seedData() {
       // Always clear all data first to ensure fresh start
@@ -30,7 +31,7 @@ export async function seedData() {
             email: "health.admin@example.com",
             phone: "9999999991",
             role: "admin",
-            department: "Health",
+            department: "Health – Ministry of Health and Family Welfare",
             aadharNumber: "000000000001"
       });
       console.log("Created health_admin user");
@@ -42,36 +43,31 @@ export async function seedData() {
             email: "police.admin@example.com",
             phone: "9999999992",
             role: "admin",
-            department: "Police",
+            department: "Police – State Police Department",
             aadharNumber: "000000000002"
       });
       console.log("Created police_admin user");
 
-      // 2. Create Departments
-      const departments = [
-            { name: "Health", description: "Healthcare and medical services" },
-            { name: "Education", description: "Schools and educational services" },
-            { name: "Police", description: "Law enforcement and safety" },
-            { name: "Municipal", description: "City maintenance and services" },
-            { name: "Revenue", description: "Tax and land revenue" }
-      ];
+      // 2. Create All Departments
+      const allDepartmentNames = getAllDepartmentNames();
+      console.log(`Creating ${allDepartmentNames.length} departments...`);
 
-      for (const dept of departments) {
+      for (const deptName of allDepartmentNames) {
             await storage.createDepartment({
-                  name: dept.name,
-                  description: dept.description,
-                  image: `https://placehold.co/600x400?text=${dept.name}`
+                  name: deptName,
+                  description: `Government services for ${deptName.split('–')[0].trim()}`,
+                  image: undefined
             });
       }
-      console.log("Created departments");
+      console.log(`Created ${allDepartmentNames.length} departments`);
 
-      // 3. Create Officials
+      // 3. Create Officials (using full department names)
       const officials = [
-            { name: "Dr. Rajesh Kumar", dept: "Health", email: "rajesh.health@example.com" },
-            { name: "Mrs. Sarah Wilson", dept: "Education", email: "sarah.edu@example.com" },
-            { name: "Inspector Vikram Singh", dept: "Police", email: "vikram.police@example.com" },
-            { name: "Mr. Amit Patel", dept: "Municipal", email: "amit.muni@example.com" },
-            { name: "Ms. Priya Sharma", dept: "Revenue", email: "priya.rev@example.com" }
+            { name: "Dr. Rajesh Kumar", dept: "Health – Ministry of Health and Family Welfare", email: "rajesh.health@example.com", subDept: "Hospital Negligence" },
+            { name: "Mrs. Sarah Wilson", dept: "Education – Ministry of Education", email: "sarah.edu@example.com", subDept: "Scholarship Not Received" },
+            { name: "Inspector Vikram Singh", dept: "Police – State Police Department", email: "vikram.police@example.com", subDept: "FIR Not Registered" },
+            { name: "Mr. Amit Patel", dept: "Municipal Corporation / Urban Local Bodies (ULBs)", email: "amit.muni@example.com", subDept: "Garbage Collection Issue" },
+            { name: "Ms. Priya Sharma", dept: "Revenue – Department of Revenue (Ministry of Finance)", email: "priya.rev@example.com", subDept: "Property Tax Issue" }
       ];
 
       for (const official of officials) {
@@ -83,6 +79,7 @@ export async function seedData() {
                   phone: `98${Math.floor(10000000 + Math.random() * 90000000)}`,
                   role: "official",
                   department: official.dept,
+                  subDepartment: official.subDept,
                   aadharNumber: `1234${Math.floor(10000000 + Math.random() * 90000000)}`
             });
       }

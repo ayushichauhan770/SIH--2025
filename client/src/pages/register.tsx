@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield, User as UserIcon, Crown, ArrowLeft } from "lucide-react";
+import { Shield, User as UserIcon, Crown, ArrowLeft, Eye, EyeOff, FileText } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +20,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getSubDepartmentsForDepartment, getAllDepartmentNames } from "@shared/sub-departments";
 
 const DEPARTMENTS = getAllDepartmentNames();
@@ -34,6 +36,19 @@ export default function Register() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
   const [selectedRole, setSelectedRole] = useState<"citizen" | "official" | "admin" | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showSecretKey, setShowSecretKey] = useState(false);
+
+  // Check for role parameter in URL and auto-select the role
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const roleParam = params.get("role");
+    if (roleParam === "citizen" || roleParam === "official" || roleParam === "admin") {
+      setSelectedRole(roleParam);
+      setFormData(prev => ({ ...prev, role: roleParam }));
+    }
+  }, []);
   const [formData, setFormData] = useState({
     username: "",
     password: "",
@@ -41,21 +56,12 @@ export default function Register() {
     fullName: "",
     email: "",
     phone: "",
+    documentType: "aadhaar",
     aadharNumber: "",
     role: "citizen",
     department: "",
     subDepartment: "",
   });
-
-  // Check for role query parameter in URL
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const roleParam = urlParams.get("role");
-    if (roleParam && ["citizen", "official", "admin"].includes(roleParam)) {
-      setSelectedRole(roleParam as "citizen" | "official" | "admin");
-      setFormData(prev => ({ ...prev, role: roleParam as "citizen" | "official" | "admin" }));
-    }
-  }, []);
 
   // OTP removed: verification is not required for registration flow
 
@@ -200,31 +206,23 @@ export default function Register() {
 
   const handleBackToRoleSelection = () => {
     setSelectedRole(null);
-    setFormData({ ...formData, role: "citizen", department: "", subDepartment: "" });
   };
 
-  // Role Selection Step
+  // Step 1: Role Selection
   if (!selectedRole) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4 relative overflow-hidden">
         <div className="fixed top-4 left-4 z-50">
           <ThemeToggle />
         </div>
-        {/* Animated background elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }}></div>
-
-          {/* Circular decorative boxes */}
-          <div className="absolute top-20 right-10 w-32 h-32 border-2 border-blue-300/30 rounded-full animate-spin" style={{ animationDuration: "20s" }}></div>
-          <div className="absolute bottom-20 left-10 w-40 h-40 border-2 border-purple-300/30 rounded-full animate-pulse"></div>
-          <div className="absolute top-1/3 left-20 w-24 h-24 border-2 border-pink-300/30 rounded-full" style={{ animationName: "none" }}></div>
-          <div className="absolute bottom-1/4 right-1/4 w-28 h-28 border-2 border-blue-300/20 rounded-full animate-bounce"></div>
         </div>
 
-        <div className="w-full max-w-4xl space-y-6 relative z-10 animate-slide-in-right">
+        <div className="w-full max-w-4xl space-y-6 relative z-10">
           <div className="flex flex-col items-center gap-2 text-center">
-            <div className="p-3 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 animate-bounce">
+            <div className="p-3 rounded-full bg-gradient-to-br from-blue-500 to-purple-600">
               <Shield className="h-10 w-10 text-white" />
             </div>
             <h1 className="text-3xl font-bold font-heading bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
@@ -233,85 +231,49 @@ export default function Register() {
             <p className="text-sm text-muted-foreground">Select your role to get started</p>
           </div>
 
-          <Card className="border border-white/20 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/70 backdrop-blur-2xl shadow-2xl hover:shadow-2xl transition-all duration-300 rounded-3xl w-full p-8">
+          <Card className="border border-white/20 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/70 backdrop-blur-2xl shadow-2xl rounded-3xl w-full p-8">
             <div className="flex flex-col items-center justify-center">
               <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent mb-8">
                 Register As
               </h2>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
-                {/* Citizen Card */}
                 <Card 
-                  className="cursor-pointer border-2 hover:border-green-500 dark:hover:border-green-400 transition-all duration-300 hover:shadow-xl hover:scale-105 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm"
+                  className="cursor-pointer border-2 hover:border-green-500 transition-all hover:shadow-xl hover:scale-105"
                   onClick={() => handleRoleSelect("citizen")}
                 >
                   <CardContent className="flex flex-col items-center justify-center p-6 space-y-4">
                     <div className="p-4 rounded-full bg-gradient-to-br from-green-400 to-green-600">
                       <UserIcon className="h-8 w-8 text-white" />
                     </div>
-                    <h3 className="text-xl font-bold text-center">Citizen</h3>
-                    <p className="text-sm text-muted-foreground text-center">
-                      Submit and track your applications
-                    </p>
-                    <Button 
-                      className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRoleSelect("citizen");
-                      }}
-                    >
-                      Register as Citizen
-                    </Button>
+                    <h3 className="text-xl font-bold">Citizen</h3>
+                    <p className="text-sm text-muted-foreground text-center">Submit and track applications</p>
                   </CardContent>
                 </Card>
 
-                {/* Official Card */}
                 <Card 
-                  className="cursor-pointer border-2 hover:border-blue-500 dark:hover:border-blue-400 transition-all duration-300 hover:shadow-xl hover:scale-105 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm"
+                  className="cursor-pointer border-2 hover:border-blue-500 transition-all hover:shadow-xl hover:scale-105"
                   onClick={() => handleRoleSelect("official")}
                 >
                   <CardContent className="flex flex-col items-center justify-center p-6 space-y-4">
                     <div className="p-4 rounded-full bg-gradient-to-br from-blue-400 to-blue-600">
                       <Shield className="h-8 w-8 text-white" />
                     </div>
-                    <h3 className="text-xl font-bold text-center">Official</h3>
-                    <p className="text-sm text-muted-foreground text-center">
-                      Process and manage applications
-                    </p>
-                    <Button 
-                      className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRoleSelect("official");
-                      }}
-                    >
-                      Register as Official
-                    </Button>
+                    <h3 className="text-xl font-bold">Official</h3>
+                    <p className="text-sm text-muted-foreground text-center">Process applications</p>
                   </CardContent>
                 </Card>
 
-                {/* Admin Card */}
                 <Card 
-                  className="cursor-pointer border-2 hover:border-purple-500 dark:hover:border-purple-400 transition-all duration-300 hover:shadow-xl hover:scale-105 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm"
+                  className="cursor-pointer border-2 hover:border-purple-500 transition-all hover:shadow-xl hover:scale-105"
                   onClick={() => handleRoleSelect("admin")}
                 >
                   <CardContent className="flex flex-col items-center justify-center p-6 space-y-4">
                     <div className="p-4 rounded-full bg-gradient-to-br from-purple-400 to-purple-600">
                       <Crown className="h-8 w-8 text-white" />
                     </div>
-                    <h3 className="text-xl font-bold text-center">Admin</h3>
-                    <p className="text-sm text-muted-foreground text-center">
-                      Monitor system and analytics
-                    </p>
-                    <Button 
-                      className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRoleSelect("admin");
-                      }}
-                    >
-                      Register as Admin
-                    </Button>
+                    <h3 className="text-xl font-bold">Admin</h3>
+                    <p className="text-sm text-muted-foreground text-center">Monitor system</p>
                   </CardContent>
                 </Card>
               </div>
@@ -327,9 +289,7 @@ export default function Register() {
 
           <div className="text-center">
             <Link href="/">
-              <Button variant="ghost" size="sm" className="text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400">
-                Back to Home
-              </Button>
+              <Button variant="ghost" size="sm">Back to Home</Button>
             </Link>
           </div>
         </div>
@@ -337,7 +297,7 @@ export default function Register() {
     );
   }
 
-  // Registration Form Step
+  // Step 2: Registration Form
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4 relative overflow-hidden">
       <div className="fixed top-4 left-4 z-50">
@@ -369,19 +329,14 @@ export default function Register() {
         <Card className="border border-white/20 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/70 backdrop-blur-2xl shadow-2xl hover:shadow-2xl transition-all duration-300 rounded-3xl w-full max-w-md p-8">
           <div className="flex flex-col items-center justify-center">
             <div className="flex items-center justify-between w-full mb-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleBackToRoleSelection}
-                className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-              >
+              <Button variant="ghost" size="sm" onClick={handleBackToRoleSelection} className="flex items-center gap-2">
                 <ArrowLeft className="h-4 w-4" />
                 Back
               </Button>
               <div className="flex items-center gap-2">
-                {selectedRole === "citizen" && <UserIcon className="h-5 w-5 text-green-600 dark:text-green-400" />}
-                {selectedRole === "official" && <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />}
-                {selectedRole === "admin" && <Crown className="h-5 w-5 text-purple-600 dark:text-purple-400" />}
+                {selectedRole === "citizen" && <UserIcon className="h-5 w-5 text-green-600" />}
+                {selectedRole === "official" && <Shield className="h-5 w-5 text-blue-600" />}
+                {selectedRole === "admin" && <Crown className="h-5 w-5 text-purple-600" />}
                 <span className="text-sm font-semibold capitalize">{selectedRole}</span>
               </div>
             </div>
@@ -419,10 +374,15 @@ export default function Register() {
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="Enter your mobile number"
+                  placeholder="Enter your 10-digit mobile number"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setFormData({ ...formData, phone: value });
+                  }}
                   required
+                  maxLength={10}
+                  pattern="[0-9]{10}"
                   data-testid="input-phone"
                   className="border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
                 />
@@ -471,30 +431,104 @@ export default function Register() {
                     )}
                     <div className="space-y-2">
                       <Label htmlFor="secretKey" className="text-sm font-semibold">Enter Secret Key *</Label>
-                      <Input
-                        id="secretKey"
-                        type="password"
-                        placeholder="Enter Secret Key"
-                        value={(formData as any).secretKey || ""}
-                        onChange={(e) => setFormData({ ...formData, secretKey: e.target.value } as any)}
-                        required
-                        className="border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
-                      />
+                      <div className="relative">
+                        <Input
+                          id="secretKey"
+                          type={showSecretKey ? "text" : "password"}
+                          placeholder="Enter Secret Key"
+                          value={(formData as any).secretKey || ""}
+                          onChange={(e) => setFormData({ ...formData, secretKey: e.target.value } as any)}
+                          required
+                          className="border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowSecretKey(!showSecretKey)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                        >
+                          {showSecretKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
                 <div className="space-y-2">
-                  <Label htmlFor="aadharNumber" className="text-sm font-semibold">Aadhar Number</Label>
+                  <Label htmlFor="documentType" className="text-sm font-semibold">Document Type</Label>
+                  <Select 
+                    value={formData.documentType} 
+                    onValueChange={(value) => {
+                      setFormData({ ...formData, documentType: value, aadharNumber: "" });
+                    }}
+                  >
+                    <SelectTrigger 
+                      id="documentType"
+                      className="border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30"
+                    >
+                      <SelectValue placeholder="Select document type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="aadhaar">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          <span>Aadhaar Card</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="pan">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          <span>PAN Card</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="voter">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          <span>Voter ID</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="driving">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          <span>Driving License</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="passport">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          <span>Passport</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="aadharNumber" className="text-sm font-semibold">
+                    {formData.documentType === "aadhaar" && "Aadhaar Number"}
+                    {formData.documentType === "pan" && "PAN Number"}
+                    {formData.documentType === "voter" && "Voter ID Number"}
+                    {formData.documentType === "driving" && "Driving License Number"}
+                    {formData.documentType === "passport" && "Passport Number"}
+                  </Label>
                   <Input
                     id="aadharNumber"
                     type="text"
-                    placeholder="Enter your 12-digit Aadhar number"
+                    placeholder={
+                      formData.documentType === "aadhaar" ? "Enter your 12-digit Aadhaar number" :
+                      formData.documentType === "pan" ? "Enter your 10-character PAN number" :
+                      formData.documentType === "voter" ? "Enter your Voter ID number" :
+                      formData.documentType === "driving" ? "Enter your Driving License number" :
+                      "Enter your Passport number"
+                    }
                     value={formData.aadharNumber}
                     onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, "").slice(0, 12);
+                      let value = e.target.value;
+                      if (formData.documentType === "aadhaar") {
+                        value = value.replace(/\D/g, "").slice(0, 12);
+                      } else if (formData.documentType === "pan") {
+                        value = value.toUpperCase().slice(0, 10);
+                      }
                       setFormData({ ...formData, aadharNumber: value });
                     }}
-                    maxLength={12}
+                    maxLength={formData.documentType === "aadhaar" ? 12 : formData.documentType === "pan" ? 10 : undefined}
                     required
                     data-testid="input-aadhar"
                     className="border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
@@ -514,29 +548,47 @@ export default function Register() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-sm font-semibold">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Create a password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required
-                  data-testid="input-password"
-                  className="border-purple-200/50 bg-white/20 dark:bg-slate-900/40 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/50 dark:focus:bg-slate-900/60 backdrop-blur-sm"
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Create a password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    required
+                    data-testid="input-password"
+                    className="border-purple-200/50 bg-white/20 dark:bg-slate-900/40 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/50 dark:focus:bg-slate-900/60 backdrop-blur-sm pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword" className="text-sm font-semibold">Confirm Password</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="Confirm your password"
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  required
-                  data-testid="input-confirm-password"
-                  className="border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
-                />
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Confirm your password"
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    required
+                    data-testid="input-confirm-password"
+                    className="border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
               <Button
                 type="submit"

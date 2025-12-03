@@ -1,12 +1,13 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Shield, Bell, Award, Clock, CheckCircle, Star } from "lucide-react";
+import { FileText, Shield, Bell, Award, Clock, CheckCircle, Star, Phone, Mail } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/contexts/auth-context";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import FundingTransparency from "@/components/FundingTransparency";
+import { getAllDepartmentNames } from "@shared/sub-departments";
 
 interface DepartmentRating {
   department_id: string;
@@ -26,19 +27,34 @@ export default function Landing() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
 
-  const { data: ratingsData, isLoading: ratingsLoading } = useQuery<RatingsData>({
+  const { data: ratingsData, isLoading: ratingsLoading, error } = useQuery<RatingsData>({
     queryKey: ["/api/public/ratings"],
     queryFn: () => apiRequest<RatingsData>("GET", "/api/public/ratings"),
+    retry: 3,
+    refetchInterval: 10000, // Refetch every 10 seconds for real-time updates
+    refetchOnWindowFocus: true, // Refetch when user returns to the page
+    staleTime: 5000, // Consider data stale after 5 seconds
+  });
+
+  // Fallback: if API fails, show all departments with 0 ratings
+  const allDepartmentNames = getAllDepartmentNames();
+  const displayDepartments = (ratingsData?.departments || allDepartmentNames.map((name, index) => ({
+    department_id: `dept-${index}`,
+    department_name: name,
+    averageRating: 0,
+    totalRatings: 0,
+    officialCount: 0,
+  }))).sort((a, b) => {
+    // Sort by rating descending (highest first)
+    if (a.averageRating !== b.averageRating) {
+      return b.averageRating - a.averageRating;
+    }
+    // If ratings are equal, sort alphabetically by name
+    return a.department_name.localeCompare(b.department_name);
   });
 
   const handleSubmitApplication = () => {
-    if (user && user.role === "citizen") {
-      // User is logged in as citizen, go to submit page
-      setLocation("/citizen/submit");
-    } else {
-      // User is not logged in or not a citizen, redirect to citizen registration
-      setLocation("/register?role=citizen");
-    }
+    setLocation("/login?role=citizen");
   };
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900">
@@ -107,7 +123,7 @@ export default function Landing() {
             <div className="flex flex-wrap items-center justify-center gap-6 pt-8 text-sm">
               <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-50 dark:bg-blue-950/50">
                 <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                <span className="text-blue-900 dark:text-blue-100">30-Day Auto-Approval</span>
+                <span className="text-blue-900 dark:text-blue-100">30-Day Auto-Assign</span>
               </div>
               <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-50 dark:bg-purple-950/50">
                 <Bell className="h-4 w-4 text-purple-600 dark:text-purple-400" />
@@ -313,89 +329,184 @@ export default function Landing() {
       <section className="py-16 bg-gradient-to-br from-slate-100/50 to-slate-200/50 dark:from-slate-800/50 dark:to-slate-900/50">
         <div className="container mx-auto px-4">
           <h2 className="text-4xl font-bold font-heading text-center mb-12 bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
-            Department Ratings
+            Public Dashboard
           </h2>
 
           {/* Website Overall Rating */}
-          {ratingsData && (
-            <div className="max-w-2xl mx-auto mb-12">
-              <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/50 dark:to-purple-950/50 hover:shadow-xl transition-all">
-                <CardHeader className="text-center">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <Star className="h-8 w-8 text-yellow-500 fill-yellow-500" />
-                    <CardTitle className="font-heading text-5xl bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
-                      {`${ratingsData.websiteRating.toFixed(1)}/5.0`}
-                    </CardTitle>
-                  </div>
-                  <CardDescription className="text-lg font-semibold">
-                    Overall Website Rating
-                  </CardDescription>
-                  <CardDescription className="text-sm text-muted-foreground">
-                    Based on {ratingsData.totalRatings} ratings from all officials
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            </div>
-          )}
+          <div className="max-w-2xl mx-auto mb-12">
+            <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/50 dark:to-purple-950/50 hover:shadow-xl transition-all">
+              <CardHeader className="text-center">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <Star className="h-8 w-8 text-yellow-500 fill-yellow-500" />
+                  <CardTitle className="font-heading text-5xl bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
+                    {ratingsData ? `${ratingsData.websiteRating.toFixed(1)}/5.0` : "0.0/5.0"}
+                  </CardTitle>
+                </div>
+                <CardDescription className="text-lg font-semibold">
+                  Overall Website Rating
+                </CardDescription>
+                <CardDescription className="text-sm text-muted-foreground">
+                  Based on {ratingsData?.totalRatings || 0} ratings from all officials
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
 
           {/* Department Ratings */}
+          <h3 className="text-2xl font-bold font-heading text-center mb-8 text-gray-700 dark:text-gray-300">
+            Department Ratings
+          </h3>
           {ratingsLoading ? (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">Loading ratings...</p>
+              <p className="text-muted-foreground">Loading department ratings...</p>
             </div>
-          ) : ratingsData && ratingsData.departments.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-w-7xl mx-auto">
-              {ratingsData.departments.map((dept) => (
-                <Card
+          ) : (
+            <div className="max-w-6xl mx-auto bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-md p-5 h-[600px] overflow-y-auto">
+              {displayDepartments.map((dept, index) => (
+                <div
                   key={dept.department_id}
-                  className={`border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 ${
-                    dept.averageRating > 0
-                      ? "bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50"
-                      : "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950/50 dark:to-gray-900/50 opacity-75"
+                  className={`flex items-center justify-between py-3 px-4 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors cursor-pointer rounded-lg ${
+                    index !== displayDepartments.length - 1 ? "border-b border-gray-200 dark:border-gray-700" : ""
                   }`}
                 >
-                  <CardHeader>
-                    <div className="flex items-center justify-between mb-2">
-                      <Star className={`h-5 w-5 ${dept.averageRating > 0 ? "text-yellow-500 fill-yellow-500" : "text-gray-400"}`} />
-                      <CardTitle className={`font-heading text-xl ${
-                        dept.averageRating > 0
-                          ? "bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-400 dark:to-blue-500 bg-clip-text text-transparent"
-                          : "text-gray-400 dark:text-gray-500"
-                      }`}>
-                        {`${dept.averageRating.toFixed(1)}/5.0`}
-                      </CardTitle>
-                    </div>
-                    <CardTitle className={`font-semibold text-base line-clamp-3 ${
+                  {/* Left: Star + Rating */}
+                  <div className="flex items-center gap-3 min-w-[140px]">
+                    <Star className={`h-5 w-5 flex-shrink-0 ${dept.averageRating > 0 ? "text-yellow-500 fill-yellow-500" : "text-gray-400"}`} />
+                    <span className={`font-bold text-lg ${
                       dept.averageRating > 0
-                        ? "text-blue-900 dark:text-blue-100"
+                        ? "text-blue-600 dark:text-blue-400"
+                        : "text-gray-400 dark:text-gray-500"
+                    }`}>
+                      {dept.averageRating.toFixed(1)}/5.0
+                    </span>
+                  </div>
+
+                  {/* Center: Department Name */}
+                  <div className="flex-1 px-4">
+                    <h4 className={`font-semibold text-base ${
+                      dept.averageRating > 0
+                        ? "text-gray-900 dark:text-gray-100"
                         : "text-gray-600 dark:text-gray-400"
                     }`}>
                       {dept.department_name}
-                    </CardTitle>
-                    <CardDescription className={`text-xs mt-2 ${
-                      dept.averageRating > 0
-                        ? "text-blue-700 dark:text-blue-300"
-                        : "text-gray-500 dark:text-gray-500"
-                    }`}>
-                      {dept.totalRatings > 0 ? (
-                        <>
-                          {dept.totalRatings} rating{dept.totalRatings !== 1 ? "s" : ""} • {dept.officialCount} official{dept.officialCount !== 1 ? "s" : ""}
-                        </>
-                      ) : (
-                        `${dept.officialCount} official${dept.officialCount !== 1 ? "s" : ""}`
-                      )}
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
+                    </h4>
+                  </div>
+
+                  {/* Right: Status/Info */}
+                  <div className="flex items-center gap-4 min-w-[220px] justify-end">
+                    {(dept.totalRatings > 0 || dept.officialCount > 0) && (
+                      <span className="text-sm text-muted-foreground">
+                        {dept.totalRatings > 0 ? (
+                          <>
+                            {dept.totalRatings} rating{dept.totalRatings !== 1 ? "s" : ""} • {dept.officialCount} official{dept.officialCount !== 1 ? "s" : ""}
+                          </>
+                        ) : (
+                          `${dept.officialCount} official${dept.officialCount !== 1 ? "s" : ""}`
+                        )}
+                      </span>
+                    )}
+                  </div>
+                </div>
               ))}
             </div>
-          ) : null}
+          )}
         </div>
       </section>
 
-      <footer className="border-t py-8 bg-slate-50 dark:bg-slate-950">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>© Accountability 2025 | Digital Governance Platform. All rights reserved.</p>
+      <footer className="bg-black text-white py-12">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-8">
+            {/* Column 1: Category */}
+            <div>
+              <h3 className="font-bold text-lg mb-4">Category</h3>
+              <ul className="space-y-2 text-sm">
+                <li><a href="#" className="hover:underline">Individuals</a></li>
+                <li><a href="#" className="hover:underline">Business</a></li>
+                <li><a href="#" className="hover:underline">Foreign Nationals</a></li>
+                <li><a href="#" className="hover:underline">Government Employees</a></li>
+                <li><a href="#" className="hover:underline">Overseas Indians</a></li>
+              </ul>
+            </div>
+
+            {/* Column 2: My Government */}
+            <div>
+              <h3 className="font-bold text-lg mb-4">My Government</h3>
+              <ul className="space-y-2 text-sm">
+                <li><a href="#" className="hover:underline">Constitution of India</a></li>
+                <li><a href="#" className="hover:underline">Government Directory</a></li>
+                <li><a href="#" className="hover:underline">Indian Parliament</a></li>
+                <li><a href="#" className="hover:underline">Judiciary</a></li>
+                <li><a href="#" className="hover:underline">Ministries</a></li>
+                <li><a href="#" className="hover:underline">State Governments</a></li>
+              </ul>
+            </div>
+
+            {/* Column 3: Explore India + News Hub */}
+            <div>
+              <h3 className="font-bold text-lg mb-4">Explore India</h3>
+              <ul className="space-y-2 text-sm">
+                <li><a href="#" className="hover:underline">About India</a></li>
+                <li><a href="#" className="hover:underline">India at a Glance</a></li>
+                <li><a href="#" className="hover:underline">National Symbols</a></li>
+                <li><a href="#" className="hover:underline">States & UTs</a></li>
+              </ul>
+              <h3 className="font-bold text-lg mb-4 mt-6">News Hub</h3>
+              <ul className="space-y-2 text-sm">
+                <li><a href="#" className="hover:underline">Press Releases</a></li>
+                <li><a href="#" className="hover:underline">News Updates</a></li>
+              </ul>
+            </div>
+
+            {/* Column 4: About Us */}
+            <div>
+              <h3 className="font-bold text-lg mb-4">About Us</h3>
+              <ul className="space-y-2 text-sm">
+                <li><a href="#" className="hover:underline">About Portal</a></li>
+                <li><a href="#" className="hover:underline">Help</a></li>
+                <li><a href="#" className="hover:underline">FAQs</a></li>
+                <li><a href="#" className="hover:underline">Feedback</a></li>
+                <li><a href="#" className="hover:underline">Terms & Conditions</a></li>
+                <li><a href="#" className="hover:underline">Privacy Policy</a></li>
+                <li><a href="#" className="hover:underline">Accessibility</a></li>
+                <li><a href="#" className="hover:underline">Sitemap</a></li>
+              </ul>
+            </div>
+
+            {/* Column 5: Calendar */}
+            <div>
+              <h3 className="font-bold text-lg mb-4">Calendar</h3>
+              <ul className="space-y-2 text-sm">
+                <li><a href="#" className="hover:underline">National Holidays</a></li>
+                <li><a href="#" className="hover:underline">Government Events</a></li>
+                <li><a href="#" className="hover:underline">Important Dates</a></li>
+                <li><a href="#" className="hover:underline">Public Holidays</a></li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Contact Information */}
+          <div className="border-t border-gray-700 pt-8 mt-8">
+            <div className="text-center mb-6">
+              <h4 className="font-bold text-lg mb-4">Contact Us</h4>
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex items-center gap-3">
+                  <Phone className="h-5 w-5 text-blue-400" />
+                  <span className="text-sm">+91 1800-123-4567</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Mail className="h-5 w-5 text-blue-400" />
+                  <a href="mailto:support@digitalgovernance.gov.in" className="text-sm hover:underline">
+                    support@digitalgovernance.gov.in
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Copyright */}
+          <div className="border-t border-gray-700 pt-6 text-center">
+            <p className="text-sm">© 2025 Digital Governance Platform. All rights reserved.</p>
+          </div>
         </div>
       </footer>
     </div>

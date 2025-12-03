@@ -932,21 +932,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Generate OTP endpoint - creates and sends OTP
-  app.post("/api/otp/generate", authenticateToken, async (req: Request, res: Response) => {
+  // Generate OTP endpoint - creates and sends OTP (no auth required for login/register flows)
+  app.post("/api/otp/generate", async (req: Request, res: Response) => {
     try {
+      console.log("[OTP Generate] Request body:", req.body);
       const data = generateOtpSchema.parse(req.body);
       const otp = generateOTP();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
       if (data.email) {
+        console.log(`[OTP Generate] Creating OTP for email: ${data.email}`);
         await storage.createOTP(data.email, "email", otp, data.purpose, expiresAt);
 
         try {
           await sendEmailOTP(data.email, otp, data.purpose);
-          console.log(`Generated OTP for email ${data.email}: ${otp}`);
+          console.log(`[OTP Generate] ✅ Generated OTP for email ${data.email}: ${otp}`);
         } catch (error) {
-          console.error("Failed to send email OTP:", error);
+          console.error("[OTP Generate] Failed to send email OTP:", error);
         }
 
         const isDev = (process.env.NODE_ENV || "development") !== "production";
@@ -955,13 +957,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ...(isDev ? { otp } : {})
         });
       } else if (data.phone) {
+        console.log(`[OTP Generate] Creating OTP for phone: ${data.phone}`);
         await storage.createOTP(data.phone, "phone", otp, data.purpose, expiresAt);
 
         try {
           await sendSMSOTP(data.phone, otp, data.purpose);
-          console.log(`Generated OTP for phone ${data.phone}: ${otp}`);
+          console.log(`[OTP Generate] ✅ Generated OTP for phone ${data.phone}: ${otp}`);
         } catch (error) {
-          console.error("Failed to send SMS OTP:", error);
+          console.error("[OTP Generate] Failed to send SMS OTP:", error);
         }
 
         const isDev = (process.env.NODE_ENV || "development") !== "production";
@@ -971,8 +974,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      console.log("[OTP Generate] ❌ No phone or email provided");
       return res.status(400).json({ error: "Phone or email is required" });
     } catch (error: any) {
+      console.error("[OTP Generate] ❌ Error:", error);
       res.status(400).json({ error: error.message });
     }
   });
@@ -1308,19 +1313,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const totalRating = allRatings.reduce((sum, r) => sum + r.rating, 0);
                 const avgRating = totalRating / allRatings.length;
 
-                // Only increment solvedCount if the application wasn't already approved
-                // (Approved applications already have solvedCount incremented in updateApplicationStatus)
-                const wasAlreadyApproved = app.status === "Approved" || app.status === "Auto-Approved";
-                const newSolvedCount = wasAlreadyApproved 
-                  ? (official.solvedCount || 0)
-                  : (official.solvedCount || 0) + 1;
-
                 await storage.updateUserStats(
                   official.id,
                   avgRating,
-                  newSolvedCount,
-                  official.assignedCount || 0,
-                  official.notSolvedCount || 0
+                  (official.solvedCount || 0) + 1,
+                  official.assignedCount || 0
                 );
               }
             }
@@ -1394,8 +1391,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     official.id,
                     avgRating,
                     official.solvedCount || 0, // Don't increment solvedCount for "Not Solved"
-                    official.assignedCount || 0,
-                    official.notSolvedCount || 0
+                    official.assignedCount || 0
                   );
                 }
               }
@@ -1506,22 +1502,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const applications = await storage.getOfficialApplications(req.params.id);
       const warnings = await storage.getWarnings(req.params.id);
 
-      const approved = applications.filter(app => app.status === "Approved" || app.status === "Auto-Approved").length;
+      const approved = applications.filter(app => app.status === "Approved").length;
       const rejected = applications.filter(app => app.status === "Rejected").length;
-      const solved = official.solvedCount || 0; // Use official's solvedCount
-      const notSolved = official.notSolvedCount || 0; // Use official's notSolvedCount
+      const solved = applications.filter(app => app.isSolved).length;
       const assigned = applications.length;
 
       res.json({
         approved,
         rejected,
         solved,
-        notSolved,
         assigned,
         pending: applications.filter(app => ["Assigned", "In Progress"].includes(app.status)).length,
         warningsSent: warnings.length,
       });
     } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get department rating for admin (based on citizen feedback)
+  app.get("/api/admin/department-rating", authenticateToken, requireRole("admin"), async (req: Request, res: Response) => {
+    try {
+      console.log("[Department Rating] Request from user:", req.user?.username);
+      
+      const admin = await storage.getUser(req.user!.id);
+      console.log("[Department Rating] Admin found:", admin?.fullName, "Department:", admin?.department);
+      
+      if (!admin || !admin.department) {
+        console.log("[Department Rating] No department assigned");
+        return res.json({
+          averageRating: 0,
+          totalRatings: 0,
+          officialCount: 0,
+        });
+      }
+
+      // Get all officials in the admin's department
+      const allOfficials = await storage.getAllOfficials();
+      console.log("[Department Rating] Total officials in system:", allOfficials.length);
+      
+      const normalizedAdminDept = admin.department.split('–')[0].trim();
+      console.log("[Department Rating] Normalized admin dept:", normalizedAdminDept);
+      
+      const deptOfficials = allOfficials.filter(official => {
+        if (!official.department) return false;
+        const officialDept = official.department.split('–')[0].trim();
+        return officialDept === normalizedAdminDept;
+      });
+      
+      console.log("[Department Rating] Officials in department:", deptOfficials.length);
+
+      if (deptOfficials.length === 0) {
+        console.log("[Department Rating] No officials found, returning 0");
+        return res.json({
+          averageRating: 0,
+          totalRatings: 0,
+          officialCount: 0,
+        });
+      }
+
+      // Get all citizen feedback ratings for officials in this department
+      let allRatings: number[] = [];
+      for (const official of deptOfficials) {
+        const feedbacks = await storage.getOfficialRatings(official.id);
+        console.log(`[Department Rating] Official ${official.fullName}: ${feedbacks.length} ratings`);
+        allRatings.push(...feedbacks.map(f => f.rating));
+      }
+
+      console.log("[Department Rating] Total ratings collected:", allRatings.length);
+
+      // Calculate average rating
+      const averageRating = allRatings.length > 0
+        ? Number((allRatings.reduce((sum, r) => sum + r, 0) / allRatings.length).toFixed(1))
+        : 0;
+
+      console.log("[Department Rating] Average rating:", averageRating);
+
+      const result = {
+        averageRating,
+        totalRatings: allRatings.length,
+        officialCount: deptOfficials.length,
+      };
+      
+      console.log("[Department Rating] Sending response:", result);
+      res.json(result);
+    } catch (error: any) {
+      console.error("[Department Rating] Error:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -1564,29 +1630,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get department ratings and overall website rating (public endpoint)
+  // Get department ratings and overall website rating based on citizen feedback (public endpoint)
   app.get("/api/public/ratings", async (req: Request, res: Response) => {
     try {
       // Fetch all departments from the database
       const allDepartments = await storage.getAllDepartments();
       const allOfficials = await storage.getAllOfficials();
-      const allOfficialRatings: number[] = [];
-
-      // Calculate ratings for each department
+      
+      // Calculate ratings for each department based on citizen feedback
       const departmentRatingsArray = await Promise.all(
         allDepartments.map(async (dept) => {
           // Get all officials belonging to this department
-          // Match by department name (handle full name like "Health – Ministry..." or just "Health")
           const deptOfficials = allOfficials.filter((official) => {
             if (!official.department) return false;
-            // Check if official's department matches (exact match or starts with department name)
             const officialDept = official.department.trim();
             const deptName = dept.name.trim();
             return officialDept === deptName || officialDept.startsWith(deptName) || deptName.startsWith(officialDept.split('–')[0].trim());
           });
 
           if (deptOfficials.length === 0) {
-            // No officials in this department
             return {
               department_id: dept.id,
               department_name: dept.name,
@@ -1596,40 +1658,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             };
           }
 
-          // Calculate average rating for all officials in this department
-          const officialRatings: number[] = [];
-          let totalRatingsCount = 0;
-
+          // Get all feedback ratings for officials in this department
+          let allRatings: number[] = [];
           for (const official of deptOfficials) {
-            // Get official's average rating (from stored rating or calculate from feedbacks)
-            let officialAvgRating = 0;
             const feedbacks = await storage.getOfficialRatings(official.id);
-            
-            if (official.rating && official.rating > 0) {
-              // Use stored rating if available
-              officialAvgRating = official.rating;
-            } else if (feedbacks.length > 0) {
-              // Calculate from feedbacks
-              officialAvgRating = feedbacks.reduce((sum, f) => sum + f.rating, 0) / feedbacks.length;
-            }
-
-            if (officialAvgRating > 0) {
-              officialRatings.push(officialAvgRating);
-              totalRatingsCount += feedbacks.length;
-              allOfficialRatings.push(officialAvgRating);
-            }
+            allRatings.push(...feedbacks.map(f => f.rating));
           }
 
-          // Calculate department average rating
-          const averageRating = officialRatings.length > 0
-            ? Number((officialRatings.reduce((sum, r) => sum + r, 0) / officialRatings.length).toFixed(1))
+          // Calculate average rating for the department
+          const averageRating = allRatings.length > 0
+            ? Number((allRatings.reduce((sum, r) => sum + r, 0) / allRatings.length).toFixed(1))
             : 0;
 
           return {
             department_id: dept.id,
             department_name: dept.name,
             averageRating,
-            totalRatings: totalRatingsCount,
+            totalRatings: allRatings.length,
             officialCount: deptOfficials.length,
           };
         })
@@ -1638,17 +1683,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Sort by department_name in ascending order
       departmentRatingsArray.sort((a, b) => a.department_name.localeCompare(b.department_name));
 
-      // Calculate overall website rating (average of all officials' ratings)
-      const websiteRating = allOfficialRatings.length > 0
-        ? Number((allOfficialRatings.reduce((sum, r) => sum + r, 0) / allOfficialRatings.length).toFixed(1))
+      // Calculate overall website rating (average of all citizen ratings)
+      const allRatings = departmentRatingsArray.reduce((acc, dept) => acc + dept.totalRatings, 0);
+      const totalRatingSum = departmentRatingsArray.reduce((acc, dept) => 
+        acc + (dept.averageRating * dept.totalRatings), 0
+      );
+      const websiteRating = allRatings > 0
+        ? Number((totalRatingSum / allRatings).toFixed(1))
         : 0;
 
       res.json({
         websiteRating,
-        totalRatings: departmentRatingsArray.reduce((sum, d) => sum + d.totalRatings, 0),
+        totalRatings: allRatings,
         departments: departmentRatingsArray,
       });
     } catch (error: any) {
+      console.error("Error fetching public ratings:", error);
       res.status(500).json({ error: error.message });
     }
   });

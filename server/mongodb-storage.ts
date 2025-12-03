@@ -66,7 +66,6 @@ export class MongoDBStorage implements IStorage {
       rating: 0,
       assignedCount: 0,
       solvedCount: 0,
-      notSolvedCount: 0,
       id,
     };
     await new UserModel(user).save();
@@ -161,67 +160,18 @@ export class MongoDBStorage implements IStorage {
   }
 
   async updateApplicationStatus(id: string, status: string, updatedBy: string, comment?: string): Promise<Application> {
-    // Get current application to check previous status
-    const currentApp = await this.getApplication(id);
-    if (!currentApp) throw new Error("Application not found");
-
-    const previousStatus = currentApp.status;
-    const previousIsSolved = currentApp.isSolved;
-
     const update: any = {
       status,
       lastUpdatedAt: new Date(),
     };
 
-    // Set solved status based on application status
     if (status === "Approved" || status === "Auto-Approved") {
       update.approvedAt = new Date();
-      update.isSolved = true; // Approved applications are always solved
-    } else if (status === "Rejected") {
-      update.approvedAt = new Date();
-      update.isSolved = false; // Rejected applications are not solved
+      update.isSolved = true;
     }
-    // For other statuses (Submitted, Assigned, In Progress), keep existing isSolved value
 
     await ApplicationModel.updateOne({ id }, update);
     await this.addApplicationHistory(id, status, updatedBy, comment);
-    
-    // Update official counts if application has an official assigned
-    if (currentApp.officialId) {
-      const official = await this.getUser(currentApp.officialId);
-      if (official && official.role === "official") {
-        let newSolvedCount = official.solvedCount || 0;
-        let newNotSolvedCount = official.notSolvedCount || 0;
-
-        // Handle status change to Rejected
-        if (status === "Rejected" && previousStatus !== "Rejected") {
-          // Only increment if it wasn't already rejected
-          newNotSolvedCount = (official.notSolvedCount || 0) + 1;
-        }
-
-        // Handle status change from Rejected to Approved
-        if ((status === "Approved" || status === "Auto-Approved") && previousStatus === "Rejected") {
-          // Decrease notSolvedCount and increase solvedCount
-          newNotSolvedCount = Math.max(0, (official.notSolvedCount || 0) - 1);
-          newSolvedCount = (official.solvedCount || 0) + 1;
-        }
-        // Handle status change to Approved (not from Rejected)
-        else if ((status === "Approved" || status === "Auto-Approved") && previousStatus !== "Rejected" && !previousIsSolved) {
-          // Only increment if it wasn't already solved
-          newSolvedCount = (official.solvedCount || 0) + 1;
-        }
-
-        // Update official stats
-        await this.updateUserStats(
-          official.id,
-          official.rating || 0,
-          newSolvedCount,
-          official.assignedCount || 0,
-          newNotSolvedCount
-        );
-      }
-    }
-
     const app = await this.getApplication(id);
     if (!app) throw new Error("Application not found");
     return app;
@@ -449,12 +399,8 @@ export class MongoDBStorage implements IStorage {
     await WarningModel.updateOne({ id }, { read: true });
   }
 
-  async updateUserStats(userId: string, rating: number, solvedCount: number, assignedCount: number, notSolvedCount?: number): Promise<User> {
-    const update: any = { rating, solvedCount, assignedCount };
-    if (notSolvedCount !== undefined) {
-      update.notSolvedCount = notSolvedCount;
-    }
-    await UserModel.updateOne({ id: userId }, update);
+  async updateUserStats(userId: string, rating: number, solvedCount: number, assignedCount: number): Promise<User> {
+    await UserModel.updateOne({ id: userId }, { rating, solvedCount, assignedCount });
     const user = await this.getUser(userId);
     if (!user) throw new Error("User not found");
     return user;

@@ -97,8 +97,21 @@ export function OTPModal({ open, onClose, onVerify, phone, email, purpose }: OTP
   const handleResend = async () => {
     if (resendCooldown > 0) return;
     try {
-      await apiRequest("POST", "/api/otp/generate", { phone, email, purpose });
-      toast({ title: "OTP Resent", description: `A new code was sent to your ${email ? "email" : "phone"}.` });
+      console.log("[OTP Modal] Resending OTP with:", { phone, email, purpose });
+      const response = await apiRequest<{ message: string; otp?: string }>("POST", "/api/otp/generate", { phone, email, purpose });
+      console.log("[OTP Modal] Resend response:", response);
+      
+      // Expose OTP in development mode
+      if (response.otp) {
+        (window as any).LAST_OTP = response.otp;
+        console.log("🔄 NEW OTP generated for testing:", response.otp);
+      }
+      
+      toast({ 
+        title: "OTP Resent", 
+        description: `A new code was sent to your ${email ? "email" : "phone"}.${response.otp ? ` (Dev: ${response.otp})` : ''}` 
+      });
+      
       setResendCooldown(30);
       if (cooldownRef.current) window.clearInterval(cooldownRef.current);
       cooldownRef.current = window.setInterval(() => {
@@ -111,7 +124,12 @@ export function OTPModal({ open, onClose, onVerify, phone, email, purpose }: OTP
         });
       }, 1000) as unknown as number;
     } catch (err: any) {
-      toast({ title: "Resend Failed", description: err?.message || "Could not resend OTP", variant: "destructive" });
+      console.error("[OTP Modal] Resend error:", err);
+      toast({ 
+        title: "Resend Failed", 
+        description: err?.message || "Could not resend OTP", 
+        variant: "destructive" 
+      });
     }
   };
 

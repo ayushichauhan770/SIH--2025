@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/auth-context";
 import { useLocation } from "wouter";
@@ -22,7 +23,6 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Application, Notification, User as UserType } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { ApplicationDetailsDialog } from "@/components/application-details-dialog";
-import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -34,13 +34,11 @@ import { useToast } from "@/hooks/use-toast";
 function ApplicationRowWithCitizen({
   app,
   statusColors,
-  officialId,
-  onViewDetails
+  officialId
 }: {
   app: Application;
   statusColors: Record<string, string>;
   officialId: string;
-  onViewDetails?: (app: Application) => void;
 }) {
   // Fetch citizen data
   const { data: citizen } = useQuery<{ fullName: string } | null>({
@@ -55,7 +53,7 @@ function ApplicationRowWithCitizen({
   });
 
   return (
-    <TableRow className="cursor-pointer hover:bg-muted/50" onClick={() => onViewDetails?.(app)}>
+    <TableRow>
       <TableCell className="font-mono text-sm">{app.trackingId}</TableCell>
       <TableCell className="font-medium">{citizen?.fullName || "Loading..."}</TableCell>
       <TableCell>
@@ -73,72 +71,6 @@ function ApplicationRowWithCitizen({
       </TableCell>
       <TableCell className="text-sm text-muted-foreground">
         {formatDistanceToNow(new Date(app.submittedAt), { addSuffix: true })}
-      </TableCell>
-      <TableCell>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            onViewDetails?.(app);
-          }}
-        >
-          <Eye className="h-4 w-4 mr-1" />
-          View Details
-        </Button>
-      </TableCell>
-    </TableRow>
-  );
-}
-
-// Helper component for application row in admin dashboard
-function AdminApplicationRow({
-  app,
-  statusColors,
-  onViewDetails,
-  showSolved
-}: {
-  app: Application;
-  statusColors: Record<string, string>;
-  onViewDetails?: (app: Application) => void;
-  showSolved?: boolean;
-}) {
-  // Fetch citizen data
-  const { data: citizen } = useQuery<{ fullName: string } | null>({
-    queryKey: ["/api/users", app.citizenId],
-    enabled: !!app.citizenId,
-  });
-
-  return (
-    <TableRow className="cursor-pointer hover:bg-muted/50" onClick={() => onViewDetails?.(app)}>
-      <TableCell className="font-mono text-sm">{app.trackingId}</TableCell>
-      <TableCell className="font-medium">{citizen?.fullName || "Loading..."}</TableCell>
-      <TableCell>
-        <Badge className={statusColors[app.status]}>{app.status}</Badge>
-      </TableCell>
-      {showSolved && (
-        <TableCell>
-          <Badge variant={app.isSolved ? "default" : "secondary"}>
-            {app.isSolved ? "Solved" : "Unsolved"}
-          </Badge>
-        </TableCell>
-      )}
-      <TableCell className="text-sm">{app.department || "N/A"}</TableCell>
-      <TableCell className="text-sm text-muted-foreground">
-        {formatDistanceToNow(new Date(app.submittedAt), { addSuffix: true })}
-      </TableCell>
-      <TableCell>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            onViewDetails?.(app);
-          }}
-        >
-          <Eye className="h-4 w-4 mr-1" />
-          View
-        </Button>
       </TableCell>
     </TableRow>
   );
@@ -183,18 +115,30 @@ export default function AdminDashboard() {
     refetchInterval: 30000,
   });
 
+  // Fetch department rating
+  const { data: departmentRating, isLoading: ratingLoading, error: ratingError, refetch: refetchRating } = useQuery<{ averageRating: number; totalRatings: number; officialCount: number }>({
+    queryKey: ["/api/admin/department-rating"],
+    refetchInterval: 10000, // Refetch every 10 seconds
+    refetchOnWindowFocus: true,
+  });
+
+  // Debug logging
+  useEffect(() => {
+    console.log("[Admin Dashboard] User:", user?.fullName, "Department:", user?.department);
+    console.log("[Admin Dashboard] Rating data:", departmentRating);
+    console.log("[Admin Dashboard] Loading:", ratingLoading, "Error:", ratingError);
+  }, [user, departmentRating, ratingLoading, ratingError]);
+
   const { data: officialStats } = useQuery<{
     approved: number;
     rejected: number;
     solved: number;
-    notSolved: number;
     assigned: number;
     pending: number;
     warningsSent: number;
   }>({
     queryKey: ["/api/officials", selectedOfficial?.id, "stats"],
     enabled: !!selectedOfficial,
-    refetchInterval: 5000, // Refetch every 5 seconds to show updated counts immediately
   });
 
   const handleMarkAsRead = async (id: string) => {
@@ -270,6 +214,27 @@ export default function AdminDashboard() {
           <div className="flex flex-col">
             <h2 className="text-xl font-bold">Admin Dashboard</h2>
             <p className="text-sm text-muted-foreground">Welcome, {user?.fullName}</p>
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-md mt-1 w-fit ${
+              departmentRating && departmentRating.averageRating > 0 
+                ? "bg-yellow-50 dark:bg-yellow-950/30" 
+                : "bg-gray-50 dark:bg-gray-950/30"
+            }`}>
+              <Star className={`h-4 w-4 ${
+                departmentRating && departmentRating.averageRating > 0 
+                  ? "text-yellow-500 fill-yellow-500" 
+                  : "text-gray-400"
+              }`} />
+              <span className={`text-sm font-semibold ${
+                departmentRating && departmentRating.averageRating > 0 
+                  ? "text-yellow-700 dark:text-yellow-400" 
+                  : "text-gray-500 dark:text-gray-400"
+              }`}>
+                {departmentRating ? departmentRating.averageRating.toFixed(1) : "0.0"}/5.0
+              </span>
+              <span className="text-xs text-muted-foreground ml-1">
+                ({departmentRating ? departmentRating.totalRatings : 0} ratings)
+              </span>
+            </div>
           </div>
           {user?.department && (
             <Badge variant="outline" className="bg-blue-50 dark:bg-blue-950 ml-2">
@@ -300,161 +265,23 @@ export default function AdminDashboard() {
             title="Total Applications"
             value={deptStats?.totalApplications || 0}
             icon={FileText}
-            colorScheme="blue"
           />
           <StatsCard
             title="Assigned"
             value={deptStats?.assignedCount || 0}
             icon={UserCheck}
-            colorScheme="purple"
           />
           <StatsCard
             title="Approved"
             value={deptStats?.approvedCount || 0}
             icon={CheckCircle}
-            colorScheme="green"
           />
           <StatsCard
             title="Rejected"
             value={deptStats?.rejectedCount || 0}
             icon={XCircle}
-            colorScheme="red"
           />
         </div>
-
-        {/* Applications List with Solved/Unsolved Tabs */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Department Applications</CardTitle>
-            <CardDescription>View all applications categorized by solved status</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="unsolved" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="unsolved">Unsolved (solved = false)</TabsTrigger>
-                <TabsTrigger value="solved">Solved (solved = true)</TabsTrigger>
-                <TabsTrigger value="all">All Applications</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="unsolved" className="mt-4">
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Applications that are not yet solved (including rejected applications)
-                  </p>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Tracking ID</TableHead>
-                        <TableHead>Citizen Name</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Department</TableHead>
-                        <TableHead>Submitted</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {deptApplications
-                        .filter(app => app.isSolved === false)
-                        .map(app => (
-                          <AdminApplicationRow
-                            key={app.id}
-                            app={app}
-                            statusColors={statusColors}
-                            onViewDetails={(app) => setSelectedApp(app)}
-                          />
-                        ))}
-                      {deptApplications.filter(app => app.isSolved === false).length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                            No unsolved applications found
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="solved" className="mt-4">
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Applications that have been solved (approved applications)
-                  </p>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Tracking ID</TableHead>
-                        <TableHead>Citizen Name</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Department</TableHead>
-                        <TableHead>Submitted</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {deptApplications
-                        .filter(app => app.isSolved === true)
-                        .map(app => (
-                          <AdminApplicationRow
-                            key={app.id}
-                            app={app}
-                            statusColors={statusColors}
-                            onViewDetails={(app) => setSelectedApp(app)}
-                          />
-                        ))}
-                      {deptApplications.filter(app => app.isSolved === true).length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                            No solved applications found
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="all" className="mt-4">
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    All applications in the department
-                  </p>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Tracking ID</TableHead>
-                        <TableHead>Citizen Name</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Solved</TableHead>
-                        <TableHead>Department</TableHead>
-                        <TableHead>Submitted</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {deptApplications.map(app => (
-                        <AdminApplicationRow
-                          key={app.id}
-                          app={app}
-                          statusColors={statusColors}
-                          onViewDetails={(app) => setSelectedApp(app)}
-                          showSolved={true}
-                        />
-                      ))}
-                      {deptApplications.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                            No applications found
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
 
         <Card>
           <CardHeader>
@@ -527,15 +354,24 @@ export default function AdminDashboard() {
                         {applications?.filter(app => app.officialId === official.id).length || 0}
                       </TableCell>
                       <TableCell>
-                        {official.solvedCount || 0}
+                        {applications?.filter(app =>
+                          app.officialId === official.id &&
+                          app.isSolved === true
+                        ).length || 0}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          <span className={`font-semibold ${(official.notSolvedCount || 0) > 0
+                          <span className={`font-semibold ${(applications?.filter(app =>
+                            app.officialId === official.id &&
+                            app.isSolved === false
+                          ).length || 0) > 0
                             ? 'text-red-600 dark:text-red-400'
                             : 'text-gray-600 dark:text-gray-400'
                             }`}>
-                            {official.notSolvedCount || 0}
+                            {applications?.filter(app =>
+                              app.officialId === official.id &&
+                              app.isSolved === false
+                            ).length || 0}
                           </span>
                         </div>
                       </TableCell>
@@ -712,17 +548,6 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-red-50 dark:bg-red-950/20">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-muted-foreground">Not Solved</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-3xl font-bold text-red-600 dark:text-red-400">
-                      {officialStats?.notSolved || 0}
-                    </p>
-                  </CardContent>
-                </Card>
-
                 <Card className="bg-yellow-50 dark:bg-yellow-950/20">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm text-muted-foreground">Avg Rating</CardTitle>
@@ -768,7 +593,6 @@ export default function AdminDashboard() {
                       <TableHead>Status</TableHead>
                       <TableHead>Citizen Rating</TableHead>
                       <TableHead>Date</TableHead>
-                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -790,13 +614,12 @@ export default function AdminDashboard() {
                             app={app}
                             statusColors={statusColors}
                             officialId={selectedOfficial?.id || ''}
-                            onViewDetails={(app) => setSelectedApp(app)}
                           />
                         );
                       })}
                     {(!applications || applications.filter(app => app.officialId === selectedOfficial?.id).length === 0) && (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                           No applications found for this official
                         </TableCell>
                       </TableRow>
