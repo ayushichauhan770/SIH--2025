@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { ShieldCheck, RefreshCw } from "lucide-react";
 
 interface OTPModalProps {
   open: boolean;
@@ -20,17 +21,7 @@ export function OTPModal({ open, onClose, onVerify, phone, email, purpose }: OTP
   const [isVerifying, setIsVerifying] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const cooldownRef = useRef<number | null>(null);
-  const [visible, setVisible] = useState(open);
   const { toast } = useToast();
-
-  const accentMap: Record<string, string> = {
-    login: "from-green-500 to-blue-500",
-    register: "from-blue-600 to-purple-600",
-    default: "from-purple-500 to-pink-500",
-  };
-
-  const accent = accentMap[purpose] || accentMap.default;
-  const headerGradient = `bg-gradient-to-r ${accent} text-white`;
 
   const handleVerify = async () => {
     if (otp.length !== 6) {
@@ -59,19 +50,8 @@ export function OTPModal({ open, onClose, onVerify, phone, email, purpose }: OTP
         description: "Invalid or expired OTP. Please try again.",
         variant: "destructive",
       });
-      // setOtp(""); // Keep the OTP so user can correct it
     }
   };
-
-  useEffect(() => {
-    if (open) {
-      setVisible(true);
-    } else {
-      // wait for exit animation then hide
-      const t = setTimeout(() => setVisible(false), 300);
-      return () => clearTimeout(t);
-    }
-  }, [open]);
 
   // start cooldown when modal opens (assume OTP already sent)
   useEffect(() => {
@@ -136,69 +116,71 @@ export function OTPModal({ open, onClose, onVerify, phone, email, purpose }: OTP
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
-        className="sm:max-w-md p-0"
+        className="sm:max-w-[400px] p-0 border-0 bg-white dark:bg-slate-900 rounded-[32px] shadow-2xl overflow-hidden font-['Outfit',sans-serif]"
         data-testid="modal-otp"
       >
-        <div
-          className={clsx(
-            "rounded-3xl overflow-hidden shadow-lg mx-4 sm:mx-0",
-            `ring-1 ring-black/10`,
-            // animation: slide up from bottom on open, reverse on close
-            visible && open ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0",
-            "transform transition-all duration-300 ease-out"
-          )}
-        >
-          <div className={clsx("p-4") + " " + headerGradient}>
-            <DialogHeader>
-              <DialogTitle className="text-white">Verify OTP</DialogTitle>
-              <DialogDescription className="text-white/90">
-                Enter the 6-digit code sent to {email ? email : phone?.replace(/(\d{3})\d{4}(\d{3})/, "$1****$2")}
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-          <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm p-6">
-            <div className="flex flex-col items-center gap-6 py-2">
-              <InputOTP
-                maxLength={6}
-                value={otp}
-                onChange={setOtp}
-                data-testid="input-otp"
-              >
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} />
-                  <InputOTPSlot index={1} />
-                  <InputOTPSlot index={2} />
-                  <InputOTPSlot index={3} />
-                  <InputOTPSlot index={4} />
-                  <InputOTPSlot index={5} />
-                </InputOTPGroup>
-              </InputOTP>
-              <div className="flex flex-col gap-3 w-full">
-                <div className="flex gap-2 w-full">
-                  <Button variant="outline" onClick={onClose} className="flex-1" data-testid="button-cancel-otp">
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleVerify}
-                    disabled={otp.length !== 6 || isVerifying}
-                    className={clsx("flex-1 text-white font-semibold py-2 rounded-lg shadow-md", `bg-gradient-to-r ${accent} hover:opacity-95`)}
-                    data-testid="button-verify-otp"
-                  >
-                    {isVerifying ? "Verifying..." : "Verify"}
-                  </Button>
-                </div>
+        <div className="flex flex-col items-center pt-10 pb-8 px-6 text-center">
+           <div className="h-20 w-20 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-[#0071e3] mb-6 animate-in zoom-in duration-500">
+              <ShieldCheck size={40} />
+           </div>
+           
+           <DialogHeader className="mb-6">
+             <DialogTitle className="text-2xl font-bold text-[#1d1d1f] dark:text-white mb-2">Verify Identity</DialogTitle>
+             <DialogDescription className="text-[#86868b] text-base">
+               Enter the 6-digit code sent to<br/>
+               <span className="font-semibold text-[#1d1d1f] dark:text-white">
+                 {email ? email : phone?.replace(/(\d{3})\d{4}(\d{3})/, "$1****$2")}
+               </span>
+             </DialogDescription>
+           </DialogHeader>
 
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <div>Didn't receive it?</div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" onClick={handleResend} disabled={resendCooldown > 0} data-testid="button-resend-otp">
-                      {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend OTP"}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+           <div className="w-full space-y-8">
+             <div className="flex justify-center">
+               <InputOTP
+                 maxLength={6}
+                 value={otp}
+                 onChange={setOtp}
+                 data-testid="input-otp"
+               >
+                 <InputOTPGroup className="gap-2">
+                   {[0, 1, 2, 3, 4, 5].map((index) => (
+                     <InputOTPSlot 
+                        key={index} 
+                        index={index} 
+                        className="h-12 w-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F5F5F7] dark:bg-slate-800 text-lg font-bold ring-offset-white dark:ring-offset-slate-950 focus:ring-2 focus:ring-[#0071e3] focus:border-[#0071e3] transition-all"
+                     />
+                   ))}
+                 </InputOTPGroup>
+               </InputOTP>
+             </div>
+
+             <div className="space-y-4">
+               <Button
+                 onClick={handleVerify}
+                 disabled={otp.length !== 6 || isVerifying}
+                 className="w-full h-12 rounded-full bg-[#0071e3] hover:bg-[#0077ED] text-white font-semibold text-lg shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02]"
+                 data-testid="button-verify-otp"
+               >
+                 {isVerifying ? "Verifying..." : "Verify Code"}
+               </Button>
+               
+               <Button 
+                  variant="ghost" 
+                  onClick={handleResend} 
+                  disabled={resendCooldown > 0} 
+                  className="w-full h-10 rounded-full text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white"
+                  data-testid="button-resend-otp"
+               >
+                 {resendCooldown > 0 ? (
+                    <span className="flex items-center gap-2">
+                       <RefreshCw className="h-4 w-4 animate-spin" /> Resend in {resendCooldown}s
+                    </span>
+                 ) : (
+                    "Resend Code"
+                 )}
+               </Button>
+             </div>
+           </div>
         </div>
       </DialogContent>
     </Dialog>

@@ -3,7 +3,7 @@ import { useRoute, Link, useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Shield, ArrowLeft, Clock, User, Calendar, MessageSquare, ThumbsUp, ThumbsDown, Star } from "lucide-react";
+import { Shield, ArrowLeft, Clock, User, Calendar, MessageSquare, ThumbsUp, ThumbsDown, Star, FileText, CheckCircle, AlertCircle, MapPin } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusStepper } from "@/components/status-stepper";
 import { BlockchainHashDisplay } from "@/components/blockchain-hash";
@@ -27,7 +27,7 @@ export default function ApplicationDetails() {
   const { data: application, isLoading } = useQuery<Application>({
     queryKey: ["/api/applications", applicationId],
     enabled: !!applicationId,
-    refetchInterval: 3000, // Auto-refresh every 3 seconds to show latest status
+    refetchInterval: 3000,
   });
 
   const { data: history = [] } = useQuery<ApplicationHistory[]>({
@@ -45,13 +45,11 @@ export default function ApplicationDetails() {
     enabled: !!applicationId && ["Approved", "Auto-Approved", "Rejected"].includes(application?.status || ""),
   });
 
-  // Fetch official information if application is assigned
   const { data: official } = useQuery<{ id: string; fullName: string; department: string | null } | null>({
     queryKey: ["/api/users", application?.officialId],
     enabled: !!application?.officialId,
   });
 
-  // Fetch official rating stats
   const { data: officialRating } = useQuery<{ averageRating: number; totalRatings: number }>({
     queryKey: ["/api/officials", application?.officialId, "rating"],
     enabled: !!application?.officialId,
@@ -64,8 +62,8 @@ export default function ApplicationDetails() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/applications", applicationId] });
       queryClient.invalidateQueries({ queryKey: ["/api/applications", applicationId, "feedback"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/users/officials"] }); // Update officials list for admin dashboard
-      queryClient.invalidateQueries({ queryKey: ["/api/officials", application?.officialId, "rating"] }); // Update official's rating
+      queryClient.invalidateQueries({ queryKey: ["/api/users/officials"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/officials", application?.officialId, "rating"] });
       toast({
         title: "Success",
         description: data?.message || "Your feedback has been submitted successfully"
@@ -82,7 +80,6 @@ export default function ApplicationDetails() {
 
   const handleSolveSelection = (solved: boolean) => {
     setIsSolved(solved);
-    // Don't immediately trigger for "Not Solved" - wait for rating
   };
 
   const handleNotSolvedRatingSubmit = (rating: number, comment: string) => {
@@ -95,14 +92,15 @@ export default function ApplicationDetails() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-        <header className="border-b sticky top-0 bg-white/95 dark:bg-slate-950/95 backdrop-blur z-50">
-          <div className="container mx-auto px-4 py-4">
-            <Skeleton className="h-8 w-64" />
+      <div className="min-h-screen bg-[#F5F5F7] dark:bg-slate-950">
+        <header className="fixed top-6 left-0 right-0 z-50 flex justify-center pointer-events-none px-6">
+          <div className="w-full max-w-7xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 shadow-sm rounded-full px-6 py-3 pointer-events-auto flex items-center justify-between">
+            <Skeleton className="h-8 w-32 rounded-full" />
+            <Skeleton className="h-8 w-8 rounded-full" />
           </div>
         </header>
-        <main className="container mx-auto px-4 py-8">
-          <Skeleton className="h-64 w-full" />
+        <main className="container mx-auto px-6 pt-32 pb-12 max-w-5xl">
+          <Skeleton className="h-64 w-full rounded-[32px]" />
         </main>
       </div>
     );
@@ -110,10 +108,17 @@ export default function ApplicationDetails() {
 
   if (!application) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Card>
-          <CardContent className="pt-6">
-            <p>Application not found</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#F5F5F7] dark:bg-slate-950">
+        <Card className="rounded-[32px] border-0 shadow-sm">
+          <CardContent className="pt-6 p-12 text-center">
+            <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800 w-fit mx-auto mb-4">
+              <AlertCircle className="h-8 w-8 text-slate-400" />
+            </div>
+            <h2 className="text-xl font-bold text-[#1d1d1f] dark:text-white mb-2">Application Not Found</h2>
+            <p className="text-[#86868b] mb-6">The application you are looking for does not exist or you don't have permission to view it.</p>
+            <Link href="/citizen/dashboard">
+              <Button className="rounded-full bg-[#0071e3] hover:bg-[#0077ED]">Return to Dashboard</Button>
+            </Link>
           </CardContent>
         </Card>
       </div>
@@ -131,189 +136,241 @@ export default function ApplicationDetails() {
 
   const isReApproved = ["Approved", "Auto-Approved"].includes(application.status) && (application.escalationLevel || 0) > 0;
 
-  // Show rating if:
-  // 1. Application is approved/auto-approved AND no feedback exists yet, OR
-  // 2. Application was re-approved (escalated) AND there's a new official assigned AND 
-  //    (no feedback exists OR the existing feedback is for a different official)
   const showRating = ["Approved", "Auto-Approved"].includes(application.status) && !application.isSolved && (
-    !feedback || // No feedback at all
-    (isReApproved && application.officialId && feedback.officialId !== application.officialId) || // Re-approved with new official and old feedback is for previous official
-    (isReApproved && !feedback.officialId) // Re-approved but old feedback has no official (edge case)
+    !feedback || 
+    (isReApproved && application.officialId && feedback.officialId !== application.officialId) || 
+    (isReApproved && !feedback.officialId)
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-      <header className="border-b sticky top-0 bg-white/95 dark:bg-slate-950/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 z-50">
-        <div className="container mx-auto px-4 py-4">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-slate-950 font-['Outfit',sans-serif] selection:bg-blue-500/30">
+      {/* Floating Header */}
+      <header className="fixed top-6 left-0 right-0 z-50 flex justify-center pointer-events-none px-6">
+        <div className="w-full max-w-7xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 shadow-sm rounded-full px-6 py-3 pointer-events-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link href="/citizen/dashboard">
-              <Button variant="ghost" size="icon" data-testid="button-back">
-                <ArrowLeft className="h-5 w-5" />
+              <Button variant="ghost" size="icon" className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 -ml-2">
+                <ArrowLeft className="h-5 w-5 text-[#1d1d1f] dark:text-white" />
               </Button>
             </Link>
-            <div className="flex items-center gap-2">
-              <Shield className="h-6 w-6 text-primary" />
-              <span className="font-heading font-bold text-xl">Digital Governance</span>
+            <div className="h-4 w-px bg-slate-200 dark:bg-slate-800" />
+            <div className="flex items-center gap-3">
+              <div className="p-1.5 rounded-full bg-[#0071e3] shadow-lg shadow-blue-500/20">
+                <Shield className="h-4 w-4 text-white" />
+              </div>
+              <span className="font-semibold text-sm tracking-tight text-[#1d1d1f] dark:text-white">
+                Application Details
+              </span>
             </div>
           </div>
+          <ThemeToggle />
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold font-heading mb-2">Application Details</h1>
-            <code className="text-lg font-mono text-muted-foreground" data-testid="text-tracking-id">
-              {application.trackingId}
-            </code>
-          </div>
-          <Badge className={statusColors[application.status]} data-testid="badge-status">
-            {application.status}
-          </Badge>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-heading">{application.applicationType}</CardTitle>
-            <CardDescription>Application Information</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <h3 className="font-medium text-sm text-muted-foreground mb-2">Description</h3>
-              <p className="text-sm">{application.description}</p>
-            </div>
-            {application.remarks && application.remarks.trim() && (
-              <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
-                <div className="flex items-start gap-2">
-                  <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5" />
-                  <div>
-                    <h3 className="font-medium text-sm text-blue-900 dark:text-blue-300 mb-1">Internal Notes / Status Comments</h3>
-                    <p className="text-sm text-blue-800 dark:text-blue-200 whitespace-pre-wrap">{application.remarks}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-            {application.image && (
+      <main className="container mx-auto px-6 pt-32 pb-12 max-w-6xl">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          
+          {/* Header Card */}
+          <Card className="border-0 shadow-sm bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden">
+            <div className="p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
               <div>
-                <h3 className="font-medium text-sm text-muted-foreground mb-2">Uploaded Image</h3>
-                <img src={application.image} alt="Application Attachment" className="max-h-64 rounded-md border" />
-              </div>
-            )}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Submitted</p>
-                  <p className="text-sm font-medium">{new Date(application.submittedAt).toLocaleDateString()}</p>
+                <div className="flex items-center gap-3 mb-2">
+                  <Badge className={`${statusColors[application.status]} px-3 py-1 rounded-full text-sm font-semibold border-0 shadow-none`}>
+                    {application.status}
+                  </Badge>
+                  <span className="text-sm text-[#86868b] font-mono">#{application.trackingId}</span>
                 </div>
+                <h1 className="text-3xl font-bold text-[#1d1d1f] dark:text-white tracking-tight">
+                  {application.applicationType}
+                </h1>
               </div>
-              {application.assignedAt && (
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Assigned</p>
-                    <p className="text-sm font-medium">{new Date(application.assignedAt).toLocaleDateString()}</p>
-                  </div>
-                </div>
-              )}
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Auto-Approval Date</p>
-                  <p className="text-sm font-medium">{new Date(application.autoApprovalDate).toLocaleDateString()}</p>
+              <div className="flex gap-3">
+                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#f5f5f7] dark:bg-slate-800">
+                  <Calendar className="h-4 w-4 text-[#86868b]" />
+                  <span className="text-sm font-medium text-[#1d1d1f] dark:text-white">
+                    {new Date(application.submittedAt).toLocaleDateString()}
+                  </span>
                 </div>
               </div>
             </div>
+          </Card>
 
-            {/* Official Information */}
-            {official && (
-              <div className="pt-4 border-t">
-                <h3 className="font-medium text-sm text-muted-foreground mb-3">Assigned Official</h3>
-                <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <div className="flex items-start gap-3">
-                    <User className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-                    <div className="space-y-1 flex-1">
-                      <p className="font-semibold text-blue-900 dark:text-blue-300">{official.fullName}</p>
-                      {official.department && (
-                        <p className="text-sm text-blue-700 dark:text-blue-400">{official.department}</p>
-                      )}
-                      {officialRating && officialRating.totalRatings > 0 && (
-                        <div className="flex items-center gap-2 mt-2">
-                          <div className="flex items-center gap-1 px-2 py-1 bg-yellow-100 dark:bg-yellow-900/20 rounded-full">
-                            <Star className="h-4 w-4 text-yellow-600 dark:text-yellow-400 fill-yellow-600 dark:fill-yellow-400" />
-                            <span className="text-sm font-bold text-yellow-700 dark:text-yellow-300">
-                              {officialRating.averageRating.toFixed(1)}
-                            </span>
-                            <span className="text-xs text-yellow-600 dark:text-yellow-400">/ 5.0</span>
-                          </div>
-                        </div>
-                      )}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Column: Details & Documents */}
+            <div className="lg:col-span-2 space-y-6">
+              <Card className="border-0 shadow-sm bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden">
+                <CardHeader className="border-b border-slate-100 dark:border-slate-800 p-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-[#0071e3]">
+                      <FileText className="h-5 w-5" />
                     </div>
+                    <CardTitle className="text-lg font-bold text-[#1d1d1f] dark:text-white">Description</CardTitle>
                   </div>
-                </div>
-              </div>
-            )}
+                </CardHeader>
+                <CardContent className="p-6">
+                  <p className="text-[#1d1d1f] dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
+                    {application.description}
+                  </p>
+                  
+                  {application.image && (
+                    <div className="mt-6">
+                      <h3 className="font-medium text-sm text-[#86868b] mb-3 uppercase tracking-wider">Attachment</h3>
+                      <div className="relative group rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800 inline-block">
+                        <img 
+                          src={application.image} 
+                          alt="Application Attachment" 
+                          className="max-h-64 object-cover transition-transform duration-500 group-hover:scale-105" 
+                        />
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
-            {blockchainHash && (
-              <div className="pt-4 border-t">
-                <BlockchainHashDisplay hash={blockchainHash} />
-              </div>
-            )}
+              {application.remarks && application.remarks.trim() && (
+                <Card className="border-0 shadow-sm bg-blue-50/50 dark:bg-blue-900/10 rounded-[32px] overflow-hidden border-l-4 border-l-[#0071e3]">
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-3">
+                      <MessageSquare className="h-5 w-5 text-[#0071e3] mt-0.5 flex-shrink-0" />
+                      <div>
+                        <h3 className="font-bold text-[#1d1d1f] dark:text-white mb-1">Official Remarks</h3>
+                        <p className="text-sm text-[#1d1d1f] dark:text-slate-300 whitespace-pre-wrap">
+                          {application.remarks}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
-            <div className="pt-6 border-t">
-              <StatusStepper
-                currentStatus={application.status}
-                history={history.map(h => ({
-                  ...h,
-                  comment: h.comment || undefined
-                }))}
-              />
-            </div>
-
-            {showRating && (
-              <div className="pt-6 border-t">
-                <h3 className="font-medium text-sm text-muted-foreground mb-4">Feedback & Rating</h3>
-                {isSolved === null ? (
-                  <div className="space-y-4">
-                    {(application.escalationLevel || 0) > 0 && (
-                      <div className="p-3 bg-blue-50 text-blue-800 rounded-md text-sm mb-2">
-                        <p>This application has been re-processed and approved. Please verify if your issue is now resolved.</p>
+              {showRating && (
+                <Card className="border-0 shadow-sm bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden">
+                  <CardHeader className="border-b border-slate-100 dark:border-slate-800 p-6">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-xl bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600">
+                        <Star className="h-5 w-5" />
+                      </div>
+                      <CardTitle className="text-lg font-bold text-[#1d1d1f] dark:text-white">Feedback & Rating</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    {isSolved === null ? (
+                      <div className="space-y-6 text-center py-4">
+                        {(application.escalationLevel || 0) > 0 && (
+                          <div className="p-3 bg-blue-50 text-blue-800 rounded-xl text-sm mb-4">
+                            <p>This application has been re-processed. Please verify if your issue is now resolved.</p>
+                          </div>
+                        )}
+                        <h3 className="text-xl font-bold text-[#1d1d1f] dark:text-white">Is your issue resolved?</h3>
+                        <div className="flex justify-center gap-4">
+                          <Button 
+                            onClick={() => handleSolveSelection(true)} 
+                            className="h-12 px-8 rounded-full bg-green-600 hover:bg-green-700 text-white gap-2 shadow-lg shadow-green-500/20"
+                          >
+                            <ThumbsUp className="h-5 w-5" />
+                            Yes, Resolved
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            onClick={() => handleSolveSelection(false)} 
+                            className="h-12 px-8 rounded-full border-slate-200 hover:bg-slate-50 gap-2"
+                          >
+                            <ThumbsDown className="h-5 w-5" />
+                            No, Not Resolved
+                          </Button>
+                        </div>
+                      </div>
+                    ) : isSolved ? (
+                      <RatingComponent
+                        onSubmit={handleRatingSubmit}
+                        isSubmitting={solveMutation.isPending}
+                      />
+                    ) : (
+                      <div className="space-y-6">
+                        <div className="text-center p-4 bg-orange-50 text-orange-800 rounded-2xl">
+                          <p className="font-medium">Please rate the service before we reassign your application.</p>
+                        </div>
+                        <RatingComponent
+                          onSubmit={handleNotSolvedRatingSubmit}
+                          isSubmitting={solveMutation.isPending}
+                        />
                       </div>
                     )}
-                    <p className="text-sm">Has your issue been resolved satisfactorily?</p>
-                    <div className="flex gap-4">
-                      <Button onClick={() => handleSolveSelection(true)} className="gap-2">
-                        <ThumbsUp className="h-4 w-4" />
-                        Yes, Resolved
-                      </Button>
-                      <Button variant="outline" onClick={() => handleSolveSelection(false)} className="gap-2">
-                        <ThumbsDown className="h-4 w-4" />
-                        No, Not Resolved
-                      </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* Right Column: Timeline & Info */}
+            <div className="space-y-6">
+              {/* Official Info Card */}
+              {official && (
+                <Card className="border-0 shadow-sm bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden">
+                  <CardHeader className="border-b border-slate-100 dark:border-slate-800 p-6">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-600">
+                        <User className="h-5 w-5" />
+                      </div>
+                      <CardTitle className="text-lg font-bold text-[#1d1d1f] dark:text-white">Assigned Official</CardTitle>
                     </div>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-full bg-[#f5f5f7] dark:bg-slate-800 flex items-center justify-center text-lg font-bold text-[#86868b]">
+                        {official.fullName.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="font-bold text-[#1d1d1f] dark:text-white">{official.fullName}</p>
+                        {official.department && (
+                          <p className="text-sm text-[#86868b]">{official.department}</p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {officialRating && officialRating.totalRatings > 0 && (
+                      <div className="mt-4 flex items-center gap-2 p-3 bg-yellow-50 dark:bg-yellow-900/10 rounded-xl">
+                        <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                        <span className="font-bold text-[#1d1d1f] dark:text-white">{officialRating.averageRating.toFixed(1)}</span>
+                        <span className="text-xs text-[#86868b]">({officialRating.totalRatings} ratings)</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Timeline Card */}
+              <Card className="border-0 shadow-sm bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden">
+                <CardHeader className="border-b border-slate-100 dark:border-slate-800 p-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-orange-50 dark:bg-orange-900/20 text-orange-500">
+                      <Clock className="h-5 w-5" />
+                    </div>
+                    <CardTitle className="text-lg font-bold text-[#1d1d1f] dark:text-white">Timeline</CardTitle>
                   </div>
-                ) : isSolved ? (
-                  <RatingComponent
-                    onSubmit={handleRatingSubmit}
-                    isSubmitting={solveMutation.isPending}
+                </CardHeader>
+                <CardContent className="p-6">
+                  <StatusStepper
+                    currentStatus={application.status}
+                    history={history.map(h => ({
+                      ...h,
+                      comment: h.comment || undefined
+                    }))}
                   />
-                ) : (
-                  <div className="space-y-4">
-                    <div className="text-center p-4 bg-orange-50 text-orange-800 rounded-md">
-                      <p className="font-medium">Please rate the official's service before we reassign your application.</p>
-                      <p className="text-sm mt-1">Your feedback helps us improve our services.</p>
-                    </div>
-                    <RatingComponent
-                      onSubmit={handleNotSolvedRatingSubmit}
-                      isSubmitting={solveMutation.isPending}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                </CardContent>
+              </Card>
+
+              {/* Blockchain Hash */}
+              {blockchainHash && (
+                <Card className="border-0 shadow-sm bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden">
+                  <CardContent className="p-6">
+                    <BlockchainHashDisplay hash={blockchainHash} />
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        </div>
       </main>
-    </div >
+    </div>
   );
 }

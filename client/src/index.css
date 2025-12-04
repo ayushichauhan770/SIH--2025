@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -64,12 +64,12 @@
   .glass {
     @apply bg-white/70 dark:bg-slate-950/70 backdrop-blur-md border border-white/20 dark:border-slate-800/50 shadow-lg;
   }
-  
+
   .glass-card {
     @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200/60 dark:border-slate-800/60 shadow-sm hover:shadow-md transition-all duration-300;
   }
-  
+
   .font-heading {
-    font-family: 'Inter', sans-serif;
+    font-family: "Inter", sans-serif;
   }
 }

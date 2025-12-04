@@ -9,13 +9,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Shield, ArrowLeft, FileText } from "lucide-react";
+import { Shield, ArrowLeft, FileText, Upload, CheckCircle, Info } from "lucide-react";
 import { Link } from "wouter";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getSubDepartmentsForDepartment, getAllDepartmentNames } from "@shared/sub-departments";
+import { NotificationBell } from "@/components/notification-bell";
+import { useQuery } from "@tanstack/react-query";
+import type { Notification } from "@shared/schema";
 
 export default function SubmitApplication() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -27,6 +30,21 @@ export default function SubmitApplication() {
     additionalInfo: "",
     image: "",
   });
+
+  const { data: notifications = [] } = useQuery<Notification[]>({
+    queryKey: ["/api/notifications"],
+    refetchInterval: 30000,
+  });
+
+  const handleMarkAsRead = async (id: string) => {
+    await apiRequest("POST", `/api/notifications/${id}/read`, {});
+    queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+  };
+
+  const handleLogout = () => {
+    logout();
+    setLocation("/");
+  };
 
   const compressImage = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -142,166 +160,200 @@ export default function SubmitApplication() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-      <header className="border-b sticky top-0 bg-white/95 dark:bg-slate-950/95 backdrop-blur z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/citizen/dashboard">
-                <Button variant="ghost" size="icon" data-testid="button-back">
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-              </Link>
-              <div className="flex items-center gap-2">
-                <Shield className="h-6 w-6 text-primary" />
-                <span className="font-heading font-bold text-xl">Digital Governance</span>
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-slate-950 font-['Outfit',sans-serif] selection:bg-blue-500/30">
+      {/* Floating Header - Consistent with Dashboard */}
+      <header className="fixed top-6 left-0 right-0 z-50 flex justify-center pointer-events-none px-6">
+        <div className="w-full max-w-7xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 shadow-sm rounded-full px-6 py-3 pointer-events-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/citizen/dashboard">
+              <Button variant="ghost" size="icon" className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 -ml-2">
+                <ArrowLeft className="h-5 w-5 text-[#1d1d1f] dark:text-white" />
+              </Button>
+            </Link>
+            <div className="h-4 w-px bg-slate-200 dark:bg-slate-800" />
+            <div className="flex items-center gap-3">
+              <div className="p-1.5 rounded-full bg-[#0071e3] shadow-lg shadow-blue-500/20">
+                <Shield className="h-4 w-4 text-white" />
               </div>
+              <span className="font-semibold text-sm tracking-tight text-[#1d1d1f] dark:text-white">
+                Submit Application
+              </span>
             </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <NotificationBell notifications={notifications} onMarkAsRead={handleMarkAsRead} />
+            <div className="h-4 w-px bg-slate-200 dark:bg-slate-800" />
             <ThemeToggle />
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold font-heading mb-2">Submit Application</h1>
-            <p className="text-muted-foreground">Fill out the form below to submit your application</p>
+      <main className="container mx-auto px-6 pt-32 pb-12 max-w-4xl">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="text-center space-y-2">
+            <h1 className="text-4xl font-bold tracking-tight text-[#1d1d1f] dark:text-white">
+              New Request
+            </h1>
+            <p className="text-lg text-[#86868b] dark:text-slate-400 font-medium max-w-xl mx-auto">
+              Please provide accurate details to help us process your application faster.
+            </p>
           </div>
 
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                <CardTitle className="font-heading">Application Details</CardTitle>
+          <Card className="border-0 shadow-sm bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden">
+            <CardHeader className="border-b border-slate-100 dark:border-slate-800 p-8 bg-slate-50/50 dark:bg-slate-900/50">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-[#0071e3]">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <CardTitle className="text-xl font-bold text-[#1d1d1f] dark:text-white">Application Details</CardTitle>
               </div>
-              <CardDescription>
-                Provide accurate information for faster processing
+              <CardDescription className="text-[#86868b] ml-12">
+                All fields marked with * are required
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="department">Department *</Label>
-                  <Select
-                    value={formData.department}
-                    onValueChange={(value) => setFormData({ ...formData, department: value, subDepartment: "" })}
-                    required
-                  >
-                    <SelectTrigger data-testid="select-department">
-                      <SelectValue placeholder="Select department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {departments.map(dept => (
-                        <SelectItem key={dept} value={dept}>
-                          {dept}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {formData.department && (
-                  <div className="space-y-2">
-                    <Label htmlFor="subDepartment">Sub-Department / Issue Type *</Label>
+            
+            <CardContent className="p-8">
+              <form onSubmit={handleSubmit} className="space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-3">
+                    <Label htmlFor="department" className="text-sm font-semibold text-[#1d1d1f] dark:text-white">Department *</Label>
                     <Select
-                      value={formData.subDepartment}
-                      onValueChange={(value) => setFormData({ ...formData, subDepartment: value })}
+                      value={formData.department}
+                      onValueChange={(value) => setFormData({ ...formData, department: value, subDepartment: "" })}
                       required
                     >
-                      <SelectTrigger data-testid="select-sub-department">
-                        <SelectValue placeholder="Select sub-department or issue type" />
+                      <SelectTrigger className="h-12 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-[#0071e3] focus:ring-offset-0" data-testid="select-department">
+                        <SelectValue placeholder="Select department" />
                       </SelectTrigger>
                       <SelectContent>
-                        {getSubDepartmentsForDepartment(formData.department).map(subDept => (
-                          <SelectItem key={subDept.name} value={subDept.name}>
-                            {subDept.name}
+                        {departments.map(dept => (
+                          <SelectItem key={dept} value={dept}>
+                            {dept}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Select the specific sub-department or issue type for your application
-                    </p>
                   </div>
-                )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description *</Label>
+                  {formData.department && (
+                    <div className="space-y-3 animate-in fade-in slide-in-from-left-2 duration-300">
+                      <Label htmlFor="subDepartment" className="text-sm font-semibold text-[#1d1d1f] dark:text-white">Issue Type *</Label>
+                      <Select
+                        value={formData.subDepartment}
+                        onValueChange={(value) => setFormData({ ...formData, subDepartment: value })}
+                        required
+                      >
+                        <SelectTrigger className="h-12 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-[#0071e3] focus:ring-offset-0" data-testid="select-sub-department">
+                          <SelectValue placeholder="Select specific issue" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getSubDepartmentsForDepartment(formData.department).map(subDept => (
+                            <SelectItem key={subDept.name} value={subDept.name}>
+                              {subDept.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <Label htmlFor="description" className="text-sm font-semibold text-[#1d1d1f] dark:text-white">Description *</Label>
                   <Textarea
                     id="description"
-                    placeholder="Describe your application request in detail..."
+                    placeholder="Please describe your request in detail..."
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     required
-                    rows={5}
+                    rows={6}
+                    className="resize-none rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-[#0071e3] focus:ring-offset-0 p-4"
                     data-testid="textarea-description"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Provide clear details about what you're requesting
-                  </p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="additionalInfo">Additional Information</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="additionalInfo" className="text-sm font-semibold text-[#1d1d1f] dark:text-white">Additional Information</Label>
                   <Textarea
                     id="additionalInfo"
-                    placeholder="Any additional details that might be helpful..."
+                    placeholder="Any other relevant details..."
                     value={formData.additionalInfo}
                     onChange={(e) => setFormData({ ...formData, additionalInfo: e.target.value })}
                     rows={4}
+                    className="resize-none rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-[#0071e3] focus:ring-offset-0 p-4"
                     data-testid="textarea-additional"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="image">Upload Image (Optional)</Label>
-                  <Input
-                    id="image"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="cursor-pointer"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Images will be compressed to max 1920x1920 pixels at 70% JPEG quality
-                  </p>
+                <div className="space-y-3">
+                  <Label htmlFor="image" className="text-sm font-semibold text-[#1d1d1f] dark:text-white">Attachments</Label>
+                  <div className="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-6 text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer relative group">
+                    <Input
+                      id="image"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    />
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="p-3 rounded-full bg-blue-50 dark:bg-blue-900/20 text-[#0071e3] group-hover:scale-110 transition-transform">
+                        <Upload className="h-6 w-6" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-[#1d1d1f] dark:text-white">Click to upload image</p>
+                        <p className="text-xs text-[#86868b]">Max 50MB (Auto-compressed)</p>
+                      </div>
+                    </div>
+                  </div>
+                  
                   {formData.image && (
-                    <div className="mt-2">
-                      <img src={formData.image} alt="Preview" className="max-h-48 rounded-md border" />
+                    <div className="mt-4 relative group inline-block">
+                      <img src={formData.image} alt="Preview" className="h-32 w-32 object-cover rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm" />
                       <Button
                         type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="mt-1 text-red-500 hover:text-red-700"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => setFormData({ ...formData, image: "" })}
                       >
-                        Remove Image
+                        <span className="sr-only">Remove</span>
+                        <div className="h-3 w-3 bg-white rounded-sm rotate-45 transform origin-center" />
                       </Button>
                     </div>
                   )}
                 </div>
 
-                <div className="bg-muted p-4 rounded-md space-y-2">
-                  <h3 className="font-medium text-sm">What happens next?</h3>
-                  <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-                    <li>Your application will be assigned to an available official</li>
-                    <li>You'll receive notifications at each stage</li>
-                    <li>AI monitoring ensures timely processing</li>
-                    <li>Auto-approval within 30 days if no action is taken</li>
-                  </ul>
+                <div className="bg-[#f5f5f7] dark:bg-slate-800/50 rounded-2xl p-6 flex gap-4 items-start">
+                  <Info className="h-5 w-5 text-[#0071e3] mt-0.5 flex-shrink-0" />
+                  <div className="space-y-2">
+                    <h3 className="font-semibold text-sm text-[#1d1d1f] dark:text-white">Process Overview</h3>
+                    <ul className="text-xs text-[#86868b] space-y-1.5">
+                      <li className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-[#0071e3]" />
+                        Application assigned to relevant official
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-[#0071e3]" />
+                        Real-time status updates via notifications
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-[#0071e3]" />
+                        AI-monitored for timely resolution
+                      </li>
+                    </ul>
+                  </div>
                 </div>
 
-                <div className="flex gap-4">
+                <div className="flex gap-4 pt-4">
                   <Link href="/citizen/dashboard" className="flex-1">
-                    <Button type="button" variant="outline" className="w-full" data-testid="button-cancel">
+                    <Button type="button" variant="outline" className="w-full h-12 rounded-full border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium" data-testid="button-cancel">
                       Cancel
                     </Button>
                   </Link>
                   <Button
                     type="submit"
                     disabled={isSubmitting}
-                    className="flex-1"
+                    className="flex-1 h-12 rounded-full bg-[#0071e3] hover:bg-[#0077ED] text-white font-medium shadow-lg shadow-blue-500/20"
                     data-testid="button-submit-application"
                   >
                     {isSubmitting ? "Submitting..." : "Submit Application"}

@@ -17,24 +17,22 @@ export function StatusStepper({ currentStatus, history }: StatusStepperProps) {
 
   return (
     <div className="w-full" data-testid="status-stepper">
-      <div className="hidden md:flex items-center justify-between">
+      <div className="hidden md:flex items-start w-full gap-0">
         {statusOrder.map((status, index) => {
           const isActive = index === currentIndex;
           const isComplete = index < currentIndex;
           const historyItem = history.find(h => h.status === status);
 
           return (
-            <div key={status} className="flex flex-col items-center flex-1">
+            <div key={status} className="flex flex-col items-center flex-1 min-w-0">
               <div className="flex items-center w-full">
-                {index > 0 && (
-                  <div className={`flex-1 h-0.5 ${isComplete || isActive ? 'bg-primary' : 'bg-border'}`} />
-                )}
+                <div className={`flex-1 h-0.5 ${index === 0 ? 'invisible' : ''} ${isComplete || isActive ? 'bg-primary' : 'bg-slate-200 dark:bg-slate-700'}`} />
                 <div
                   className={`
-                    flex items-center justify-center w-10 h-10 rounded-full border-2 
+                    flex items-center justify-center w-10 h-10 rounded-full border-2 z-10
                     ${isComplete ? 'bg-primary border-primary text-primary-foreground' : ''}
                     ${isActive ? 'border-primary bg-background text-primary' : ''}
-                    ${!isComplete && !isActive ? 'border-border bg-background text-muted-foreground' : ''}
+                    ${!isComplete && !isActive ? 'border-slate-200 dark:border-slate-700 bg-background text-muted-foreground' : ''}
                   `}
                   data-testid={`step-${status.toLowerCase().replace(/\s+/g, '-')}`}
                 >
@@ -44,11 +42,9 @@ export function StatusStepper({ currentStatus, history }: StatusStepperProps) {
                     <span className="text-sm font-semibold">{index + 1}</span>
                   )}
                 </div>
-                {index < statusOrder.length - 1 && (
-                  <div className={`flex-1 h-0.5 ${isComplete ? 'bg-primary' : 'bg-border'}`} />
-                )}
+                <div className={`flex-1 h-0.5 ${index === statusOrder.length - 1 ? 'invisible' : ''} ${isComplete ? 'bg-primary' : 'bg-slate-200 dark:bg-slate-700'}`} />
               </div>
-              <div className="mt-2 text-center">
+              <div className="mt-2 text-center px-2">
                 <p className={`text-sm font-medium ${isActive ? 'text-primary' : isComplete ? 'text-foreground' : 'text-muted-foreground'}`}>
                   {status}
                 </p>

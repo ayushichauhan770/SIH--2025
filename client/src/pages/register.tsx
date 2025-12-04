@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield, User as UserIcon, Crown, ArrowLeft, Eye, EyeOff, FileText } from "lucide-react";
+import { Shield, User as UserIcon, Crown, ArrowLeft, Eye, EyeOff, FileText, CheckCircle2 } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
@@ -20,7 +20,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getSubDepartmentsForDepartment, getAllDepartmentNames } from "@shared/sub-departments";
 
@@ -63,11 +62,8 @@ export default function Register() {
     subDepartment: "",
   });
 
-  // OTP removed: verification is not required for registration flow
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // OTP removed: proceed directly with registration
     if (formData.password !== formData.confirmPassword) {
       toast({
         title: "Password Mismatch",
@@ -77,7 +73,6 @@ export default function Register() {
       return;
     }
 
-    // Validate sub-department for officials
     if (formData.role === "official" && !formData.subDepartment) {
       toast({
         title: "Sub-Department Required",
@@ -91,8 +86,6 @@ export default function Register() {
 
     try {
       const { confirmPassword, ...registerData } = formData;
-
-      // All fields are now required, so we don't need to filter out empty optional fields
       const cleanedData = registerData;
 
       const response = await apiRequest<{ user: User; token?: string; phone?: string; email?: string; otpMethod?: "phone" | "email"; otp?: string }>(
@@ -106,7 +99,6 @@ export default function Register() {
         console.log("OTP exposed for testing:", response.otp);
       }
 
-      // If server returned a phone or email (two-step flow), show OTP modal
       if (response.phone || response.email) {
         setTempUser({
           user: response.user,
@@ -122,7 +114,6 @@ export default function Register() {
         return;
       }
 
-      // otherwise immediate login (no phone)
       if (response.token) {
         sessionStorage.setItem("user", JSON.stringify(response.user));
         sessionStorage.setItem("token", response.token);
@@ -141,7 +132,6 @@ export default function Register() {
     } catch (error: any) {
       const msg = (error && error.message) ? String(error.message) : "Unable to create account";
       const lowered = msg.toLowerCase();
-      // If the server returned a duplicate email/phone/aadhar message, show a modal popup.
       if (lowered.includes("email") || lowered.includes("mobile") || lowered.includes("phone") || lowered.includes("aadhar")) {
         setModalMessage(msg);
         setIsModalOpen(true);
@@ -211,86 +201,85 @@ export default function Register() {
   // Step 1: Role Selection
   if (!selectedRole) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4 relative overflow-hidden">
-        <div className="fixed top-4 left-4 z-50">
+      <div className="min-h-screen flex items-center justify-center bg-[#F5F5F7] dark:bg-slate-950 font-['Outfit',sans-serif] p-4">
+        <div className="fixed top-6 right-6 z-50">
           <ThemeToggle />
         </div>
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }}></div>
-        </div>
 
-        <div className="w-full max-w-4xl space-y-6 relative z-10">
-          <div className="flex flex-col items-center gap-2 text-center">
-            <div className="p-3 rounded-full bg-gradient-to-br from-blue-500 to-purple-600">
-              <Shield className="h-10 w-10 text-white" />
+        <div className="w-full max-w-5xl space-y-8 animate-in fade-in zoom-in duration-500">
+          <div className="text-center space-y-4">
+            <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-[#0071e3] shadow-lg shadow-blue-500/20 mb-2">
+              <Shield className="h-8 w-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold font-heading bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
-              Digital Governance
+            <h1 className="text-4xl font-bold text-[#1d1d1f] dark:text-white tracking-tight">
+              Join Accountability
             </h1>
-            <p className="text-sm text-muted-foreground">Select your role to get started</p>
+            <p className="text-lg text-[#86868b]">Select your role to get started</p>
           </div>
 
-          <Card className="border border-white/20 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/70 backdrop-blur-2xl shadow-2xl rounded-3xl w-full p-8">
-            <div className="flex flex-col items-center justify-center">
-              <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent mb-8">
-                Register As
-              </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
-                <Card 
-                  className="cursor-pointer border-2 hover:border-green-500 transition-all hover:shadow-xl hover:scale-105"
-                  onClick={() => handleRoleSelect("citizen")}
-                >
-                  <CardContent className="flex flex-col items-center justify-center p-6 space-y-4">
-                    <div className="p-4 rounded-full bg-gradient-to-br from-green-400 to-green-600">
-                      <UserIcon className="h-8 w-8 text-white" />
-                    </div>
-                    <h3 className="text-xl font-bold">Citizen</h3>
-                    <p className="text-sm text-muted-foreground text-center">Submit and track applications</p>
-                  </CardContent>
-                </Card>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card 
+              className="group cursor-pointer border-0 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden"
+              onClick={() => handleRoleSelect("citizen")}
+            >
+              <CardContent className="p-8 flex flex-col items-center text-center space-y-6">
+                <div className="w-20 h-20 rounded-full bg-green-50 dark:bg-green-900/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <UserIcon className="h-10 w-10 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-[#1d1d1f] dark:text-white mb-2">Citizen</h3>
+                  <p className="text-[#86868b]">Submit applications, track status, and rate services</p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-[#F5F5F7] dark:bg-slate-800 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <ArrowLeft className="h-5 w-5 text-[#1d1d1f] dark:text-white rotate-180" />
+                </div>
+              </CardContent>
+            </Card>
 
-                <Card 
-                  className="cursor-pointer border-2 hover:border-blue-500 transition-all hover:shadow-xl hover:scale-105"
-                  onClick={() => handleRoleSelect("official")}
-                >
-                  <CardContent className="flex flex-col items-center justify-center p-6 space-y-4">
-                    <div className="p-4 rounded-full bg-gradient-to-br from-blue-400 to-blue-600">
-                      <Shield className="h-8 w-8 text-white" />
-                    </div>
-                    <h3 className="text-xl font-bold">Official</h3>
-                    <p className="text-sm text-muted-foreground text-center">Process applications</p>
-                  </CardContent>
-                </Card>
+            <Card 
+              className="group cursor-pointer border-0 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden"
+              onClick={() => handleRoleSelect("official")}
+            >
+              <CardContent className="p-8 flex flex-col items-center text-center space-y-6">
+                <div className="w-20 h-20 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <Shield className="h-10 w-10 text-[#0071e3]" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-[#1d1d1f] dark:text-white mb-2">Official</h3>
+                  <p className="text-[#86868b]">Process applications and manage department tasks</p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-[#F5F5F7] dark:bg-slate-800 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <ArrowLeft className="h-5 w-5 text-[#1d1d1f] dark:text-white rotate-180" />
+                </div>
+              </CardContent>
+            </Card>
 
-                <Card 
-                  className="cursor-pointer border-2 hover:border-purple-500 transition-all hover:shadow-xl hover:scale-105"
-                  onClick={() => handleRoleSelect("admin")}
-                >
-                  <CardContent className="flex flex-col items-center justify-center p-6 space-y-4">
-                    <div className="p-4 rounded-full bg-gradient-to-br from-purple-400 to-purple-600">
-                      <Crown className="h-8 w-8 text-white" />
-                    </div>
-                    <h3 className="text-xl font-bold">Admin</h3>
-                    <p className="text-sm text-muted-foreground text-center">Monitor system</p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="mt-6 text-center text-sm">
-                Already have an account?{" "}
-                <Link href="/login" className="text-purple-600 dark:text-purple-400 hover:underline font-semibold">
-                  Login
-                </Link>
-              </div>
-            </div>
-          </Card>
+            <Card 
+              className="group cursor-pointer border-0 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden"
+              onClick={() => handleRoleSelect("admin")}
+            >
+              <CardContent className="p-8 flex flex-col items-center text-center space-y-6">
+                <div className="w-20 h-20 rounded-full bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <Crown className="h-10 w-10 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-[#1d1d1f] dark:text-white mb-2">Admin</h3>
+                  <p className="text-[#86868b]">Monitor system performance and manage users</p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-[#F5F5F7] dark:bg-slate-800 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <ArrowLeft className="h-5 w-5 text-[#1d1d1f] dark:text-white rotate-180" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
           <div className="text-center">
-            <Link href="/">
-              <Button variant="ghost" size="sm">Back to Home</Button>
-            </Link>
+            <p className="text-[#86868b]">
+              Already have an account?{" "}
+              <Link href="/login">
+                <span className="text-[#0071e3] font-semibold hover:underline cursor-pointer">Login</span>
+              </Link>
+            </p>
           </div>
         </div>
       </div>
@@ -299,52 +288,45 @@ export default function Register() {
 
   // Step 2: Registration Form
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4 relative overflow-hidden">
-      <div className="fixed top-4 left-4 z-50">
+    <div className="min-h-screen flex items-center justify-center bg-[#F5F5F7] dark:bg-slate-950 font-['Outfit',sans-serif] p-4">
+      <div className="fixed top-6 right-6 z-50">
         <ThemeToggle />
       </div>
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }}></div>
 
-        {/* Circular decorative boxes */}
-        <div className="absolute top-20 right-10 w-32 h-32 border-2 border-blue-300/30 rounded-full animate-spin" style={{ animationDuration: "20s" }}></div>
-        <div className="absolute bottom-20 left-10 w-40 h-40 border-2 border-purple-300/30 rounded-full animate-pulse"></div>
-        <div className="absolute top-1/3 left-20 w-24 h-24 border-2 border-pink-300/30 rounded-full" style={{ animationName: "none" }}></div>
-        <div className="absolute bottom-1/4 right-1/4 w-28 h-28 border-2 border-blue-300/20 rounded-full animate-bounce"></div>
-      </div>
-
-      <div className="w-full max-w-md space-y-6 relative z-10 animate-slide-in-right">
-        <div className="flex flex-col items-center gap-2 text-center">
-          <div className="p-3 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 animate-bounce">
-            <Shield className="h-10 w-10 text-white" />
+      <div className="w-full max-w-md animate-in fade-in slide-in-from-right-8 duration-700">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-[#0071e3] shadow-lg shadow-blue-500/20 mb-4">
+            <Shield className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold font-heading bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
-            Digital Governance
+          <h1 className="text-3xl font-bold text-[#1d1d1f] dark:text-white tracking-tight mb-2">
+            Create Account
           </h1>
-          <p className="text-sm text-muted-foreground">Join our smart governance platform</p>
+          <p className="text-[#86868b]">Join our smart governance platform</p>
         </div>
 
-        <Card className="border border-white/20 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/70 backdrop-blur-2xl shadow-2xl hover:shadow-2xl transition-all duration-300 rounded-3xl w-full max-w-md p-8">
-          <div className="flex flex-col items-center justify-center">
-            <div className="flex items-center justify-between w-full mb-4">
-              <Button variant="ghost" size="sm" onClick={handleBackToRoleSelection} className="flex items-center gap-2">
-                <ArrowLeft className="h-4 w-4" />
+        <Card className="border-0 shadow-lg bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden">
+          <CardContent className="p-8">
+            <div className="flex items-center justify-between mb-8">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleBackToRoleSelection} 
+                className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 -ml-2 text-[#86868b]"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
               </Button>
-              <div className="flex items-center gap-2">
-                {selectedRole === "citizen" && <UserIcon className="h-5 w-5 text-green-600" />}
-                {selectedRole === "official" && <Shield className="h-5 w-5 text-blue-600" />}
-                {selectedRole === "admin" && <Crown className="h-5 w-5 text-purple-600" />}
-                <span className="text-sm font-semibold capitalize">{selectedRole}</span>
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#F5F5F7] dark:bg-slate-800">
+                {selectedRole === "citizen" && <UserIcon className="h-4 w-4 text-green-600" />}
+                {selectedRole === "official" && <Shield className="h-4 w-4 text-[#0071e3]" />}
+                {selectedRole === "admin" && <Crown className="h-4 w-4 text-purple-600" />}
+                <span className="text-sm font-semibold capitalize text-[#1d1d1f] dark:text-white">{selectedRole}</span>
               </div>
             </div>
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent mb-6">Create Account</h2>
 
-            <form onSubmit={handleSubmit} className="space-y-3 w-full bg-white/10 dark:bg-slate-900/20 backdrop-blur-md rounded-2xl p-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="fullName" className="text-sm font-semibold">Full Name</Label>
+                <Label htmlFor="fullName" className="text-sm font-semibold text-[#1d1d1f] dark:text-white ml-1">Full Name</Label>
                 <Input
                   id="fullName"
                   type="text"
@@ -352,12 +334,11 @@ export default function Register() {
                   value={formData.fullName}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                   required
-                  data-testid="input-fullname"
-                  className="border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
+                  className="h-12 rounded-xl bg-[#F5F5F7] dark:bg-slate-800 border-transparent focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-semibold">Email</Label>
+                <Label htmlFor="email" className="text-sm font-semibold text-[#1d1d1f] dark:text-white ml-1">Email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -365,16 +346,15 @@ export default function Register() {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
-                  data-testid="input-email"
-                  className="border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
+                  className="h-12 rounded-xl bg-[#F5F5F7] dark:bg-slate-800 border-transparent focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone" className="text-sm font-semibold">Mobile Number</Label>
+                <Label htmlFor="phone" className="text-sm font-semibold text-[#1d1d1f] dark:text-white ml-1">Mobile Number</Label>
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="Enter your 10-digit mobile number"
+                  placeholder="Enter 10-digit number"
                   value={formData.phone}
                   onChange={(e) => {
                     const value = e.target.value.replace(/\D/g, '').slice(0, 10);
@@ -383,158 +363,126 @@ export default function Register() {
                   required
                   maxLength={10}
                   pattern="[0-9]{10}"
-                  data-testid="input-phone"
-                  className="border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
+                  className="h-12 rounded-xl bg-[#F5F5F7] dark:bg-slate-800 border-transparent focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
                 />
               </div>
-              <div className="space-y-2">
-                {(formData.role === "official" || formData.role === "admin") && (
-                  <div className="space-y-4">
+
+              {(formData.role === "official" || formData.role === "admin") && (
+                <div className="space-y-4 p-4 rounded-2xl bg-[#F5F5F7] dark:bg-slate-800">
+                  <div className="space-y-2">
+                    <Label htmlFor="department" className="text-sm font-semibold text-[#1d1d1f] dark:text-white ml-1">Department *</Label>
+                    <select
+                      id="department"
+                      value={formData.department}
+                      onChange={(e) => setFormData({ ...formData, department: e.target.value, subDepartment: "" })}
+                      className="w-full h-12 rounded-xl bg-white dark:bg-slate-900 border-transparent focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all px-3"
+                      required
+                    >
+                      <option value="">Select Department</option>
+                      {DEPARTMENTS.map((dept) => (
+                        <option key={dept} value={dept}>
+                          {dept}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {formData.department && formData.role === "official" && (
                     <div className="space-y-2">
-                      <Label htmlFor="department" className="text-sm font-semibold">Department *</Label>
+                      <Label htmlFor="subDepartment" className="text-sm font-semibold text-[#1d1d1f] dark:text-white ml-1">Sub-Department *</Label>
                       <select
-                        id="department"
-                        value={formData.department}
-                        onChange={(e) => setFormData({ ...formData, department: e.target.value, subDepartment: "" })}
-                        className="w-full border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30 dark:focus:bg-slate-900/40 rounded-md p-2"
+                        id="subDepartment"
+                        value={formData.subDepartment}
+                        onChange={(e) => setFormData({ ...formData, subDepartment: e.target.value })}
+                        className="w-full h-12 rounded-xl bg-white dark:bg-slate-900 border-transparent focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all px-3"
                         required
                       >
-                        <option value="">Select Department</option>
-                        {DEPARTMENTS.map((dept) => (
-                          <option key={dept} value={dept}>
-                            {dept}
+                        <option value="">Select Sub-Department</option>
+                        {getSubDepartmentsForDepartment(formData.department).map((subDept) => (
+                          <option key={subDept.name} value={subDept.name}>
+                            {subDept.name}
                           </option>
                         ))}
                       </select>
                     </div>
-                    {formData.department && formData.role === "official" && (
-                      <div className="space-y-2">
-                        <Label htmlFor="subDepartment" className="text-sm font-semibold">Sub-Department *</Label>
-                        <select
-                          id="subDepartment"
-                          value={formData.subDepartment}
-                          onChange={(e) => setFormData({ ...formData, subDepartment: e.target.value })}
-                          className="w-full border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30 dark:focus:bg-slate-900/40 rounded-md p-2"
-                          required
-                        >
-                          <option value="">Select Sub-Department</option>
-                          {getSubDepartmentsForDepartment(formData.department).map((subDept) => (
-                            <option key={subDept.name} value={subDept.name}>
-                              {subDept.name}
-                            </option>
-                          ))}
-                        </select>
-                        <p className="text-xs text-muted-foreground">
-                          Select the sub-department you will handle. You will only receive applications matching this sub-department.
-                        </p>
-                      </div>
-                    )}
-                    <div className="space-y-2">
-                      <Label htmlFor="secretKey" className="text-sm font-semibold">Enter Secret Key *</Label>
-                      <div className="relative">
-                        <Input
-                          id="secretKey"
-                          type={showSecretKey ? "text" : "password"}
-                          placeholder="Enter Secret Key"
-                          value={(formData as any).secretKey || ""}
-                          onChange={(e) => setFormData({ ...formData, secretKey: e.target.value } as any)}
-                          required
-                          className="border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm pr-10"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowSecretKey(!showSecretKey)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                        >
-                          {showSecretKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
+                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="secretKey" className="text-sm font-semibold text-[#1d1d1f] dark:text-white ml-1">Secret Key *</Label>
+                    <div className="relative">
+                      <Input
+                        id="secretKey"
+                        type={showSecretKey ? "text" : "password"}
+                        placeholder="Enter Secret Key"
+                        value={(formData as any).secretKey || ""}
+                        onChange={(e) => setFormData({ ...formData, secretKey: e.target.value } as any)}
+                        required
+                        className="h-12 rounded-xl bg-white dark:bg-slate-900 border-transparent focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowSecretKey(!showSecretKey)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white transition-colors"
+                      >
+                        {showSecretKey ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
                     </div>
                   </div>
-                )}
-                <div className="space-y-2">
-                  <Label htmlFor="documentType" className="text-sm font-semibold">Document Type</Label>
-                  <Select 
-                    value={formData.documentType} 
-                    onValueChange={(value) => {
-                      setFormData({ ...formData, documentType: value, aadharNumber: "" });
-                    }}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="documentType" className="text-sm font-semibold text-[#1d1d1f] dark:text-white ml-1">Document Type</Label>
+                <Select 
+                  value={formData.documentType} 
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, documentType: value, aadharNumber: "" });
+                  }}
+                >
+                  <SelectTrigger 
+                    id="documentType"
+                    className="h-12 rounded-xl bg-[#F5F5F7] dark:bg-slate-800 border-transparent focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
                   >
-                    <SelectTrigger 
-                      id="documentType"
-                      className="border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30"
-                    >
-                      <SelectValue placeholder="Select document type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="aadhaar">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4" />
-                          <span>Aadhaar Card</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="pan">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4" />
-                          <span>PAN Card</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="voter">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4" />
-                          <span>Voter ID</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="driving">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4" />
-                          <span>Driving License</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="passport">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4" />
-                          <span>Passport</span>
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="aadharNumber" className="text-sm font-semibold">
-                    {formData.documentType === "aadhaar" && "Aadhaar Number"}
-                    {formData.documentType === "pan" && "PAN Number"}
-                    {formData.documentType === "voter" && "Voter ID Number"}
-                    {formData.documentType === "driving" && "Driving License Number"}
-                    {formData.documentType === "passport" && "Passport Number"}
-                  </Label>
-                  <Input
-                    id="aadharNumber"
-                    type="text"
-                    placeholder={
-                      formData.documentType === "aadhaar" ? "Enter your 12-digit Aadhaar number" :
-                      formData.documentType === "pan" ? "Enter your 10-character PAN number" :
-                      formData.documentType === "voter" ? "Enter your Voter ID number" :
-                      formData.documentType === "driving" ? "Enter your Driving License number" :
-                      "Enter your Passport number"
+                    <SelectValue placeholder="Select document type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="aadhaar">Aadhaar Card</SelectItem>
+                    <SelectItem value="pan">PAN Card</SelectItem>
+                    <SelectItem value="voter">Voter ID</SelectItem>
+                    <SelectItem value="driving">Driving License</SelectItem>
+                    <SelectItem value="passport">Passport</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="aadharNumber" className="text-sm font-semibold text-[#1d1d1f] dark:text-white ml-1">
+                  {formData.documentType === "aadhaar" && "Aadhaar Number"}
+                  {formData.documentType === "pan" && "PAN Number"}
+                  {formData.documentType === "voter" && "Voter ID Number"}
+                  {formData.documentType === "driving" && "Driving License Number"}
+                  {formData.documentType === "passport" && "Passport Number"}
+                </Label>
+                <Input
+                  id="aadharNumber"
+                  type="text"
+                  placeholder="Enter document number"
+                  value={formData.aadharNumber}
+                  onChange={(e) => {
+                    let value = e.target.value;
+                    if (formData.documentType === "aadhaar") {
+                      value = value.replace(/\D/g, "").slice(0, 12);
+                    } else if (formData.documentType === "pan") {
+                      value = value.toUpperCase().slice(0, 10);
                     }
-                    value={formData.aadharNumber}
-                    onChange={(e) => {
-                      let value = e.target.value;
-                      if (formData.documentType === "aadhaar") {
-                        value = value.replace(/\D/g, "").slice(0, 12);
-                      } else if (formData.documentType === "pan") {
-                        value = value.toUpperCase().slice(0, 10);
-                      }
-                      setFormData({ ...formData, aadharNumber: value });
-                    }}
-                    maxLength={formData.documentType === "aadhaar" ? 12 : formData.documentType === "pan" ? 10 : undefined}
-                    required
-                    data-testid="input-aadhar"
-                    className="border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
-                  />
-                </div>
-                <Label htmlFor="username" className="text-sm font-semibold">Username</Label>
+                    setFormData({ ...formData, aadharNumber: value });
+                  }}
+                  maxLength={formData.documentType === "aadhaar" ? 12 : formData.documentType === "pan" ? 10 : undefined}
+                  required
+                  className="h-12 rounded-xl bg-[#F5F5F7] dark:bg-slate-800 border-transparent focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="username" className="text-sm font-semibold text-[#1d1d1f] dark:text-white ml-1">Username</Label>
                 <Input
                   id="username"
                   type="text"
@@ -542,76 +490,78 @@ export default function Register() {
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                   required
-                  data-testid="input-username"
-                  className="border-purple-200/50 bg-white/20 dark:bg-slate-900/40 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/50 dark:focus:bg-slate-900/60 backdrop-blur-sm"
+                  className="h-12 rounded-xl bg-[#F5F5F7] dark:bg-slate-800 border-transparent focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-semibold">Password</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Create a password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    required
-                    data-testid="input-password"
-                    className="border-purple-200/50 bg-white/20 dark:bg-slate-900/40 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/50 dark:focus:bg-slate-900/60 backdrop-blur-sm pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-sm font-semibold text-[#1d1d1f] dark:text-white ml-1">Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      required
+                      className="h-12 rounded-xl bg-[#F5F5F7] dark:bg-slate-800 border-transparent focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="text-sm font-semibold text-[#1d1d1f] dark:text-white ml-1">Confirm</Label>
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Confirm"
+                      value={formData.confirmPassword}
+                      onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                      required
+                      className="h-12 rounded-xl bg-[#F5F5F7] dark:bg-slate-800 border-transparent focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white transition-colors"
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-sm font-semibold">Confirm Password</Label>
-                <div className="relative">
-                  <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Confirm your password"
-                    value={formData.confirmPassword}
-                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                    required
-                    data-testid="input-confirm-password"
-                    className="border-purple-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-purple-500 focus:ring-purple-500/20 dark:border-purple-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                  >
-                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
+
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-2 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50"
+                className="w-full h-12 rounded-full bg-[#0071e3] hover:bg-[#0077ED] text-white font-semibold shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100 mt-4"
                 disabled={isLoading}
-                data-testid="button-register-submit"
               >
                 {isLoading ? "Creating Account..." : "Register"}
               </Button>
             </form>
-            {/* OTP removed */}
-            <div className="mt-4 text-center text-sm">
-              Already have an account?{" "}
-              <Link href="/login" className="text-purple-600 dark:text-purple-400 hover:underline font-semibold" data-testid="link-login">
-                Login
-              </Link>
+
+            <div className="mt-8 text-center">
+              <p className="text-[#86868b]">
+                Already have an account?{" "}
+                <Link href="/login">
+                  <span className="text-[#0071e3] font-semibold hover:underline cursor-pointer">Login</span>
+                </Link>
+              </p>
             </div>
-          </div>
+          </CardContent>
         </Card>
 
-        <div className="text-center">
+        <div className="text-center mt-8">
           <Link href="/">
-            <Button variant="ghost" size="sm" className="text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400" data-testid="button-back-home">
+            <Button variant="ghost" size="sm" className="rounded-full text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white">
               Back to Home
             </Button>
           </Link>
@@ -619,13 +569,13 @@ export default function Register() {
 
         {/* Duplicate/email/phone error modal */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent>
+          <DialogContent className="rounded-[24px]">
             <DialogHeader>
               <DialogTitle>Registration Error</DialogTitle>
               <DialogDescription>{modalMessage}</DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button onClick={() => setIsModalOpen(false)}>OK</Button>
+              <Button onClick={() => setIsModalOpen(false)} className="rounded-full bg-[#0071e3]">OK</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

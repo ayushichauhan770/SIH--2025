@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/auth-context";
-import { useLocation, Link } from "wouter";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ApplicationCard } from "@/components/application-card";
 import { NotificationBell } from "@/components/notification-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { FileText, Plus, Search, LogOut, Shield, Clock, CheckCircle, XCircle } from "lucide-react";
+import { FileText, Plus, Search, LogOut, Shield, Clock, CheckCircle, XCircle, LayoutDashboard, ArrowRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Application, Notification } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -42,10 +42,6 @@ export default function CitizenDashboard() {
     setLocation(`/citizen/application/${id}`);
   };
 
-  // Debug logging
-  // console.log("Current filter:", filterStatus);
-  // console.log("Filtered apps count:", filteredApplications?.length);
-
   // Filter applications based on selected status
   const filteredApplications = (applications?.filter(app => {
     if (filterStatus === "all") return true;
@@ -71,214 +67,217 @@ export default function CitizenDashboard() {
   }, [filterStatus]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-      <header className="border-b sticky top-0 bg-white/95 dark:bg-slate-950/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-950/60 z-50 shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600">
-                <Shield className="h-6 w-6 text-white" />
-              </div>
-              <span className="font-heading font-bold text-xl bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
-                Digital Governance
-              </span>
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-slate-950 font-['Outfit',sans-serif] selection:bg-blue-500/30">
+      {/* Wider Floating Header */}
+      <header className="fixed top-6 left-0 right-0 z-50 flex justify-center pointer-events-none px-6">
+        <div className="w-full max-w-7xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 shadow-sm rounded-full px-6 py-3 pointer-events-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-1.5 rounded-full bg-[#0071e3] shadow-lg shadow-blue-500/20">
+              <Shield className="h-4 w-4 text-white" />
             </div>
-            <div className="flex items-center gap-2">
-              <NotificationBell notifications={notifications} onMarkAsRead={handleMarkAsRead} />
-              <ThemeToggle />
-              <Button variant="ghost" size="icon" onClick={handleLogout} data-testid="button-logout">
-                <LogOut className="h-5 w-5" />
-              </Button>
-            </div>
+            <span className="font-semibold text-sm tracking-tight text-[#1d1d1f] dark:text-white">
+              ACCOUNTABILITY
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <NotificationBell notifications={notifications} onMarkAsRead={handleMarkAsRead} />
+            <div className="h-4 w-px bg-slate-200 dark:bg-slate-800" />
+            <ThemeToggle />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleLogout} 
+              className="h-8 w-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              data-testid="button-logout"
+            >
+              <LogOut className="h-4 w-4 text-slate-500" />
+            </Button>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 space-y-8">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold font-heading bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
-            Welcome, {user?.fullName}
+      <main className="container mx-auto px-6 pt-32 pb-12 space-y-8 max-w-7xl">
+        {/* Welcome Section */}
+        <div className="flex flex-col items-center text-center space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <h1 className="text-4xl font-bold tracking-tight text-[#1d1d1f] dark:text-white">
+            Hello, {user?.fullName?.split(' ')[0]}
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">Manage your applications and track their progress</p>
+          <p className="text-lg text-[#86868b] dark:text-slate-400 font-medium">
+            Manage your applications and requests
+          </p>
         </div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Horizontal Stats Row - Compact */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card
-            className={`border-0 shadow-lg cursor-pointer transition-all duration-300 hover:scale-105 ${filterStatus === 'all' ? 'ring-2 ring-blue-500 ring-offset-2' : ''} bg-gradient-to-br from-blue-500 to-blue-600 text-white`}
+            className={`group relative border-0 overflow-hidden bg-white dark:bg-slate-900 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-pointer rounded-[24px] flex flex-row items-center gap-4 p-4 ${filterStatus === 'all' ? 'ring-2 ring-[#0071e3]' : ''}`}
             onClick={() => setFilterStatus("all")}
           >
-            <CardHeader className="pb-2">
-              <CardDescription className="text-blue-100 text-xs font-medium">Total Applications</CardDescription>
-              <CardTitle className="text-4xl font-bold">{stats.total}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                <span className="text-sm">All submissions</span>
-              </div>
-            </CardContent>
+            <div className="p-2.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-[#0071e3]">
+              <LayoutDashboard className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="text-xl font-bold text-[#1d1d1f] dark:text-white leading-none">{stats.total}</div>
+              <div className="text-xs font-medium text-[#86868b] mt-1">Total</div>
+            </div>
           </Card>
 
           <Card
-            className={`border-0 shadow-lg cursor-pointer transition-all duration-300 hover:scale-105 ${filterStatus === 'pending' ? 'ring-2 ring-orange-500 ring-offset-2' : ''} bg-gradient-to-br from-orange-500 to-orange-600 text-white`}
+            className={`group relative border-0 overflow-hidden bg-white dark:bg-slate-900 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-pointer rounded-[24px] flex flex-row items-center gap-4 p-4 ${filterStatus === 'pending' ? 'ring-2 ring-orange-500' : ''}`}
             onClick={() => setFilterStatus("pending")}
           >
-            <CardHeader className="pb-2">
-              <CardDescription className="text-orange-100 text-xs font-medium">Pending</CardDescription>
-              <CardTitle className="text-4xl font-bold">{stats.pending}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                <span className="text-sm">In progress</span>
-              </div>
-            </CardContent>
+            <div className="p-2.5 rounded-full bg-orange-50 dark:bg-orange-900/20 text-orange-500">
+              <Clock className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="text-xl font-bold text-[#1d1d1f] dark:text-white leading-none">{stats.pending}</div>
+              <div className="text-xs font-medium text-[#86868b] mt-1">Pending</div>
+            </div>
           </Card>
 
           <Card
-            className={`border-0 shadow-lg cursor-pointer transition-all duration-300 hover:scale-105 ${filterStatus === 'approved' ? 'ring-2 ring-green-500 ring-offset-2' : ''} bg-gradient-to-br from-green-500 to-green-600 text-white`}
+            className={`group relative border-0 overflow-hidden bg-white dark:bg-slate-900 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-pointer rounded-[24px] flex flex-row items-center gap-4 p-4 ${filterStatus === 'approved' ? 'ring-2 ring-green-500' : ''}`}
             onClick={() => setFilterStatus("approved")}
           >
-            <CardHeader className="pb-2">
-              <CardDescription className="text-green-100 text-xs font-medium">Approved</CardDescription>
-              <CardTitle className="text-4xl font-bold">{stats.approved}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5" />
-                <span className="text-sm">Completed</span>
-              </div>
-            </CardContent>
+            <div className="p-2.5 rounded-full bg-green-50 dark:bg-green-900/20 text-green-500">
+              <CheckCircle className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="text-xl font-bold text-[#1d1d1f] dark:text-white leading-none">{stats.approved}</div>
+              <div className="text-xs font-medium text-[#86868b] mt-1">Approved</div>
+            </div>
           </Card>
 
           <Card
-            className={`border-0 shadow-lg cursor-pointer transition-all duration-300 hover:scale-105 ${filterStatus === 'rejected' ? 'ring-2 ring-red-500 ring-offset-2' : ''} bg-gradient-to-br from-red-500 to-red-600 text-white`}
+            className={`group relative border-0 overflow-hidden bg-white dark:bg-slate-900 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-pointer rounded-[24px] flex flex-row items-center gap-4 p-4 ${filterStatus === 'rejected' ? 'ring-2 ring-red-500' : ''}`}
             onClick={() => setFilterStatus("rejected")}
           >
-            <CardHeader className="pb-2">
-              <CardDescription className="text-red-100 text-xs font-medium">Rejected</CardDescription>
-              <CardTitle className="text-4xl font-bold">{stats.rejected}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <XCircle className="h-5 w-5" />
-                <span className="text-sm">Not approved</span>
-              </div>
-            </CardContent>
+            <div className="p-2.5 rounded-full bg-red-50 dark:bg-red-900/20 text-red-500">
+              <XCircle className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="text-xl font-bold text-[#1d1d1f] dark:text-white leading-none">{stats.rejected}</div>
+              <div className="text-xs font-medium text-[#86868b] mt-1">Rejected</div>
+            </div>
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card className="border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50" onClick={() => setLocation("/citizen/submit")} data-testid="card-new-application">
-            <CardHeader className="flex flex-row flex-wrap items-center gap-4 space-y-0">
-              <div className="flex items-center justify-center w-14 h-14 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg">
-                <Plus className="h-7 w-7" />
-              </div>
-              <div className="flex-1">
-                <CardTitle className="font-heading text-blue-900 dark:text-blue-100">New Application</CardTitle>
-                <CardDescription className="text-blue-700 dark:text-blue-300">Submit a new government application</CardDescription>
-              </div>
-            </CardHeader>
-          </Card>
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column: Quick Actions & Filters */}
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 gap-4">
+              <Card 
+                className="group relative border-0 overflow-hidden bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer rounded-[32px] h-40"
+                onClick={() => setLocation("/citizen/submit")} 
+                data-testid="card-new-application"
+              >
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10" />
+                <CardHeader className="h-full flex flex-col justify-between p-6">
+                  <div className="flex justify-between items-start">
+                    <div className="p-2.5 rounded-2xl bg-white/20 backdrop-blur-md">
+                      <Plus className="h-5 w-5" />
+                    </div>
+                    <ArrowRight className="h-5 w-5 opacity-50 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl font-bold tracking-tight mb-1">New Application</CardTitle>
+                    <CardDescription className="text-white/70 dark:text-black/60 font-medium text-xs">
+                      Start a new request
+                    </CardDescription>
+                  </div>
+                </CardHeader>
+              </Card>
 
-          <Card className="border-0 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50" onClick={() => setLocation("/citizen/track")} data-testid="card-track-application">
-            <CardHeader className="flex flex-row flex-wrap items-center gap-4 space-y-0">
-              <div className="flex items-center justify-center w-14 h-14 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg">
-                <Search className="h-7 w-7" />
-              </div>
-              <div className="flex-1">
-                <CardTitle className="font-heading text-purple-900 dark:text-purple-100">Track Application</CardTitle>
-                <CardDescription className="text-purple-700 dark:text-purple-300">Search by tracking ID</CardDescription>
-              </div>
-            </CardHeader>
-          </Card>
-        </div>
-
-        <div className="space-y-4" id="applications-list">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-950/50">
-              <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <Card 
+                className="group relative border-0 overflow-hidden bg-white dark:bg-slate-900 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 cursor-pointer rounded-[32px] h-40"
+                onClick={() => setLocation("/citizen/track")} 
+                data-testid="card-track-application"
+              >
+                <CardHeader className="h-full flex flex-col justify-between p-6">
+                  <div className="flex justify-between items-start">
+                    <div className="p-2.5 rounded-2xl bg-purple-50 dark:bg-purple-900/20 text-purple-600">
+                      <Search className="h-5 w-5" />
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-slate-300 group-hover:text-[#0071e3] transition-colors" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl font-bold tracking-tight text-[#1d1d1f] dark:text-white mb-1">Track Status</CardTitle>
+                    <CardDescription className="text-[#86868b] font-medium text-xs">
+                      Check existing requests
+                    </CardDescription>
+                  </div>
+                </CardHeader>
+              </Card>
             </div>
-            <h2 className="text-2xl font-bold font-heading text-gray-900 dark:text-gray-100">
-              Applications
-            </h2>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant={filterStatus === "all" ? "default" : "outline"}
-              onClick={() => setFilterStatus("all")}
-              className="gap-2"
-            >
-              <FileText className="h-4 w-4" />
-              All ({stats.total})
-            </Button>
-            <Button
-              variant={filterStatus === "pending" ? "default" : "outline"}
-              onClick={() => setFilterStatus("pending")}
-              className="gap-2"
-            >
-              <Clock className="h-4 w-4" />
-              Pending ({stats.pending})
-            </Button>
-            <Button
-              variant={filterStatus === "approved" ? "default" : "outline"}
-              onClick={() => setFilterStatus("approved")}
-              className="gap-2"
-            >
-              <CheckCircle className="h-4 w-4" />
-              Approved ({stats.approved})
-            </Button>
-            <Button
-              variant={filterStatus === "rejected" ? "default" : "outline"}
-              onClick={() => setFilterStatus("rejected")}
-              className="gap-2"
-            >
-              <XCircle className="h-4 w-4" />
-              Rejected ({stats.rejected})
-            </Button>
-          </div>
+          {/* Right Column: Recent Activity List (Spans 2 cols) */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white dark:bg-slate-900 rounded-[32px] p-6 shadow-sm min-h-[500px]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 px-2">
+                <h2 className="text-xl font-bold tracking-tight text-[#1d1d1f] dark:text-white">
+                  Recent Activity
+                </h2>
+                {/* Filter Tabs */}
+                <div className="inline-flex p-1 bg-[#f5f5f7] dark:bg-slate-800 rounded-full">
+                  {(["all", "pending", "approved", "rejected"] as const).map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => setFilterStatus(status)}
+                      className={`
+                        px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide transition-all duration-300
+                        ${filterStatus === status 
+                          ? "bg-white dark:bg-slate-700 text-[#1d1d1f] dark:text-white shadow-sm" 
+                          : "text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white"
+                        }
+                      `}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          {applicationsLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[1, 2].map(i => (
-                <Card key={i}>
-                  <CardHeader>
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-3 w-24 mt-2" />
-                  </CardHeader>
-                  <CardContent>
-                    <Skeleton className="h-20 w-full" />
-                  </CardContent>
-                </Card>
-              ))}
+              {applicationsLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50">
+                      <Skeleton className="h-12 w-12 rounded-xl" />
+                      <div className="space-y-2 flex-1">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-24" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : filteredApplications.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="p-4 rounded-full bg-[#f5f5f7] dark:bg-slate-800 mb-4">
+                    <FileText className="h-8 w-8 text-[#86868b]" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-[#1d1d1f] dark:text-white mb-1">No applications found</h3>
+                  <p className="text-[#86868b] max-w-sm">
+                    {filterStatus === 'all' 
+                      ? "You haven't submitted any applications yet." 
+                      : `No applications found with status "${filterStatus}".`
+                    }
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredApplications.map(app => (
+                    <ApplicationCard
+                      key={app.id}
+                      application={app}
+                      onViewDetails={() => handleViewDetails(app.id)}
+                      className="!shadow-none !bg-[#f5f5f7] dark:!bg-slate-800 !rounded-[24px] hover:!bg-slate-200 dark:hover:!bg-slate-700"
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-          ) : filteredApplications.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground text-center">
-                  No applications found for this category.
-                </p>
-                {filterStatus === 'all' && (
-                  <Button className="mt-4" onClick={() => setLocation("/citizen/submit")} data-testid="button-submit-first">
-                    Submit Application
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredApplications.map(app => (
-                <ApplicationCard
-                  key={app.id}
-                  application={app}
-                  onViewDetails={() => handleViewDetails(app.id)}
-                />
-              ))}
-            </div>
-          )}
+          </div>
         </div>
       </main>
     </div>

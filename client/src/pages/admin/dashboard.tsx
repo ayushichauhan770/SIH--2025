@@ -7,8 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { NotificationBell } from "@/components/notification-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { StatsCard } from "@/components/stats-card";
-
 import {
   Table,
   TableBody,
@@ -17,13 +15,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FileText, Users, AlertTriangle, LogOut, Eye, Star, Send, Building2, CheckCircle, XCircle, UserCheck } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { FileText, Users, AlertTriangle, LogOut, Eye, Star, Send, Building2, CheckCircle, XCircle, UserCheck, Menu, Search, Filter, ChevronRight, Shield } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Application, Notification, User as UserType } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { ApplicationDetailsDialog } from "@/components/application-details-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,36 +36,36 @@ function ApplicationRowWithCitizen({
   statusColors: Record<string, string>;
   officialId: string;
 }) {
-  // Fetch citizen data
   const { data: citizen } = useQuery<{ fullName: string } | null>({
     queryKey: ["/api/users", app.citizenId],
     enabled: !!app.citizenId,
   });
 
-  // Fetch feedback/rating for this application and official
   const { data: feedback } = useQuery<{ rating: number; comment: string } | null>({
     queryKey: ["/api/applications", app.id, "feedback"],
     enabled: !!app.id && ["Approved", "Auto-Approved", "Rejected"].includes(app.status),
   });
 
   return (
-    <TableRow>
-      <TableCell className="font-mono text-sm">{app.trackingId}</TableCell>
-      <TableCell className="font-medium">{citizen?.fullName || "Loading..."}</TableCell>
+    <TableRow className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100 dark:border-slate-800">
+      <TableCell className="font-mono text-sm text-[#86868b]">{app.trackingId}</TableCell>
+      <TableCell className="font-medium text-[#1d1d1f] dark:text-white">{citizen?.fullName || "Loading..."}</TableCell>
       <TableCell>
-        <Badge className={statusColors[app.status]}>{app.status}</Badge>
+        <Badge className={`rounded-full px-3 py-1 text-xs font-medium border-0 ${statusColors[app.status]}`}>
+          {app.status}
+        </Badge>
       </TableCell>
       <TableCell>
         {feedback?.rating ? (
-          <div className="flex items-center gap-1">
-            <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-            <span className="font-semibold">{feedback.rating}/5</span>
+          <div className="flex items-center gap-1 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-1 rounded-lg w-fit">
+            <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
+            <span className="font-bold text-sm text-yellow-700 dark:text-yellow-500">{feedback.rating}</span>
           </div>
         ) : (
-          <span className="text-muted-foreground text-sm">No rating yet</span>
+          <span className="text-muted-foreground text-xs italic">No rating</span>
         )}
       </TableCell>
-      <TableCell className="text-sm text-muted-foreground">
+      <TableCell className="text-sm text-[#86868b]">
         {formatDistanceToNow(new Date(app.submittedAt), { addSuffix: true })}
       </TableCell>
     </TableRow>
@@ -87,7 +83,6 @@ export default function AdminDashboard() {
   const [isOfficialDetailOpen, setIsOfficialDetailOpen] = useState(false);
   const [officialSearch, setOfficialSearch] = useState("");
 
-  // Fetch department-specific stats
   const { data: deptStats } = useQuery<{
     totalApplications: number;
     assignedCount: number;
@@ -100,14 +95,14 @@ export default function AdminDashboard() {
     refetchInterval: 5000,
   });
 
-  const { data: applications, isLoading: appsLoading } = useQuery<Application[]>({
+  const { data: applications } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
     refetchInterval: 5000,
   });
 
   const { data: officials } = useQuery<UserType[]>({
     queryKey: ["/api/users/officials"],
-    refetchInterval: 5000, // Refetch every 5 seconds for instant updates when ratings change
+    refetchInterval: 5000,
   });
 
   const { data: notifications = [] } = useQuery<Notification[]>({
@@ -115,19 +110,11 @@ export default function AdminDashboard() {
     refetchInterval: 30000,
   });
 
-  // Fetch department rating
-  const { data: departmentRating, isLoading: ratingLoading, error: ratingError, refetch: refetchRating } = useQuery<{ averageRating: number; totalRatings: number; officialCount: number }>({
+  const { data: departmentRating } = useQuery<{ averageRating: number; totalRatings: number; officialCount: number }>({
     queryKey: ["/api/admin/department-rating"],
-    refetchInterval: 10000, // Refetch every 10 seconds
+    refetchInterval: 10000,
     refetchOnWindowFocus: true,
   });
-
-  // Debug logging
-  useEffect(() => {
-    console.log("[Admin Dashboard] User:", user?.fullName, "Department:", user?.department);
-    console.log("[Admin Dashboard] Rating data:", departmentRating);
-    console.log("[Admin Dashboard] Loading:", ratingLoading, "Error:", ratingError);
-  }, [user, departmentRating, ratingLoading, ratingError]);
 
   const { data: officialStats } = useQuery<{
     approved: number;
@@ -169,266 +156,246 @@ export default function AdminDashboard() {
     }
   };
 
-  // Filter applications by admin's department
-  const deptApplications = applications?.filter(app =>
-    app.department === user?.department
-  ) || [];
-
-  // Filter officials by admin's department and search term, then sort by rating
   const sortedOfficials = (officials || [])
     .filter(o => {
-      // First filter by department - normalize department names (handle "Health – Ministry..." vs "Health")
       if (!o.department || !user?.department) return false;
       const officialDept = o.department.split(/[–-]/)[0].trim();
       const adminDept = user.department.split(/[–-]/)[0].trim();
       const matchesDepartment = officialDept === adminDept;
-
-      // Then filter by search term (if provided)
       const matchesSearch = !officialSearch ||
         o.fullName.toLowerCase().includes(officialSearch.toLowerCase()) ||
         (o.email && o.email.toLowerCase().includes(officialSearch.toLowerCase()));
-
       return matchesDepartment && matchesSearch;
     })
     .sort((a, b) => (a.rating || 0) - (b.rating || 0));
 
-  // Debug logging
-  console.log("Admin department:", user?.department);
-  console.log("Total officials fetched:", officials?.length || 0);
-  console.log("Dept officials after filter:", sortedOfficials.length);
-  console.log("Officials data:", officials);
-
   const statusColors: Record<string, string> = {
-    "Submitted": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-    "Assigned": "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-    "In Progress": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-    "Approved": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-    "Rejected": "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-    "Auto-Approved": "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
+    "Submitted": "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+    "Assigned": "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
+    "In Progress": "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300",
+    "Approved": "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+    "Rejected": "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
+    "Auto-Approved": "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
   };
 
   return (
-    <div className="flex flex-col h-screen w-full bg-gradient-to-br from-blue-50 via-slate-50 to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-      <header className="flex items-center justify-between p-4 border-b bg-white/95 dark:bg-slate-950/95 border-gray-200 dark:border-gray-800 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="flex flex-col">
-            <h2 className="text-xl font-bold">Admin Dashboard</h2>
-            <p className="text-sm text-muted-foreground">Welcome, {user?.fullName}</p>
-            <div className={`flex items-center gap-1 px-2 py-1 rounded-md mt-1 w-fit ${
+    <div className="flex flex-col h-screen w-full bg-[#F5F5F7] dark:bg-slate-950 font-['Outfit',sans-serif]">
+      {/* Floating Navbar */}
+      <nav className="fixed top-6 left-0 right-0 z-50 flex justify-center px-6 pointer-events-none">
+        <div className="w-full max-w-7xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/50 dark:border-slate-800/50 shadow-sm rounded-full px-6 py-3 pointer-events-auto flex justify-between items-center transition-all duration-300">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+                A
+              </div>
+              <div className="hidden md:block">
+                <h1 className="text-sm font-bold text-[#1d1d1f] dark:text-white leading-tight">Admin Dashboard</h1>
+                <p className="text-[10px] text-[#86868b] font-medium tracking-wide uppercase">
+                  {user?.department?.split(/[–-]/)[0].trim() || "Department"}
+                </p>
+              </div>
+            </div>
+            
+            {/* Department Rating Badge */}
+            <div className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full border ${
               departmentRating && departmentRating.averageRating > 0 
-                ? "bg-yellow-50 dark:bg-yellow-950/30" 
-                : "bg-gray-50 dark:bg-gray-950/30"
+                ? "bg-yellow-50 border-yellow-100 dark:bg-yellow-900/20 dark:border-yellow-900/30" 
+                : "bg-slate-50 border-slate-100 dark:bg-slate-800 dark:border-slate-700"
             }`}>
-              <Star className={`h-4 w-4 ${
+              <Star className={`h-3.5 w-3.5 ${
                 departmentRating && departmentRating.averageRating > 0 
                   ? "text-yellow-500 fill-yellow-500" 
-                  : "text-gray-400"
+                  : "text-slate-400"
               }`} />
-              <span className={`text-sm font-semibold ${
+              <span className={`text-xs font-bold ${
                 departmentRating && departmentRating.averageRating > 0 
-                  ? "text-yellow-700 dark:text-yellow-400" 
-                  : "text-gray-500 dark:text-gray-400"
+                  ? "text-yellow-700 dark:text-yellow-500" 
+                  : "text-slate-500"
               }`}>
-                {departmentRating ? departmentRating.averageRating.toFixed(1) : "0.0"}/5.0
-              </span>
-              <span className="text-xs text-muted-foreground ml-1">
-                ({departmentRating ? departmentRating.totalRatings : 0} ratings)
+                {departmentRating ? departmentRating.averageRating.toFixed(1) : "0.0"}
               </span>
             </div>
           </div>
-          {user?.department && (
-            <Badge variant="outline" className="bg-blue-50 dark:bg-blue-950 ml-2">
-              <Building2 className="h-3 w-3 mr-1" />
-              {user.department.split(/[–-]/)[0].trim()}
-            </Badge>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <NotificationBell notifications={notifications} onMarkAsRead={handleMarkAsRead} />
-          <ThemeToggle />
-          <Button variant="ghost" size="icon" onClick={handleLogout}>
-            <LogOut className="h-5 w-5" />
-          </Button>
-        </div>
-      </header>
 
-      <main className="flex-1 overflow-auto p-6 space-y-6">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold font-heading bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
-            Department Overview
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">Monitoring and management for {user?.department}</p>
+          <div className="flex items-center gap-2">
+            <NotificationBell notifications={notifications} onMarkAsRead={handleMarkAsRead} />
+            <ThemeToggle />
+            <Button variant="ghost" size="icon" onClick={handleLogout} className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-[#86868b]">
+              <LogOut className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="md:hidden rounded-full text-[#1d1d1f] dark:text-white">
+              <Menu className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
+      </nav>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <StatsCard
-            title="Total Applications"
-            value={deptStats?.totalApplications || 0}
-            icon={FileText}
-          />
-          <StatsCard
-            title="Assigned"
-            value={deptStats?.assignedCount || 0}
-            icon={UserCheck}
-          />
-          <StatsCard
-            title="Approved"
-            value={deptStats?.approvedCount || 0}
-            icon={CheckCircle}
-          />
-          <StatsCard
-            title="Rejected"
-            value={deptStats?.rejectedCount || 0}
-            icon={XCircle}
-          />
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Department Officials</CardTitle>
-            <CardDescription>Sorted by rating (lowest to highest)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-4">
-              <Label>Search</Label>
-              <Input
-                placeholder="Search by name or email..."
-                value={officialSearch}
-                onChange={(e) => setOfficialSearch(e.target.value)}
-              />
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto pt-28 pb-10 px-6">
+        <div className="max-w-7xl mx-auto space-y-8">
+          
+          {/* Header Section */}
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold text-[#1d1d1f] dark:text-white tracking-tight">
+                Overview
+              </h1>
+              <p className="text-[#86868b] mt-2 text-lg">
+                Monitoring performance for {user?.department?.split(/[–-]/)[0].trim()}
+              </p>
             </div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Official ID</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Rating</TableHead>
-                  <TableHead>Total Handled</TableHead>
-                  <TableHead>Solved</TableHead>
-                  <TableHead>Not Solved</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedOfficials.map(official => {
-                  const hasPendingAlert = (applications?.filter(app =>
-                    app.officialId === official.id &&
-                    ["Assigned", "In Progress"].includes(app.status)
-                  ).length || 0) >= 3;
+          </div>
 
-                  return (
-                    <TableRow key={official.id} className={hasPendingAlert ? "bg-red-50 dark:bg-red-950/20" : ""}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => {
-                              setSelectedOfficial(official);
-                              setIsOfficialDetailOpen(true);
-                            }}
-                            className="font-medium hover:underline text-blue-600 dark:text-blue-400 cursor-pointer"
-                          >
-                            {official.fullName}
-                          </button>
-                          {hasPendingAlert && (
-                            <Badge variant="destructive" className="text-xs">
+          {/* Bento Grid Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { title: "Total Applications", value: deptStats?.totalApplications || 0, icon: FileText, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-900/20" },
+              { title: "Assigned", value: deptStats?.assignedCount || 0, icon: UserCheck, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-900/20" },
+              { title: "Approved", value: deptStats?.approvedCount || 0, icon: CheckCircle, color: "text-green-600", bg: "bg-green-50 dark:bg-green-900/20" },
+              { title: "Rejected", value: deptStats?.rejectedCount || 0, icon: XCircle, color: "text-red-600", bg: "bg-red-50 dark:bg-red-900/20" },
+            ].map((stat, i) => (
+              <div key={i} className="bg-white dark:bg-slate-900 p-6 rounded-[32px] shadow-sm hover:shadow-md transition-all duration-300 group">
+                <div className="flex items-center justify-between mb-4">
+                  <div className={`p-3 rounded-2xl ${stat.bg} ${stat.color} group-hover:scale-110 transition-transform duration-300`}>
+                    <stat.icon className="h-6 w-6" />
+                  </div>
+                  <span className="text-xs font-bold text-[#86868b] uppercase tracking-wider">
+                    {stat.title}
+                  </span>
+                </div>
+                <div className="text-4xl font-bold text-[#1d1d1f] dark:text-white">
+                  {stat.value}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Officials Table Section */}
+          <div className="bg-white dark:bg-slate-900 rounded-[32px] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-[#1d1d1f] dark:text-white">Department Officials</h2>
+                <p className="text-sm text-[#86868b]">Performance metrics and management</p>
+              </div>
+              <div className="relative w-full md:w-72">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#86868b]" />
+                <Input
+                  placeholder="Search officials..."
+                  value={officialSearch}
+                  onChange={(e) => setOfficialSearch(e.target.value)}
+                  className="pl-10 h-10 rounded-full bg-[#F5F5F7] dark:bg-slate-800 border-0 focus-visible:ring-1 focus-visible:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent border-b border-slate-100 dark:border-slate-800">
+                    <TableHead className="font-bold text-[#86868b] uppercase text-xs tracking-wider pl-6">Official</TableHead>
+                    <TableHead className="font-bold text-[#86868b] uppercase text-xs tracking-wider">Contact</TableHead>
+                    <TableHead className="font-bold text-[#86868b] uppercase text-xs tracking-wider">Rating</TableHead>
+                    <TableHead className="font-bold text-[#86868b] uppercase text-xs tracking-wider">Workload</TableHead>
+                    <TableHead className="font-bold text-[#86868b] uppercase text-xs tracking-wider">Status</TableHead>
+                    <TableHead className="font-bold text-[#86868b] uppercase text-xs tracking-wider text-right pr-6">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedOfficials.map(official => {
+                    const hasPendingAlert = (applications?.filter(app =>
+                      app.officialId === official.id &&
+                      ["Assigned", "In Progress"].includes(app.status)
+                    ).length || 0) >= 3;
+
+                    return (
+                      <TableRow key={official.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100 dark:border-slate-800">
+                        <TableCell className="pl-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                              {official.fullName.charAt(0)}
+                            </div>
+                            <div>
+                              <div className="font-bold text-[#1d1d1f] dark:text-white">{official.fullName}</div>
+                              <div className="text-xs text-[#86868b] font-mono">{official.id.slice(0, 8)}...</div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col text-sm">
+                            <span className="text-[#1d1d1f] dark:text-white">{official.email || "N/A"}</span>
+                            <span className="text-[#86868b] text-xs">{official.phone || "N/A"}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-1 rounded-lg w-fit">
+                            <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
+                            <span className="font-bold text-sm text-yellow-700 dark:text-yellow-500">{official.rating?.toFixed(1) || "0.0"}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <span className="font-bold text-[#1d1d1f] dark:text-white">{applications?.filter(app => app.officialId === official.id).length || 0}</span>
+                            <span className="text-[#86868b]"> total</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {hasPendingAlert ? (
+                            <Badge variant="destructive" className="rounded-full px-3 py-1 text-xs font-bold animate-pulse">
                               <AlertTriangle className="h-3 w-3 mr-1" />
-                              3+ Pending
+                              Overloaded
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="rounded-full px-3 py-1 text-xs font-bold border-green-200 text-green-600 bg-green-50 dark:bg-green-900/20 dark:border-green-900">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Healthy
                             </Badge>
                           )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {official.id.slice(0, 8)}...
-                      </TableCell>
-                      <TableCell className="text-sm">{official.email || "N/A"}</TableCell>
-                      <TableCell className="text-sm">{official.phone || "N/A"}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-                          {official.rating?.toFixed(1) || "0.0"}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {applications?.filter(app => app.officialId === official.id).length || 0}
-                      </TableCell>
-                      <TableCell>
-                        {applications?.filter(app =>
-                          app.officialId === official.id &&
-                          app.isSolved === true
-                        ).length || 0}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <span className={`font-semibold ${(applications?.filter(app =>
-                            app.officialId === official.id &&
-                            app.isSolved === false
-                          ).length || 0) > 0
-                            ? 'text-red-600 dark:text-red-400'
-                            : 'text-gray-600 dark:text-gray-400'
-                            }`}>
-                            {applications?.filter(app =>
-                              app.officialId === official.id &&
-                              app.isSolved === false
-                            ).length || 0}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedOfficial(official);
-                              setIsOfficialDetailOpen(true);
-                            }}
-                          >
-                            <Eye className="h-4 w-4 mr-1" /> Details
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedOfficial(official);
-                              setIsWarningOpen(true);
-                            }}
-                          >
-                            <AlertTriangle className="h-4 w-4 mr-1 text-red-500" />
-                            Warning
-                          </Button>
+                        </TableCell>
+                        <TableCell className="text-right pr-6">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedOfficial(official);
+                                setIsOfficialDetailOpen(true);
+                              }}
+                              className="rounded-full hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20 dark:hover:text-blue-400"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedOfficial(official);
+                                setIsWarningOpen(true);
+                              }}
+                              className="rounded-full hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                            >
+                              <AlertTriangle className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {sortedOfficials.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-12">
+                        <div className="flex flex-col items-center gap-3">
+                          <Users className="h-12 w-12 text-slate-200 dark:text-slate-800" />
+                          <p className="text-[#86868b] font-medium">No officials found</p>
                         </div>
                       </TableCell>
                     </TableRow>
-                  );
-                })}
-                {sortedOfficials.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12">
-                      <div className="flex flex-col items-center gap-3">
-                        <Users className="h-12 w-12 text-muted-foreground opacity-50" />
-                        <div>
-                          <p className="text-lg font-semibold text-muted-foreground">No Officials Found</p>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {officials && officials.length > 0
-                              ? `No officials found in "${user?.department?.split('–')[0].trim()}" department`
-                              : "No officials have been registered yet"}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-2">
-                            Total officials in system: {officials?.length || 0}
-                          </p>
-                        </div>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )
-                }
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </main >
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </div>
+      </main>
 
       <ApplicationDetailsDialog
         application={selectedApp}
@@ -439,274 +406,132 @@ export default function AdminDashboard() {
 
       {/* Official Detail Dialog */}
       <Dialog open={isOfficialDetailOpen} onOpenChange={setIsOfficialDetailOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-2xl">Official Performance Details</DialogTitle>
-            <DialogDescription>Complete overview of {selectedOfficial?.fullName}'s performance</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-6 py-4">
-            {/* Auto-Alert Banner */}
-            {officialStats && officialStats.pending >= 3 && (
-              <Card className="border-2 border-red-500 bg-red-50 dark:bg-red-950/30">
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" />
-                    <div>
-                      <p className="font-bold text-red-600 dark:text-red-400 text-lg">
-                        ⚠️ This official has more than 3 pending approvals. Action required.
-                      </p>
-                      <p className="text-red-600 dark:text-red-400">
-                        {officialStats.pending} applications are waiting for approval.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Basic Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Basic Information</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-start gap-6">
-                  {/* Profile Avatar */}
-                  <div className="flex-shrink-0">
-                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold">
-                      {selectedOfficial?.fullName.charAt(0).toUpperCase()}
-                    </div>
-                  </div>
-                  {/* Details */}
-                  <div className="grid grid-cols-2 gap-4 flex-1">
-                    <div>
-                      <Label className="text-muted-foreground">Name</Label>
-                      <p className="text-lg font-semibold">{selectedOfficial?.fullName}</p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground">Department</Label>
-                      <p className="text-lg font-semibold">{selectedOfficial?.department?.split(/[–-]/)[0].trim()}</p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground">Email</Label>
-                      <p className="text-lg font-semibold">{selectedOfficial?.email || "N/A"}</p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground">Phone</Label>
-                      <p className="text-lg font-semibold">{selectedOfficial?.phone || "N/A"}</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Performance Summary */}
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Performance Summary</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                <Card className="bg-purple-50 dark:bg-purple-950/20">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-muted-foreground">Total Assigned</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">
-                      {officialStats?.assigned || 0}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-green-50 dark:bg-green-950/20">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-muted-foreground">Approved</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-3xl font-bold text-green-600 dark:text-green-400">
-                      {officialStats?.approved || 0}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-red-50 dark:bg-red-950/20">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-muted-foreground">Rejected</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-3xl font-bold text-red-600 dark:text-red-400">
-                      {officialStats?.rejected || 0}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-blue-50 dark:bg-blue-950/20">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-muted-foreground">Solved</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-                      {officialStats?.solved || 0}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-yellow-50 dark:bg-yellow-950/20">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-muted-foreground">Avg Rating</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-1">
-                      <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-                      <p className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">
-                        {selectedOfficial?.rating?.toFixed(1) || "0.0"}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-orange-50 dark:bg-orange-950/20 border-orange-200">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-muted-foreground">Warnings Sent</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-5 w-5 text-orange-600" />
-                      <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">
-                        {officialStats?.warningsSent || 0}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-[#F5F5F7] dark:bg-slate-950 rounded-[32px] border-0 shadow-2xl p-0 font-['Outfit',sans-serif]">
+          <div className="bg-white dark:bg-slate-900 p-6 border-b border-slate-100 dark:border-slate-800 sticky top-0 z-10">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-blue-500/20">
+                {selectedOfficial?.fullName.charAt(0)}
+              </div>
+              <div>
+                <DialogTitle className="text-2xl font-bold text-[#1d1d1f] dark:text-white">
+                  {selectedOfficial?.fullName}
+                </DialogTitle>
+                <p className="text-[#86868b]">{selectedOfficial?.department?.split(/[–-]/)[0].trim()}</p>
               </div>
             </div>
-
-            {/* Applications Handled */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Applications Handled</CardTitle>
-                <CardDescription>All applications assigned to this official with citizen feedback</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Application ID</TableHead>
-                      <TableHead>Citizen Name</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Citizen Rating</TableHead>
-                      <TableHead>Date</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {applications?.filter(app => app.officialId === selectedOfficial?.id)
-                      .slice(0, 10)
-                      .map(app => {
-                        const statusColors: Record<string, string> = {
-                          "Submitted": "bg-blue-100 text-blue-800",
-                          "Assigned": "bg-purple-100 text-purple-800",
-                          "In Progress": "bg-yellow-100 text-yellow-800",
-                          "Approved": "bg-green-100 text-green-800",
-                          "Rejected": "bg-red-100 text-red-800",
-                          "Auto-Approved": "bg-emerald-100 text-emerald-800",
-                        };
-
-                        return (
-                          <ApplicationRowWithCitizen
-                            key={app.id}
-                            app={app}
-                            statusColors={statusColors}
-                            officialId={selectedOfficial?.id || ''}
-                          />
-                        );
-                      })}
-                    {(!applications || applications.filter(app => app.officialId === selectedOfficial?.id).length === 0) && (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                          No applications found for this official
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-
-            {/* Warning Control */}
-            <Card className="border-2 border-orange-200 dark:border-orange-800">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
-                  <AlertTriangle className="h-5 w-5" />
-                  Send Warning
-                </CardTitle>
-                <CardDescription>Send a warning notification to this official</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <Label>Warning Message</Label>
-                    <Textarea
-                      placeholder="Enter warning message for the official..."
-                      value={warningMessage}
-                      onChange={(e) => setWarningMessage(e.target.value)}
-                      rows={3}
-                    />
-                  </div>
-                  <Button
-                    onClick={handleSendWarning}
-                    className="bg-red-600 hover:bg-red-700 w-full"
-                    disabled={!warningMessage.trim()}
-                  >
-                    <Send className="h-4 w-4 mr-2" />
-                    Send Warning
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setIsOfficialDetailOpen(false);
-              setWarningMessage("");
-            }}>
-              Close
+
+          <div className="p-6 space-y-6">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { label: "Assigned", value: officialStats?.assigned || 0, color: "text-purple-600", bg: "bg-purple-50" },
+                { label: "Approved", value: officialStats?.approved || 0, color: "text-green-600", bg: "bg-green-50" },
+                { label: "Rejected", value: officialStats?.rejected || 0, color: "text-red-600", bg: "bg-red-50" },
+                { label: "Solved", value: officialStats?.solved || 0, color: "text-blue-600", bg: "bg-blue-50" },
+              ].map((stat, i) => (
+                <div key={i} className="bg-white dark:bg-slate-900 p-4 rounded-[24px] shadow-sm text-center">
+                  <div className="text-2xl font-bold text-[#1d1d1f] dark:text-white mb-1">{stat.value}</div>
+                  <div className={`text-xs font-bold uppercase tracking-wider ${stat.color}`}>{stat.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Applications Table */}
+            <div className="bg-white dark:bg-slate-900 rounded-[24px] shadow-sm overflow-hidden">
+              <div className="p-4 border-b border-slate-100 dark:border-slate-800">
+                <h3 className="font-bold text-[#1d1d1f] dark:text-white">Recent Applications</h3>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-b border-slate-100 dark:border-slate-800">
+                    <TableHead className="text-xs font-bold uppercase text-[#86868b]">ID</TableHead>
+                    <TableHead className="text-xs font-bold uppercase text-[#86868b]">Citizen</TableHead>
+                    <TableHead className="text-xs font-bold uppercase text-[#86868b]">Status</TableHead>
+                    <TableHead className="text-xs font-bold uppercase text-[#86868b]">Rating</TableHead>
+                    <TableHead className="text-xs font-bold uppercase text-[#86868b]">Time</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {applications?.filter(app => app.officialId === selectedOfficial?.id)
+                    .slice(0, 5)
+                    .map(app => (
+                      <ApplicationRowWithCitizen
+                        key={app.id}
+                        app={app}
+                        statusColors={statusColors}
+                        officialId={selectedOfficial?.id || ''}
+                      />
+                    ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Warning Section */}
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-[24px] shadow-sm border-2 border-red-50 dark:border-red-900/20">
+              <h3 className="font-bold text-[#1d1d1f] dark:text-white mb-4 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+                Send Warning
+              </h3>
+              <div className="space-y-4">
+                <Textarea
+                  placeholder="Enter warning message..."
+                  value={warningMessage}
+                  onChange={(e) => setWarningMessage(e.target.value)}
+                  className="bg-[#F5F5F7] dark:bg-slate-800 border-0 rounded-xl resize-none"
+                  rows={3}
+                />
+                <Button 
+                  onClick={handleSendWarning}
+                  disabled={!warningMessage.trim()}
+                  className="w-full rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold h-12"
+                >
+                  Send Warning
+                </Button>
+              </div>
+            </div>
+          </div>
+          
+          <div className="p-6 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 sticky bottom-0 z-10">
+            <Button variant="ghost" onClick={() => setIsOfficialDetailOpen(false)} className="w-full rounded-full h-12 text-[#86868b]">
+              Close Details
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Quick Warning Dialog */}
       <Dialog open={isWarningOpen} onOpenChange={setIsWarningOpen}>
-        <DialogContent>
+        <DialogContent className="bg-white dark:bg-slate-900 rounded-[32px] border-0 shadow-2xl p-6 font-['Outfit',sans-serif]">
           <DialogHeader>
-            <DialogTitle>Send Warning</DialogTitle>
-            <DialogDescription>
-              Send a warning notification to {selectedOfficial?.fullName}.
+            <DialogTitle className="text-xl font-bold text-[#1d1d1f] dark:text-white flex items-center gap-2">
+              <AlertTriangle className="h-6 w-6 text-red-600" />
+              Send Warning
+            </DialogTitle>
+            <DialogDescription className="text-[#86868b]">
+              Send a warning to {selectedOfficial?.fullName}.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Warning Message</Label>
-              <Textarea
-                placeholder="Enter warning message..."
-                value={warningMessage}
-                onChange={(e) => setWarningMessage(e.target.value)}
-                rows={4}
-              />
-            </div>
+          <div className="py-4">
+            <Textarea
+              placeholder="Enter warning message..."
+              value={warningMessage}
+              onChange={(e) => setWarningMessage(e.target.value)}
+              className="bg-[#F5F5F7] dark:bg-slate-800 border-0 rounded-xl resize-none min-h-[120px]"
+            />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsWarningOpen(false)}>Cancel</Button>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setIsWarningOpen(false)} className="rounded-full">Cancel</Button>
             <Button
-              variant="destructive"
               onClick={handleSendWarning}
               disabled={!warningMessage.trim()}
+              className="bg-red-600 hover:bg-red-700 text-white rounded-full px-6"
             >
-              <Send className="h-4 w-4 mr-2" />
               Send Warning
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Warning Dialog functionality now integrated into Official Detail Dialog */}
-    </div >
+    </div>
   );
 }

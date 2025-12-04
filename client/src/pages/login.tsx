@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield, Phone, Mail, User as UserIcon, Crown, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { Shield, Phone, Mail, User as UserIcon, Crown, ArrowLeft, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
@@ -171,86 +171,85 @@ export default function Login() {
   // Step 1: Role Selection
   if (!selectedRole) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4 relative overflow-hidden">
-        <div className="fixed top-4 left-4 z-50">
+      <div className="min-h-screen flex items-center justify-center bg-[#F5F5F7] dark:bg-slate-950 font-['Outfit',sans-serif] p-4">
+        <div className="fixed top-6 right-6 z-50">
           <ThemeToggle />
         </div>
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-green-400/20 to-blue-400/20 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }}></div>
-        </div>
 
-        <div className="w-full max-w-4xl space-y-6 relative z-10">
-          <div className="flex flex-col items-center gap-2 text-center">
-            <div className="p-3 rounded-full bg-gradient-to-br from-green-500 to-blue-600">
-              <Shield className="h-10 w-10 text-white" />
+        <div className="w-full max-w-5xl space-y-8 animate-in fade-in zoom-in duration-500">
+          <div className="text-center space-y-4">
+            <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-[#0071e3] shadow-lg shadow-blue-500/20 mb-2">
+              <Shield className="h-8 w-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold font-heading bg-gradient-to-r from-green-600 to-blue-600 dark:from-green-400 dark:to-blue-400 bg-clip-text text-transparent">
-              Digital Governance
+            <h1 className="text-4xl font-bold text-[#1d1d1f] dark:text-white tracking-tight">
+              Welcome to Accountability
             </h1>
-            <p className="text-sm text-muted-foreground">Select your role to continue</p>
+            <p className="text-lg text-[#86868b]">Select your role to continue</p>
           </div>
 
-          <Card className="border border-white/20 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/70 backdrop-blur-2xl shadow-2xl rounded-3xl w-full p-8">
-            <div className="flex flex-col items-center justify-center">
-              <h2 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 dark:from-green-400 dark:to-blue-400 bg-clip-text text-transparent mb-8">
-                Login As
-              </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
-                <Card 
-                  className="cursor-pointer border-2 hover:border-green-500 transition-all hover:shadow-xl hover:scale-105"
-                  onClick={() => handleRoleSelect("citizen")}
-                >
-                  <CardContent className="flex flex-col items-center justify-center p-6 space-y-4">
-                    <div className="p-4 rounded-full bg-gradient-to-br from-green-400 to-green-600">
-                      <UserIcon className="h-8 w-8 text-white" />
-                    </div>
-                    <h3 className="text-xl font-bold">Citizen</h3>
-                    <p className="text-sm text-muted-foreground text-center">Submit and track applications</p>
-                  </CardContent>
-                </Card>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card 
+              className="group cursor-pointer border-0 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden"
+              onClick={() => handleRoleSelect("citizen")}
+            >
+              <CardContent className="p-8 flex flex-col items-center text-center space-y-6">
+                <div className="w-20 h-20 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <UserIcon className="h-10 w-10 text-[#0071e3]" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-[#1d1d1f] dark:text-white mb-2">Citizen</h3>
+                  <p className="text-[#86868b]">Submit applications, track status, and rate services</p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-[#F5F5F7] dark:bg-slate-800 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <ArrowLeft className="h-5 w-5 text-[#1d1d1f] dark:text-white rotate-180" />
+                </div>
+              </CardContent>
+            </Card>
 
-                <Card 
-                  className="cursor-pointer border-2 hover:border-blue-500 transition-all hover:shadow-xl hover:scale-105"
-                  onClick={() => handleRoleSelect("official")}
-                >
-                  <CardContent className="flex flex-col items-center justify-center p-6 space-y-4">
-                    <div className="p-4 rounded-full bg-gradient-to-br from-blue-400 to-blue-600">
-                      <Shield className="h-8 w-8 text-white" />
-                    </div>
-                    <h3 className="text-xl font-bold">Official</h3>
-                    <p className="text-sm text-muted-foreground text-center">Process applications</p>
-                  </CardContent>
-                </Card>
+            <Card 
+              className="group cursor-pointer border-0 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden"
+              onClick={() => handleRoleSelect("official")}
+            >
+              <CardContent className="p-8 flex flex-col items-center text-center space-y-6">
+                <div className="w-20 h-20 rounded-full bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <Shield className="h-10 w-10 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-[#1d1d1f] dark:text-white mb-2">Official</h3>
+                  <p className="text-[#86868b]">Process applications and manage department tasks</p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-[#F5F5F7] dark:bg-slate-800 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <ArrowLeft className="h-5 w-5 text-[#1d1d1f] dark:text-white rotate-180" />
+                </div>
+              </CardContent>
+            </Card>
 
-                <Card 
-                  className="cursor-pointer border-2 hover:border-purple-500 transition-all hover:shadow-xl hover:scale-105"
-                  onClick={() => handleRoleSelect("admin")}
-                >
-                  <CardContent className="flex flex-col items-center justify-center p-6 space-y-4">
-                    <div className="p-4 rounded-full bg-gradient-to-br from-purple-400 to-purple-600">
-                      <Crown className="h-8 w-8 text-white" />
-                    </div>
-                    <h3 className="text-xl font-bold">Admin</h3>
-                    <p className="text-sm text-muted-foreground text-center">Monitor system</p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="mt-6 text-center text-sm">
-                Don't have an account?{" "}
-                <Link href="/register" className="text-green-600 dark:text-green-400 hover:underline font-semibold">
-                  Register
-                </Link>
-              </div>
-            </div>
-          </Card>
+            <Card 
+              className="group cursor-pointer border-0 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden"
+              onClick={() => handleRoleSelect("admin")}
+            >
+              <CardContent className="p-8 flex flex-col items-center text-center space-y-6">
+                <div className="w-20 h-20 rounded-full bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <Crown className="h-10 w-10 text-orange-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-[#1d1d1f] dark:text-white mb-2">Admin</h3>
+                  <p className="text-[#86868b]">Monitor system performance and manage users</p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-[#F5F5F7] dark:bg-slate-800 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <ArrowLeft className="h-5 w-5 text-[#1d1d1f] dark:text-white rotate-180" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
           <div className="text-center">
-            <Link href="/">
-              <Button variant="ghost" size="sm">Back to Home</Button>
-            </Link>
+            <p className="text-[#86868b]">
+              Don't have an account?{" "}
+              <Link href="/register">
+                <span className="text-[#0071e3] font-semibold hover:underline cursor-pointer">Register Now</span>
+              </Link>
+            </p>
           </div>
         </div>
       </div>
@@ -259,67 +258,66 @@ export default function Login() {
 
   // Step 2: Login Form
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4 relative overflow-hidden">
-      <div className="fixed top-4 left-4 z-50">
+    <div className="min-h-screen flex items-center justify-center bg-[#F5F5F7] dark:bg-slate-950 font-['Outfit',sans-serif] p-4">
+      <div className="fixed top-6 right-6 z-50">
         <ThemeToggle />
       </div>
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-green-400/20 to-blue-400/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }}></div>
 
-        {/* Circular decorative boxes */}
-        <div className="absolute top-20 left-10 w-32 h-32 border-2 border-green-300/30 rounded-full animate-spin" style={{ animationDuration: "20s", animationDirection: "reverse" }}></div>
-        <div className="absolute bottom-20 right-10 w-40 h-40 border-2 border-blue-300/30 rounded-full animate-pulse"></div>
-        <div className="absolute top-1/2 right-20 w-24 h-24 border-2 border-purple-300/30 rounded-full" style={{ animationName: "none" }}></div>
-        <div className="absolute bottom-1/3 left-1/4 w-28 h-28 border-2 border-green-300/20 rounded-full animate-bounce"></div>
-      </div>
-
-      <div className="w-full max-w-md space-y-6 relative z-10 animate-slide-in-left">
-        <div className="flex flex-col items-center gap-2 text-center">
-          <div className="p-3 rounded-full bg-gradient-to-br from-green-500 to-blue-600 animate-bounce">
-            <Shield className="h-10 w-10 text-white" />
+      <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-8 duration-700">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-[#0071e3] shadow-lg shadow-blue-500/20 mb-4">
+            <Shield className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold font-heading bg-gradient-to-r from-green-600 to-blue-600 dark:from-green-400 dark:to-blue-400 bg-clip-text text-transparent">
-            Digital Governance
+          <h1 className="text-3xl font-bold text-[#1d1d1f] dark:text-white tracking-tight mb-2">
+            Welcome Back
           </h1>
-          <p className="text-sm text-muted-foreground">Welcome back! Sign in to your account</p>
+          <p className="text-[#86868b]">Sign in to your account</p>
         </div>
 
-        <Card className="border border-white/20 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/70 backdrop-blur-2xl shadow-2xl hover:shadow-2xl transition-all duration-300 rounded-3xl w-full max-w-md p-6">
-          <div className="flex flex-col items-center justify-center">
-            <div className="flex items-center justify-between w-full mb-4">
-              <Button variant="ghost" size="sm" onClick={handleBackToRoleSelection} className="flex items-center gap-2">
-                <ArrowLeft className="h-4 w-4" />
+        <Card className="border-0 shadow-lg bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden">
+          <CardContent className="p-8">
+            <div className="flex items-center justify-between mb-8">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleBackToRoleSelection} 
+                className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 -ml-2 text-[#86868b]"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
               </Button>
-              <div className="flex items-center gap-2">
-                {selectedRole === "citizen" && <UserIcon className="h-5 w-5 text-green-600" />}
-                {selectedRole === "official" && <Shield className="h-5 w-5 text-blue-600" />}
-                {selectedRole === "admin" && <Crown className="h-5 w-5 text-purple-600" />}
-                <span className="text-sm font-semibold capitalize">{selectedRole}</span>
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#F5F5F7] dark:bg-slate-800">
+                {selectedRole === "citizen" && <UserIcon className="h-4 w-4 text-[#0071e3]" />}
+                {selectedRole === "official" && <Shield className="h-4 w-4 text-purple-600" />}
+                {selectedRole === "admin" && <Crown className="h-4 w-4 text-orange-600" />}
+                <span className="text-sm font-semibold capitalize text-[#1d1d1f] dark:text-white">{selectedRole}</span>
               </div>
             </div>
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 dark:from-green-400 dark:to-blue-400 bg-clip-text text-transparent mb-6">Login</h2>
 
             <Tabs defaultValue="mobile" value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="mobile" className="flex items-center gap-2">
-                  <Phone className="h-4 w-4" /> Mobile
+              <TabsList className="grid w-full grid-cols-2 mb-8 p-1 bg-[#F5F5F7] dark:bg-slate-800 rounded-2xl">
+                <TabsTrigger 
+                  value="mobile" 
+                  className="rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm transition-all"
+                >
+                  <Phone className="h-4 w-4 mr-2" /> Mobile
                 </TabsTrigger>
-                <TabsTrigger value="email" className="flex items-center gap-2">
-                  <Mail className="h-4 w-4" /> Email/User
+                <TabsTrigger 
+                  value="email" 
+                  className="rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm transition-all"
+                >
+                  <Mail className="h-4 w-4 mr-2" /> Email
                 </TabsTrigger>
               </TabsList>
 
-              <form onSubmit={handleSubmit} className="space-y-4 w-full bg-white/10 dark:bg-slate-900/20 backdrop-blur-md rounded-2xl p-4">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <TabsContent value="mobile" className="space-y-4 mt-0">
                   <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-sm font-semibold">Mobile Number</Label>
+                    <Label htmlFor="phone" className="text-sm font-semibold text-[#1d1d1f] dark:text-white ml-1">Mobile Number</Label>
                     <Input
                       id="phone"
                       type="tel"
-                      placeholder="Enter your 10-digit mobile number"
+                      placeholder="Enter 10-digit number"
                       value={formData.phone}
                       onChange={(e) => {
                         const value = e.target.value.replace(/\D/g, '').slice(0, 10);
@@ -328,26 +326,26 @@ export default function Login() {
                       required={activeTab === "mobile"}
                       maxLength={10}
                       pattern="[0-9]{10}"
-                      className="border-green-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-green-500 focus:ring-green-500/20 dark:border-green-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
+                      className="h-12 rounded-xl bg-[#F5F5F7] dark:bg-slate-800 border-transparent focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="mobile-password" className="text-sm font-semibold">Password</Label>
+                    <Label htmlFor="mobile-password" className="text-sm font-semibold text-[#1d1d1f] dark:text-white ml-1">Password</Label>
                     <div className="relative">
                       <Input
                         id="mobile-password"
                         type={showPassword ? "text" : "password"}
-                        placeholder="Enter your password"
+                        placeholder="Enter password"
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        className="border-green-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-green-500 focus:ring-green-500/20 dark:border-green-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm pr-10"
+                        className="h-12 rounded-xl bg-[#F5F5F7] dark:bg-slate-800 border-transparent focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all pr-10"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white transition-colors"
                       >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
                     </div>
                   </div>
@@ -355,7 +353,7 @@ export default function Login() {
 
                 <TabsContent value="email" className="space-y-4 mt-0">
                   <div className="space-y-2">
-                    <Label htmlFor="username" className="text-sm font-semibold">Username or Email</Label>
+                    <Label htmlFor="username" className="text-sm font-semibold text-[#1d1d1f] dark:text-white ml-1">Username or Email</Label>
                     <Input
                       id="username"
                       type="text"
@@ -363,14 +361,14 @@ export default function Login() {
                       value={formData.username}
                       onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                       required={activeTab === "email"}
-                      className="border-green-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-green-500 focus:ring-green-500/20 dark:border-green-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm"
+                      className="h-12 rounded-xl bg-[#F5F5F7] dark:bg-slate-800 border-transparent focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
                     />
                   </div>
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="password" className="text-sm font-semibold">Password</Label>
-                      <Link href="/forgot-password" className="text-xs text-green-600 dark:text-green-400 hover:underline">
-                        Forgot Password?
+                    <div className="flex items-center justify-between ml-1">
+                      <Label htmlFor="password" className="text-sm font-semibold text-[#1d1d1f] dark:text-white">Password</Label>
+                      <Link href="/forgot-password">
+                        <span className="text-xs text-[#0071e3] hover:underline cursor-pointer font-medium">Forgot Password?</span>
                       </Link>
                     </div>
                     <div className="relative">
@@ -381,14 +379,14 @@ export default function Login() {
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         required={activeTab === "email"}
-                        className="border-green-200/30 bg-white/10 dark:bg-slate-900/30 focus:border-green-500 focus:ring-green-500/20 dark:border-green-800/30 dark:focus:bg-slate-900/40 backdrop-blur-sm pr-10"
+                        className="h-12 rounded-xl bg-[#F5F5F7] dark:bg-slate-800 border-transparent focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all pr-10"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white transition-colors"
                       >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
                     </div>
                   </div>
@@ -396,7 +394,7 @@ export default function Login() {
 
                 <Button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-semibold py-2 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 mt-4"
+                  className="w-full h-12 rounded-full bg-[#0071e3] hover:bg-[#0077ED] text-white font-semibold shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100"
                   disabled={isLoading}
                 >
                   {isLoading ? "Processing..." : (activeTab === "mobile" ? "Send OTP" : "Login")}
@@ -404,36 +402,34 @@ export default function Login() {
               </form>
             </Tabs>
 
-            <div className="w-full flex items-center gap-4 my-4">
-              <Separator className="flex-1" />
-              <span className="text-xs text-muted-foreground">OR</span>
-              <Separator className="flex-1" />
+            <div className="relative my-8">
+              <div className="absolute inset-0 flex items-center">
+                <Separator className="w-full" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white dark:bg-slate-900 px-2 text-[#86868b]">Or continue with</span>
+              </div>
             </div>
 
             <Button
               variant="outline"
-              className="w-full flex items-center gap-2 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="w-full h-12 rounded-full border-slate-200 dark:border-slate-700 hover:bg-[#F5F5F7] dark:hover:bg-slate-800 text-[#1d1d1f] dark:text-white font-medium transition-all"
               onClick={handleGoogleLogin}
             >
-              <SiGoogle className="h-4 w-4" />
-              Continue with Google
+              <SiGoogle className="h-5 w-5 mr-2" />
+              Google
             </Button>
-            <div className="mt-4 text-center text-sm">
-              Don't have an account?{" "}
-              <Link href="/register" className="text-green-600 dark:text-green-400 hover:underline font-semibold">
-                Register
-              </Link>
-            </div>
-          </div>
-        </Card>
 
-        <div className="text-center">
-          <Link href="/">
-            <Button variant="ghost" size="sm" className="text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400">
-              Back to Home
-            </Button>
-          </Link>
-        </div>
+            <div className="mt-8 text-center">
+              <p className="text-[#86868b]">
+                Don't have an account?{" "}
+                <Link href="/register">
+                  <span className="text-[#0071e3] font-semibold hover:underline cursor-pointer">Register Now</span>
+                </Link>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* OTP Modal */}

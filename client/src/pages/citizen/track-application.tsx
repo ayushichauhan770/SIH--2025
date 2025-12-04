@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Shield, ArrowLeft, Search, Calendar, Clock, FileText, X } from "lucide-react";
+import { Shield, ArrowLeft, Search, Calendar, Clock, FileText, X, CheckCircle, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -80,58 +80,71 @@ export default function TrackApplication() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-      <header className="border-b sticky top-0 bg-white/95 dark:bg-slate-950/95 backdrop-blur z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href={user ? "/citizen/dashboard" : "/"}>
-                <Button variant="ghost" size="icon" data-testid="button-back">
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-              </Link>
-              <div className="flex items-center gap-2">
-                <Shield className="h-6 w-6 text-primary" />
-                <span className="font-heading font-bold text-xl">Digital Governance</span>
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-slate-950 font-['Outfit',sans-serif] selection:bg-blue-500/30">
+      {/* Floating Header */}
+      <header className="fixed top-6 left-0 right-0 z-50 flex justify-center pointer-events-none px-6">
+        <div className="w-full max-w-7xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 shadow-sm rounded-full px-6 py-3 pointer-events-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href={user ? "/citizen/dashboard" : "/"}>
+              <Button variant="ghost" size="icon" className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 -ml-2">
+                <ArrowLeft className="h-5 w-5 text-[#1d1d1f] dark:text-white" />
+              </Button>
+            </Link>
+            <div className="h-4 w-px bg-slate-200 dark:bg-slate-800" />
+            <div className="flex items-center gap-3">
+              <div className="p-1.5 rounded-full bg-[#0071e3] shadow-lg shadow-blue-500/20">
+                <Shield className="h-4 w-4 text-white" />
               </div>
+              <span className="font-semibold text-sm tracking-tight text-[#1d1d1f] dark:text-white">
+                Track Application
+              </span>
             </div>
-            <ThemeToggle />
           </div>
+          <ThemeToggle />
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold font-heading mb-2">Track Application</h1>
-            <p className="text-muted-foreground">Enter your tracking ID to view application status</p>
+      <main className="container mx-auto px-6 pt-32 pb-12 max-w-3xl">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="text-center space-y-2">
+            <h1 className="text-4xl font-bold tracking-tight text-[#1d1d1f] dark:text-white">
+              Track Status
+            </h1>
+            <p className="text-lg text-[#86868b] dark:text-slate-400 font-medium max-w-xl mx-auto">
+              Enter your tracking ID to view the current status of your application.
+            </p>
           </div>
 
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Search className="h-5 w-5 text-primary" />
-                <CardTitle className="font-heading">Search by Tracking ID</CardTitle>
+          <Card className="border-0 shadow-sm bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden">
+            <CardHeader className="border-b border-slate-100 dark:border-slate-800 p-8 bg-slate-50/50 dark:bg-slate-900/50">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-600">
+                  <Search className="h-5 w-5" />
+                </div>
+                <CardTitle className="text-xl font-bold text-[#1d1d1f] dark:text-white">Search Application</CardTitle>
               </div>
-              <CardDescription>
+              <CardDescription className="text-[#86868b] ml-12">
                 Your tracking ID was provided when you submitted your application
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-8">
               <form onSubmit={handleSearch} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="trackingId">Tracking ID</Label>
-                  <Input
-                    id="trackingId"
-                    type="text"
-                    placeholder="Enter tracking ID (e.g., APP-2024-001234)"
-                    value={trackingId}
-                    onChange={(e) => setTrackingId(e.target.value)}
-                    className="font-mono"
-                    required
-                    data-testid="input-tracking-id"
-                  />
-                  <p className="text-xs text-muted-foreground">
+                <div className="space-y-3">
+                  <Label htmlFor="trackingId" className="text-sm font-semibold text-[#1d1d1f] dark:text-white">Tracking ID</Label>
+                  <div className="relative">
+                    <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
+                    <Input
+                      id="trackingId"
+                      type="text"
+                      placeholder="e.g., APP-2024-001234"
+                      value={trackingId}
+                      onChange={(e) => setTrackingId(e.target.value)}
+                      className="h-12 pl-12 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-[#0071e3] focus:ring-offset-0 font-mono text-lg tracking-wide uppercase placeholder:normal-case placeholder:tracking-normal"
+                      required
+                      data-testid="input-tracking-id"
+                    />
+                  </div>
+                  <p className="text-xs text-[#86868b] ml-1">
                     The tracking ID is case-sensitive
                   </p>
                 </div>
@@ -139,92 +152,114 @@ export default function TrackApplication() {
                 <Button
                   type="submit"
                   disabled={isSearching}
-                  className="w-full"
+                  className="w-full h-12 rounded-full bg-[#0071e3] hover:bg-[#0077ED] text-white font-medium shadow-lg shadow-blue-500/20 text-base"
                   data-testid="button-search"
                 >
-                  {isSearching ? "Searching..." : "Search Application"}
+                  {isSearching ? "Searching..." : "Track Application"}
                 </Button>
               </form>
             </CardContent>
           </Card>
 
-          <Card className="bg-muted/50">
-            <CardHeader>
-              <CardTitle className="text-lg font-heading">Need Help?</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <p>• Check your email for the tracking ID sent after submission</p>
-              <p>• Tracking IDs typically start with "APP-" followed by year and number</p>
-              <p>• You can track your application without logging in</p>
-              <p>• For full details and to rate officials, please log in to your account</p>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="border-0 shadow-sm bg-white dark:bg-slate-900 rounded-[24px] p-6">
+              <div className="flex gap-4">
+                <div className="p-3 rounded-full bg-blue-50 dark:bg-blue-900/20 text-[#0071e3] h-fit">
+                  <CheckCircle className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-[#1d1d1f] dark:text-white mb-1">Real-time Updates</h3>
+                  <p className="text-sm text-[#86868b]">
+                    Get instant status updates as your application moves through the review process.
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="border-0 shadow-sm bg-white dark:bg-slate-900 rounded-[24px] p-6">
+              <div className="flex gap-4">
+                <div className="p-3 rounded-full bg-orange-50 dark:bg-orange-900/20 text-orange-500 h-fit">
+                  <AlertCircle className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-[#1d1d1f] dark:text-white mb-1">Need Help?</h3>
+                  <p className="text-sm text-[#86868b]">
+                    Check your email for the tracking ID or contact support if you've lost it.
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </div>
         </div>
       </main>
 
-      {/* Status Dialog */}
+      {/* Status Dialog - Refined */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                Application Status
+        <DialogContent className="max-w-2xl border-0 rounded-[32px] p-0 overflow-hidden bg-white dark:bg-slate-900 shadow-2xl">
+          <DialogHeader className="p-8 pb-0">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-[#0071e3]">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <DialogTitle className="text-xl font-bold text-[#1d1d1f] dark:text-white">Application Status</DialogTitle>
               </div>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={handleCloseDialog}
-                className="h-6 w-6"
+                className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5 text-slate-500" />
               </Button>
-            </DialogTitle>
-            <DialogDescription>
-              Your application details and current status
+            </div>
+            <DialogDescription className="text-[#86868b] ml-12">
+              Current status details for your application
             </DialogDescription>
           </DialogHeader>
 
           {foundApplication && (
-            <div className="space-y-6">
+            <div className="p-8 space-y-8">
               {/* Tracking ID and Status */}
-              <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-muted/50 rounded-lg">
+              <div className="flex flex-wrap items-center justify-between gap-4 p-6 bg-[#f5f5f7] dark:bg-slate-800/50 rounded-2xl">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Tracking ID</p>
-                  <code className="text-lg font-mono font-bold">{foundApplication.trackingId}</code>
+                  <p className="text-xs font-bold uppercase tracking-wider text-[#86868b] mb-1">Tracking ID</p>
+                  <code className="text-xl font-mono font-bold text-[#1d1d1f] dark:text-white">{foundApplication.trackingId}</code>
                 </div>
-                <Badge className={`${statusColors[foundApplication.status]} text-lg px-4 py-2`}>
+                <Badge className={`${statusColors[foundApplication.status]} text-sm px-4 py-1.5 rounded-full font-semibold border-0`}>
                   {foundApplication.status}
                 </Badge>
               </div>
 
               {/* Application Details */}
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div>
-                  <Label className="text-muted-foreground">Application Type</Label>
-                  <p className="font-medium mt-1">{foundApplication.applicationType}</p>
+                  <Label className="text-xs font-bold uppercase tracking-wider text-[#86868b]">Application Type</Label>
+                  <p className="text-lg font-medium text-[#1d1d1f] dark:text-white mt-1">{foundApplication.applicationType}</p>
                 </div>
 
                 <div>
-                  <Label className="text-muted-foreground">Description</Label>
-                  <p className="mt-1 text-sm whitespace-pre-wrap">{foundApplication.description}</p>
+                  <Label className="text-xs font-bold uppercase tracking-wider text-[#86868b]">Description</Label>
+                  <p className="mt-2 text-sm leading-relaxed text-[#1d1d1f] dark:text-slate-300 whitespace-pre-wrap bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
+                    {foundApplication.description}
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                    <Calendar className="h-5 w-5 text-[#86868b]" />
                     <div>
-                      <p className="text-xs text-muted-foreground">Submitted</p>
-                      <p className="text-sm font-medium">
+                      <p className="text-xs font-medium text-[#86868b]">Submitted</p>
+                      <p className="text-sm font-bold text-[#1d1d1f] dark:text-white">
                         {new Date(foundApplication.submittedAt).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                    <Clock className="h-5 w-5 text-[#86868b]" />
                     <div>
-                      <p className="text-xs text-muted-foreground">Auto-Approval Date</p>
-                      <p className="text-sm font-medium">
+                      <p className="text-xs font-medium text-[#86868b]">Auto-Approval</p>
+                      <p className="text-sm font-bold text-[#1d1d1f] dark:text-white">
                         {new Date(foundApplication.autoApprovalDate).toLocaleDateString()}
                       </p>
                     </div>
@@ -233,16 +268,15 @@ export default function TrackApplication() {
               </div>
 
               {/* Login Prompt */}
-              <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
-                <p className="text-sm text-blue-900 dark:text-blue-300">
-                  <strong>Want more details?</strong> Log in to your account to view complete application history,
-                  rate officials, and track all your applications.
+              <div className="p-6 bg-blue-50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/20">
+                <p className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-4">
+                  Want to see more details? Log in to view full history and rate officials.
                 </p>
-                <div className="flex gap-2 mt-3">
+                <div className="flex gap-3">
                   <Button
                     size="sm"
                     onClick={() => setLocation("/login")}
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="rounded-full bg-[#0071e3] hover:bg-[#0077ED] text-white shadow-md shadow-blue-500/20 px-6"
                   >
                     Log In
                   </Button>
@@ -250,6 +284,7 @@ export default function TrackApplication() {
                     size="sm"
                     variant="outline"
                     onClick={() => setLocation("/register")}
+                    className="rounded-full border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-6"
                   >
                     Register
                   </Button>
