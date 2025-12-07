@@ -4,13 +4,16 @@ import { useAuth } from "@/contexts/auth-context";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ApplicationCard } from "@/components/application-card";
+import { CaseCard } from "@/components/case-card";
 import { NotificationBell } from "@/components/notification-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { FileText, Plus, Search, LogOut, Shield, Clock, CheckCircle, XCircle, LayoutDashboard, ArrowRight } from "lucide-react";
+import { FileText, Plus, Search, LogOut, Shield, Clock, CheckCircle, XCircle, LayoutDashboard, ArrowRight, Gavel } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Application, Notification } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { AccountabilityChat } from "@/components/AccountabilityChat";
 
 export default function CitizenDashboard() {
   const { user, logout } = useAuth();
@@ -19,6 +22,10 @@ export default function CitizenDashboard() {
   const { data: applications, isLoading: applicationsLoading } = useQuery<Application[]>({
     queryKey: ["/api/applications/my"],
     refetchInterval: 5000,
+  });
+
+  const { data: myCases, isLoading: casesLoading } = useQuery<any[]>({
+    queryKey: ["/api/judiciary/my-cases"],
   });
 
   const { data: notifications = [] } = useQuery<Notification[]>({
@@ -166,7 +173,35 @@ export default function CitizenDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column: Quick Actions & Filters */}
           <div className="space-y-6">
+            <h2 className="text-xl font-bold tracking-tight text-[#1d1d1f] dark:text-white px-2">
+              Quick Actions
+            </h2>
             <div className="grid grid-cols-1 gap-4">
+              {/* My Cases Summary Card */}
+              {myCases && myCases.length > 0 && (
+                <Card 
+                  className="bg-gradient-to-br from-[#0071e3] to-[#0077ED] border-0 text-white shadow-lg shadow-blue-500/30 rounded-[32px] overflow-hidden relative cursor-pointer group"
+                  onClick={() => setLocation("/judiciary/portal")}
+                >
+                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
+                   <CardHeader className="p-6">
+                      <div className="flex justify-between items-start">
+                         <div className="p-2.5 rounded-2xl bg-white/20 backdrop-blur-md">
+                           <Gavel className="h-5 w-5 text-white" />
+                         </div>
+                         <Badge className="bg-white/20 hover:bg-white/30 text-white border-0">
+                           {myCases.length} Active
+                         </Badge>
+                      </div>
+                      <div className="mt-4">
+                        <CardTitle className="text-xl font-bold">My Legal Cases</CardTitle>
+                        <CardDescription className="text-blue-100 text-xs mt-1 font-medium">
+                          Next Hearing: {myCases[0].nextHearingDate ? new Date(myCases[0].nextHearingDate).toLocaleDateString() : "Pending Scheduling"}
+                        </CardDescription>
+                      </div>
+                   </CardHeader>
+                </Card>
+              )}
               <Card 
                 className="group relative border-0 overflow-hidden bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer rounded-[32px] h-40"
                 onClick={() => setLocation("/citizen/submit")} 
@@ -205,6 +240,48 @@ export default function CitizenDashboard() {
                     <CardTitle className="text-xl font-bold tracking-tight text-[#1d1d1f] dark:text-white mb-1">Track Status</CardTitle>
                     <CardDescription className="text-[#86868b] font-medium text-xs">
                       Check existing requests
+                    </CardDescription>
+                  </div>
+                </CardHeader>
+              </Card>
+
+              <Card 
+                className="group relative border-0 overflow-hidden bg-white dark:bg-slate-900 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 cursor-pointer rounded-[32px] h-40"
+                onClick={() => setLocation("/judiciary/file")} 
+                data-testid="card-file-case"
+              >
+                <CardHeader className="h-full flex flex-col justify-between p-6">
+                  <div className="flex justify-between items-start">
+                    <div className="p-2.5 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600">
+                      <Gavel className="h-5 w-5" />
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-slate-300 group-hover:text-[#0071e3] transition-colors" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl font-bold tracking-tight text-[#1d1d1f] dark:text-white mb-1">File Legal Case</CardTitle>
+                    <CardDescription className="text-[#86868b] font-medium text-xs">
+                      Submit to Judiciary AI
+                    </CardDescription>
+                  </div>
+                </CardHeader>
+              </Card>
+
+              <Card 
+                className="group relative border-0 overflow-hidden bg-white dark:bg-slate-900 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 cursor-pointer rounded-[32px] h-40"
+                onClick={() => setLocation("/judiciary/portal")} 
+                data-testid="card-litigant-portal"
+              >
+                <CardHeader className="h-full flex flex-col justify-between p-6">
+                  <div className="flex justify-between items-start">
+                    <div className="p-2.5 rounded-2xl bg-purple-50 dark:bg-purple-900/20 text-purple-600">
+                      <Search className="h-5 w-5" />
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-slate-300 group-hover:text-[#0071e3] transition-colors" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl font-bold tracking-tight text-[#1d1d1f] dark:text-white mb-1">Litigant Portal</CardTitle>
+                    <CardDescription className="text-[#86868b] font-medium text-xs">
+                      Track cases & hearings
                     </CardDescription>
                   </div>
                 </CardHeader>
@@ -251,21 +328,30 @@ export default function CitizenDashboard() {
                     </div>
                   ))}
                 </div>
-              ) : filteredApplications.length === 0 ? (
+              ) : (filteredApplications.length === 0 && (!myCases || myCases.length === 0)) ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <div className="p-4 rounded-full bg-[#f5f5f7] dark:bg-slate-800 mb-4">
                     <FileText className="h-8 w-8 text-[#86868b]" />
                   </div>
-                  <h3 className="text-lg font-semibold text-[#1d1d1f] dark:text-white mb-1">No applications found</h3>
+                  <h3 className="text-lg font-semibold text-[#1d1d1f] dark:text-white mb-1">No activity found</h3>
                   <p className="text-[#86868b] max-w-sm">
                     {filterStatus === 'all' 
-                      ? "You haven't submitted any applications yet." 
-                      : `No applications found with status "${filterStatus}".`
+                      ? "You haven't submitted any applications or cases yet." 
+                      : `No activity found with status "${filterStatus}".`
                     }
                   </p>
                 </div>
               ) : (
                 <div className="space-y-4">
+                  {/* Show Legal Cases First */}
+                  {myCases && myCases.map(caseItem => (
+                    <CaseCard
+                      key={caseItem.id}
+                      caseItem={caseItem}
+                      className="!shadow-none !bg-[#f5f5f7] dark:!bg-slate-800 !rounded-[24px] hover:!bg-slate-200 dark:hover:!bg-slate-700"
+                    />
+                  ))}
+                  
                   {filteredApplications.map(app => (
                     <ApplicationCard
                       key={app.id}
@@ -280,6 +366,9 @@ export default function CitizenDashboard() {
           </div>
         </div>
       </main>
+      
+      {/* AI Assistant */}
+      <AccountabilityChat />
     </div>
   );
 }

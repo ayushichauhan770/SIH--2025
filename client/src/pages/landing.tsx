@@ -9,6 +9,7 @@ import { apiRequest } from "@/lib/queryClient";
 import FundingTransparency from "@/components/FundingTransparency";
 import PoliticianRatingSection from "@/components/PoliticianRatingSection";
 import { getAllDepartmentNames } from "@shared/sub-departments";
+import { AccountabilityChat } from "@/components/AccountabilityChat";
 
 interface DepartmentRating {
   department_id: string;
@@ -64,7 +65,7 @@ export default function Landing() {
             <div className="p-1.5 rounded-full bg-[#0071e3] shadow-lg shadow-blue-500/20">
               <Shield className="h-5 w-5 text-white" />
             </div>
-            <a href="#" className="text-xl font-bold tracking-tight text-[#1d1d1f] dark:text-white">Accountability</a>
+            <a href="/" className="text-xl font-bold tracking-tight text-[#1d1d1f] dark:text-white">Accountability</a>
           </div>
           
           <div className="hidden md:flex gap-8 h-full items-center">
@@ -97,7 +98,8 @@ export default function Landing() {
                           {[
                             { name: 'Track Application', href: '/track' },
                             { name: 'Application Status', href: '/track' },
-                            { name: 'Download Forms', href: '#' },
+                            { name: 'Judiciary Dashboard', href: '/judiciary' },
+                            { name: 'Litigant Portal', href: '/judiciary/portal' },
                             { name: 'Payment History', href: '#' }
                           ].map(item => (
                             <a key={item.name} href={item.href} className="block text-[15px] text-[#1d1d1f] dark:text-white hover:text-[#0071e3] transition-colors font-medium">
@@ -124,6 +126,9 @@ export default function Landing() {
 
             <a href="#dashboard" className="text-[#86868b] text-sm font-medium hover:text-[#0071e3] transition-colors">Dashboard</a>
             <a href="#reforms" className="text-[#86868b] text-sm font-medium hover:text-[#0071e3] transition-colors">Reforms</a>
+            <Link href="/judiciary">
+              <a className="text-[#86868b] text-sm font-medium hover:text-[#0071e3] transition-colors">Judiciary</a>
+            </Link>
           </div>
 
           <div className="hidden md:flex gap-4 items-center">
@@ -165,8 +170,8 @@ export default function Landing() {
                 <a href="#" className="text-[#1d1d1f] dark:text-white">Licenses & Permits</a>
               </div>
             </div>
-            <a href="#dashboard" className="text-lg font-medium text-[#1d1d1f] dark:text-white">Dashboard</a>
-            <a href="#reforms" className="text-lg font-medium text-[#1d1d1f] dark:text-white">Reforms</a>
+            {/* <a href="#dashboard" className="text-lg font-medium text-[#1d1d1f] dark:text-white">Dashboard</a>
+            <a href="#reforms" className="text-lg font-medium text-[#1d1d1f] dark:text-white">Reforms</a> */}
             <div className="h-px bg-slate-200 dark:bg-slate-800 my-2"></div>
             <div className="flex flex-col gap-4">
               <Link href="/login">
@@ -637,6 +642,10 @@ export default function Landing() {
           </div>
         </div>
       </footer>
+
+      
+      {/* AI Help Desk */}
+      <AccountabilityChat defaultOpen={false} className="shadow-2xl" />
     </div>
   );
 }

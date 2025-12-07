@@ -11,6 +11,14 @@ export interface DepartmentWithSubDepartments {
 
 export const DEPARTMENTS_WITH_SUB_DEPARTMENTS: DepartmentWithSubDepartments[] = [
   {
+    department: "Judiciary – Department of Justice",
+    subDepartments: [
+      { name: "Scrutiny Official", issueTypes: ["Case Review", "Document Verification"] },
+      { name: "Court Registry", issueTypes: ["Filing Issue", "Scheduling Problem"] },
+      { name: "Legal Aid", issueTypes: ["Representation Issue", "Application Delay"] },
+    ],
+  },
+  {
     department: "Aadhaar – Unique Identification Authority of India (UIDAI)",
     subDepartments: [
       { name: "Aadhaar Update (Name/DOB/Address mismatch)", issueTypes: ["Name Update", "DOB Update", "Address Update", "Mismatch Issue"] },

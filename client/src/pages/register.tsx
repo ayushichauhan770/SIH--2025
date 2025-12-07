@@ -23,9 +23,10 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getSubDepartmentsForDepartment, getAllDepartmentNames } from "@shared/sub-departments";
 
-const DEPARTMENTS = getAllDepartmentNames();
+
 
 export default function Register() {
+  const DEPARTMENTS = getAllDepartmentNames();
   const [, setLocation] = useLocation();
   const { setUser } = useAuth();
   const { toast } = useToast();
@@ -171,7 +172,19 @@ export default function Register() {
 
       setShowOTP(false);
       setTempUser(null);
-      setFormData({ username: "", password: "", confirmPassword: "", fullName: "", email: "", phone: "", aadharNumber: "", role: "citizen", department: "" });
+      setFormData({ 
+        username: "", 
+        password: "", 
+        confirmPassword: "", 
+        fullName: "", 
+        email: "", 
+        phone: "", 
+        aadharNumber: "", 
+        role: "citizen", 
+        department: "",
+        documentType: "aadhaar",
+        subDepartment: ""
+      });
 
       const role = tokenResp.user?.role;
       if (role === "admin") {

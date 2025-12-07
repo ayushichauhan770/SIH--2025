@@ -1,3 +1,4 @@
+import { users, applications, applicationHistory, feedback, otpRecords, notifications, departments, warnings, judges, cases, hearings } from "@shared/schema";
 import type {
   User,
   InsertUser,
@@ -13,6 +14,12 @@ import type {
   InsertDepartment,
   Warning,
   InsertWarning,
+  Judge,
+  InsertJudge,
+  Case,
+  InsertCase,
+  Hearing,
+  InsertHearing,
 } from "@shared/schema";
 import { randomUUID, createHash } from "crypto";
 import fs from "fs";
@@ -76,6 +83,9 @@ export interface IStorage {
   updateApplicationEscalation(id: string, escalationLevel: number, officialId: string): Promise<Application>;
   markApplicationSolved(id: string, isSolved: boolean): Promise<Application>;
   clearAllData(): Promise<void>;
+
+  getJudgePerformance(judgeId: string): Promise<Judge | undefined>;
+  getCase(id: string): Promise<Case | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -88,7 +98,11 @@ export class MemStorage implements IStorage {
   private notifications: Map<string, Notification>;
   private departments: Map<string, Department>;
   private warnings: Map<string, Warning>;
+  private judges: Map<string, Judge>;
+  private cases: Map<string, Case>;
+  private hearings: Map<string, Hearing>;
   private dataDir = '.data';
+  private dataFile = path.join(process.cwd(), '.data', 'db.json');
 
   constructor() {
     this.users = new Map();
@@ -100,13 +114,89 @@ export class MemStorage implements IStorage {
     this.notifications = new Map();
     this.departments = new Map();
     this.warnings = new Map();
+    this.judges = new Map();
+    this.cases = new Map();
+    this.hearings = new Map();
 
-    // Persistence disabled as per user request
-    // this.loadFromDisk();
+    // Ensure data directory exists
+    if (!fs.existsSync(path.join(process.cwd(), this.dataDir))) {
+      fs.mkdirSync(path.join(process.cwd(), this.dataDir));
+    }
+
+    // Try to load from disk first
+    this.loadFromDisk();
+
+    // If no judges (fresh install or empty db), seed data
+    if (this.judges.size === 0) {
+      this.seedJudiciaryData();
+      this.seedJudiciaryData();
+      this.saveToDisk();
+    }
   }
 
-  // private loadFromDisk() { ... }
-  // private async saveToDisk() { ... }
+  private loadFromDisk() {
+    try {
+      if (fs.existsSync(this.dataFile)) {
+        const data = JSON.parse(fs.readFileSync(this.dataFile, 'utf-8'));
+        
+        // Helper to load map from array of values
+        const loadMap = (targetMap: Map<string, any>, sourceArray: any[], keyField: string = 'id') => {
+          if (Array.isArray(sourceArray)) {
+            sourceArray.forEach(item => targetMap.set(item[keyField], item));
+          }
+        };
+
+        loadMap(this.users, data.users);
+        loadMap(this.applications, data.applications);
+        
+        // History is a map of arrays, handle separately
+        if (data.applicationHistory) {
+          Object.entries(data.applicationHistory).forEach(([key, value]) => {
+            this.applicationHistory.set(key, value as ApplicationHistory[]);
+          });
+        }
+
+        loadMap(this.feedback, data.feedback);
+        loadMap(this.otpRecords, data.otpRecords);
+        loadMap(this.blockchainHashes, data.blockchainHashes);
+        loadMap(this.notifications, data.notifications);
+        loadMap(this.departments, data.departments);
+        loadMap(this.warnings, data.warnings);
+        loadMap(this.judges, data.judges);
+        loadMap(this.cases, data.cases);
+        loadMap(this.hearings, data.hearings);
+
+        console.log(`✅ Data loaded from disk: ${this.users.size} users, ${this.cases.size} cases, ${this.judges.size} judges`);
+      }
+    } catch (error) {
+      console.error("Failed to load data from disk:", error);
+      // Fallback to empty/seed data if load fails
+    }
+  }
+
+  private saveToDisk() {
+    try {
+      const data = {
+        users: Array.from(this.users.values()),
+        applications: Array.from(this.applications.values()),
+        applicationHistory: Object.fromEntries(this.applicationHistory),
+        feedback: Array.from(this.feedback.values()),
+        otpRecords: Array.from(this.otpRecords.values()),
+        blockchainHashes: Array.from(this.blockchainHashes.values()),
+        notifications: Array.from(this.notifications.values()),
+        departments: Array.from(this.departments.values()),
+        warnings: Array.from(this.warnings.values()),
+        judges: Array.from(this.judges.values()),
+        cases: Array.from(this.cases.values()),
+        hearings: Array.from(this.hearings.values()),
+      };
+
+      fs.writeFileSync(this.dataFile, JSON.stringify(data, null, 2));
+      console.log("💾 Data saved to disk");
+    } catch (error) {
+      console.error("Failed to save data to disk:", error);
+    }
+  }
 
   async getUser(id: string): Promise<User | undefined> {
     return this.users.get(id);
@@ -143,6 +233,8 @@ export class MemStorage implements IStorage {
       phone: insertUser.phone ?? null,
       aadharNumber: insertUser.aadharNumber ?? null,
       department: insertUser.department ?? null,
+      subDepartment: insertUser.subDepartment ?? null,
+      district: insertUser.district ?? null,
       createdAt: new Date(),
       rating: 0,
       assignedCount: 0,
@@ -150,7 +242,8 @@ export class MemStorage implements IStorage {
       id,
     };
     this.users.set(id, user);
-    // await this.saveToDisk();
+    this.users.set(id, user);
+    this.saveToDisk();
     return user;
   }
 
@@ -158,7 +251,7 @@ export class MemStorage implements IStorage {
     const user = this.users.get(id);
     if (!user) throw new Error("User not found");
     this.users.set(id, { ...user, password });
-    // await this.saveToDisk();
+    await this.saveToDisk();
   }
 
   async createApplication(insertApplication: InsertApplication): Promise<Application> {
@@ -198,7 +291,7 @@ export class MemStorage implements IStorage {
 
     this.applications.set(id, application);
     await this.addApplicationHistory(id, "Submitted", insertApplication.citizenId, "Application submitted");
-    // await this.saveToDisk();
+    await this.saveToDisk();
     return application;
   }
 
@@ -287,7 +380,7 @@ export class MemStorage implements IStorage {
       await this.createBlockchainHash(id, hash, blockNumber);
     }
 
-    // await this.saveToDisk();
+    await this.saveToDisk();
     return updated;
   }
 
@@ -305,7 +398,7 @@ export class MemStorage implements IStorage {
 
     this.applications.set(id, updated);
     await this.addApplicationHistory(id, "Assigned", officialId, "Application assigned to official");
-    // await this.saveToDisk();
+    await this.saveToDisk();
     return updated;
   }
 
@@ -324,7 +417,9 @@ export class MemStorage implements IStorage {
     existing.push(history);
     this.applicationHistory.set(applicationId, existing);
 
-    // No need to save here as it's called by other methods that save
+    // No need to save here as it's called by other methods that save, 
+    // BUT it might be called independently, so let's save to be safe.
+    await this.saveToDisk();
     return history;
   }
 
@@ -344,7 +439,7 @@ export class MemStorage implements IStorage {
     };
 
     this.feedback.set(id, feedback);
-    // await this.saveToDisk();
+    await this.saveToDisk();
     return feedback;
   }
 
@@ -358,6 +453,7 @@ export class MemStorage implements IStorage {
       comment: comment ?? feedback.comment,
     };
     this.feedback.set(id, updated);
+    await this.saveToDisk();
     return updated;
   }
 
@@ -377,6 +473,7 @@ export class MemStorage implements IStorage {
     const feedback = this.feedback.get(id);
     if (feedback) {
       this.feedback.set(id, { ...feedback, verified: true });
+      await this.saveToDisk();
     }
   }
 
@@ -395,6 +492,7 @@ export class MemStorage implements IStorage {
     };
 
     this.otpRecords.set(id, record);
+    await this.saveToDisk();
     return record;
   }
 
@@ -420,6 +518,7 @@ export class MemStorage implements IStorage {
     const otp = this.otpRecords.get(id);
     if (otp) {
       this.otpRecords.set(id, { ...otp, verified: true });
+      await this.saveToDisk();
     }
   }
 
@@ -434,6 +533,7 @@ export class MemStorage implements IStorage {
     };
 
     this.blockchainHashes.set(id, blockchainHash);
+    await this.saveToDisk();
     return blockchainHash;
   }
 
@@ -455,6 +555,7 @@ export class MemStorage implements IStorage {
     };
 
     this.notifications.set(id, notification);
+    await this.saveToDisk();
     return notification;
   }
 
@@ -468,6 +569,7 @@ export class MemStorage implements IStorage {
     const notification = this.notifications.get(id);
     if (notification) {
       this.notifications.set(id, { ...notification, read: true });
+      await this.saveToDisk();
     }
   }
 
@@ -481,7 +583,7 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
     };
     this.departments.set(id, department);
-    // await this.saveToDisk();
+    await this.saveToDisk();
     return department;
   }
 
@@ -502,7 +604,7 @@ export class MemStorage implements IStorage {
       read: false,
     };
     this.warnings.set(id, warning);
-    // await this.saveToDisk();
+    await this.saveToDisk();
     return warning;
   }
 
@@ -516,6 +618,7 @@ export class MemStorage implements IStorage {
     const warning = this.warnings.get(id);
     if (warning) {
       this.warnings.set(id, { ...warning, read: true });
+      await this.saveToDisk();
     }
   }
 
@@ -524,7 +627,7 @@ export class MemStorage implements IStorage {
     if (!user) throw new Error("User not found");
     const updated = { ...user, rating, solvedCount, assignedCount };
     this.users.set(userId, updated);
-    // await this.saveToDisk();
+    await this.saveToDisk();
     return updated;
   }
 
@@ -540,7 +643,7 @@ export class MemStorage implements IStorage {
       lastUpdatedAt: new Date(),
     };
     this.applications.set(id, updated);
-    // await this.saveToDisk();
+    await this.saveToDisk();
     return updated;
   }
 
@@ -553,7 +656,7 @@ export class MemStorage implements IStorage {
       lastUpdatedAt: new Date(),
     };
     this.applications.set(id, updated);
-    // await this.saveToDisk();
+    await this.saveToDisk();
     return updated;
   }
 
@@ -568,6 +671,15 @@ export class MemStorage implements IStorage {
     this.notifications.clear();
     this.departments.clear();
     this.warnings.clear();
+    this.judges.clear();
+    this.cases.clear();
+    this.hearings.clear();
+    
+    // Also clear from disk
+    if (fs.existsSync(this.dataFile)) {
+      fs.unlinkSync(this.dataFile);
+    }
+    
     console.log("✅ All data cleared successfully!");
   }
 
@@ -575,7 +687,282 @@ export class MemStorage implements IStorage {
 
     return createHash('sha256').update(data + Date.now()).digest('hex');
   }
+
+  // Judiciary Implementation
+  
+  async createHearing(insertHearing: InsertHearing): Promise<Hearing> {
+    const id = randomUUID();
+    const hearing: Hearing = {
+      ...insertHearing,
+      id,
+      isVideoRecorded: insertHearing.isVideoRecorded ?? null,
+      videoLink: insertHearing.videoLink ?? null,
+    };
+    this.hearings.set(id, hearing);
+    await this.saveToDisk();
+    return hearing;
+  }
+
+  async getHearingsByCaseId(caseId: string): Promise<Hearing[]> {
+    return Array.from(this.hearings.values())
+      .filter(h => h.caseId === caseId)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }
+
+  async assignNextDate(caseId: string): Promise<Hearing> {
+    const caseItem = this.cases.get(caseId);
+    if (!caseItem) throw new Error("Case not found");
+
+    // Auto-Scheduler Logic
+    // 1. Find assigned judge or assign one if missing
+    let judgeId = caseItem.allocatedJudgeId;
+    if (!judgeId) {
+      const judges = await this.getAvailableJudges();
+      if (judges.length === 0) throw new Error("No judges available");
+      // Simple load balancing: pick judge with fewest pending cases
+      const bestJudge = judges.reduce((prev, curr) => 
+        (prev.casesPending || 0) < (curr.casesPending || 0) ? prev : curr
+      );
+      judgeId = bestJudge.id;
+      
+      // Update case with assigned judge
+      this.cases.set(caseId, { ...caseItem, allocatedJudgeId: judgeId, status: "Allocated" });
+      
+      // Update judge pending count
+      const judge = this.judges.get(judgeId);
+      if (judge) {
+        this.judges.set(judgeId, { ...judge, casesPending: (judge.casesPending || 0) + 1 });
+      }
+    }
+
+    // 2. Calculate Date based on Priority
+    const today = new Date();
+    let nextDate = new Date();
+    
+    if (caseItem.priority === "High" || caseItem.priority === "Urgent") {
+      // Within 7 days
+      nextDate.setDate(today.getDate() + Math.floor(Math.random() * 7) + 1);
+    } else {
+      // Within 30 days
+      nextDate.setDate(today.getDate() + Math.floor(Math.random() * 30) + 1);
+    }
+
+    // 3. Create Hearing (Locked Slot)
+    const hearing: InsertHearing = {
+      caseId: caseId,
+      judgeId: judgeId!,
+      date: nextDate,
+      status: "Scheduled"
+    };
+
+    return this.createHearing(hearing);
+  }
+
+  async getJudgePerformance(judgeId: string): Promise<Judge> {
+    const judge = this.judges.get(judgeId);
+    if (!judge) throw new Error("Judge not found");
+    return judge;
+  }
+
+  async getAllJudges(): Promise<Judge[]> {
+    return Array.from(this.judges.values());
+  }
+
+  async getAllCases(): Promise<Case[]> {
+    return Array.from(this.cases.values());
+  }
+
+  async getPendingCases(): Promise<Case[]> {
+    return Array.from(this.cases.values()).filter(c => c.status === "Pending");
+  }
+  async getAvailableJudges(): Promise<Judge[]> {
+    return Array.from(this.judges.values()).filter(j => j.status === "Available");
+  }
+
+  async assignCaseToJudge(caseId: string, judgeId: string): Promise<void> {
+    const caseItem = this.cases.get(caseId);
+    const judge = this.judges.get(judgeId);
+
+    if (caseItem && judge) {
+      this.cases.set(caseId, { ...caseItem, status: "Allocated", allocatedJudgeId: judgeId });
+      // Ideally update judge stats here too
+      await this.saveToDisk();
+    }
+  }
+
+  async createCase(insertCase: InsertCase, citizenId?: string, scrutinyOptions?: { scrutinyOfficialId?: string | null, filingDistrict?: string | null }): Promise<Case> {
+    const id = randomUUID();
+    const newCase: Case = {
+      ...insertCase,
+      id,
+      citizenId: citizenId || null,
+      filedDate: new Date(),
+      allocatedJudgeId: null,
+      status: scrutinyOptions?.scrutinyOfficialId ? "Scrutiny" : "Pending",
+      priority: insertCase.priority || "Medium",
+      caseNumber: insertCase.caseNumber || `CASE-${Date.now()}`,
+      scrutinyOfficialId: scrutinyOptions?.scrutinyOfficialId || null,
+      isAnonymized: true,
+      rejectionReason: null,
+      filingDistrict: scrutinyOptions?.filingDistrict || insertCase.filingDistrict || null,
+    };
+    this.cases.set(id, newCase);
+    this.cases.set(id, newCase);
+    this.saveToDisk();
+    return newCase;
+  }
+
+  async updateCaseStatus(caseId: string, status: string, rejectionReason?: string | null): Promise<Case> {
+      const caseItem = this.cases.get(caseId);
+      if (!caseItem) throw new Error("Case not found");
+      
+      const updatedCase = { ...caseItem, status, rejectionReason: rejectionReason || null };
+      // If status is "Pending" (passed scrutiny) or "Rejected", update logic can go here (stats etc)
+
+      this.cases.set(caseId, updatedCase);
+      this.cases.set(caseId, updatedCase);
+      this.saveToDisk();
+      return updatedCase;
+  }
+
+  async findScrutinyOfficial(excludeDistrict: string): Promise<User | null> {
+    const officials = Array.from(this.users.values()).filter(
+      u => u.role === "official" && 
+           u.district && 
+           u.district !== excludeDistrict &&
+           u.department?.startsWith("Judiciary")
+    );
+
+    if (officials.length === 0) return null;
+
+    // Sort by workload (assignedCount) - simplified for now
+    officials.sort((a, b) => (a.assignedCount || 0) - (b.assignedCount || 0));
+    
+    return officials[0];
+  }
+
+  async getScrutinyCasesForOfficial(officialId: string): Promise<Case[]> {
+    return Array.from(this.cases.values()).filter(
+      c => c.scrutinyOfficialId === officialId && c.status === "Scrutiny"
+    );
+  }
+
+  async getCasesByCitizenId(citizenId: string): Promise<Case[]> {
+    return Array.from(this.cases.values()).filter(c => c.citizenId === citizenId);
+  }
+
+  async getCase(id: string): Promise<Case | undefined> {
+    return this.cases.get(id);
+  }
+
+  private seedJudiciaryData() {
+    // Mock Judges
+    const judgesList: Judge[] = [
+      { 
+        id: "j1", 
+        name: "Justice A. Sharma", 
+        specialization: "Constitutional", 
+        experience: 25, 
+        reputationScore: 98, 
+        casesSolved: 1200, 
+        avgResolutionTime: 45, 
+        image: null, 
+        status: "Available",
+        district: "New Delhi",
+        casesPending: 12,
+        casesDisposed: 1200,
+        publicRating: 5,
+        performanceScore: 98
+      },
+      { 
+        id: "j2", 
+        name: "Justice R. Iyer", 
+        specialization: "Criminal", 
+        experience: 18, 
+        reputationScore: 92, 
+        casesSolved: 850, 
+        avgResolutionTime: 30, 
+        image: null, 
+        status: "Available",
+        district: "Mumbai",
+        casesPending: 45,
+        casesDisposed: 850,
+        publicRating: 4,
+        performanceScore: 92
+      },
+      { 
+        id: "j3", 
+        name: "Justice K. Singh", 
+        specialization: "Civil", 
+        experience: 20, 
+        reputationScore: 45, // Low score (Red Flag)
+        casesSolved: 300, 
+        avgResolutionTime: 120, // Slow
+        image: null, 
+        status: "Busy",
+        district: "Bangalore",
+        casesPending: 80, // High pending
+        casesDisposed: 300,
+        publicRating: 2,
+        performanceScore: 40
+      },
+    ];
+    judgesList.forEach(j => this.judges.set(j.id, j));
+
+    // Mock Cases
+    const casesList: Case[] = [
+      { 
+        id: "c1", 
+        title: "State vs. XYZ Corp", 
+        description: "Environmental violation case.", 
+        type: "Civil", 
+        status: "Pending", 
+        priority: "High", 
+        filedDate: new Date(), 
+        allocatedJudgeId: null,
+        caseNumber: "CV-2023-001",
+        citizenId: null,
+        scrutinyOfficialId: null,
+        isAnonymized: true,
+        rejectionReason: null,
+        filingDistrict: "New Delhi"
+      },
+      { 
+        id: "c2", 
+        title: "Doe vs. State", 
+        description: "Fundamental rights violation.", 
+        type: "Constitutional", 
+        status: "Pending", 
+        priority: "Medium", 
+        filedDate: new Date(), 
+        allocatedJudgeId: null,
+        caseNumber: "CN-2023-045",
+        citizenId: null,
+        scrutinyOfficialId: null,
+        isAnonymized: true,
+        rejectionReason: null,
+        filingDistrict: "Mumbai"
+      },
+      { 
+        id: "c3", 
+        title: "Family Dispute #8821", 
+        description: "Property inheritance dispute.", 
+        type: "Civil", 
+        status: "Allocated", 
+        priority: "Low", 
+        filedDate: new Date(), 
+        allocatedJudgeId: "j3",
+        caseNumber: "CV-2023-112",
+        citizenId: null,
+        scrutinyOfficialId: null,
+        isAnonymized: true,
+        rejectionReason: null,
+        filingDistrict: "Bangalore"
+      },
+    ];
+    casesList.forEach(c => this.cases.set(c.id, c));
+  }
 }
 
-// Use in-memory storage (data resets on server restart)
+// Use in-memory storage with file persistence
 export const storage = new MemStorage();

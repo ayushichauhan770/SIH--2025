@@ -13,7 +13,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Application, ApplicationHistory, BlockchainHash, Feedback } from "@shared/schema";
+
 import { useState } from "react";
+import { AccountabilityChat } from "@/components/AccountabilityChat";
 
 export default function ApplicationDetails() {
   const [, params] = useRoute("/citizen/application/:id");
@@ -141,6 +143,19 @@ export default function ApplicationDetails() {
     (isReApproved && application.officialId && feedback.officialId !== application.officialId) || 
     (isReApproved && !feedback.officialId)
   );
+
+  const aiContext = {
+    fileId: application.trackingId,
+    status: application.status,
+    department: application.department,
+    description: application.description,
+    history: history.map(h => ({ 
+      date: h.updatedAt, 
+      status: h.status, 
+      comment: h.comment,
+      by: h.updatedBy 
+    }))
+  };
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-slate-950 font-['Outfit',sans-serif] selection:bg-blue-500/30">
@@ -371,6 +386,8 @@ export default function ApplicationDetails() {
           </div>
         </div>
       </main>
+      
+      <AccountabilityChat context={aiContext} />
     </div>
   );
 }
