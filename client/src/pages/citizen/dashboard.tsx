@@ -13,7 +13,6 @@ import { FileText, Plus, Search, LogOut, Shield, Clock, CheckCircle, XCircle, La
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Application, Notification } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { AccountabilityChat } from "@/components/AccountabilityChat";
 
 export default function CitizenDashboard() {
   const { user, logout } = useAuth();
@@ -366,9 +365,6 @@ export default function CitizenDashboard() {
           </div>
         </div>
       </main>
-      
-      {/* AI Assistant */}
-      <AccountabilityChat />
     </div>
   );
 }

@@ -9,7 +9,6 @@ import { apiRequest } from "@/lib/queryClient";
 import FundingTransparency from "@/components/FundingTransparency";
 import PoliticianRatingSection from "@/components/PoliticianRatingSection";
 import { getAllDepartmentNames } from "@shared/sub-departments";
-import { AccountabilityChat } from "@/components/AccountabilityChat";
 
 interface DepartmentRating {
   department_id: string;
@@ -642,10 +641,6 @@ export default function Landing() {
           </div>
         </div>
       </footer>
-
-      
-      {/* AI Help Desk */}
-      <AccountabilityChat defaultOpen={false} className="shadow-2xl" />
     </div>
   );
 }

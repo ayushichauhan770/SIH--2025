@@ -7,7 +7,6 @@ import { loginSchema, insertUserSchema, insertApplicationSchema, updateApplicati
 import type { User, Application } from "@shared/schema";
 import { sendEmailOTP, verifyEmailConfig } from "./email-service";
 import { sendSMSOTP } from "./sms-service";
-import aiRoutes from "./routes/ai-routes";
 
 const JWT_SECRET = process.env.SESSION_SECRET || "dev-secret-key";
 
@@ -289,10 +288,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const isDev = (process.env.NODE_ENV || "development") !== "production";
-
-  // AI Routes
-  app.use("/api/ai", aiRoutes);
-
   app.post("/api/auth/register", async (req: Request, res: Response) => {
     try {
       const data = insertUserSchema.parse(req.body);
