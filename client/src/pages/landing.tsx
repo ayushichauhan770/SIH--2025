@@ -123,8 +123,7 @@ export default function Landing() {
               </div>
             </div>
 
-            <a href="#dashboard" className="text-[#86868b] text-sm font-medium hover:text-[#0071e3] transition-colors">Dashboard</a>
-            <a href="#reforms" className="text-[#86868b] text-sm font-medium hover:text-[#0071e3] transition-colors">Reforms</a>
+
             <Link href="/judiciary">
               <a className="text-[#86868b] text-sm font-medium hover:text-[#0071e3] transition-colors">Judiciary</a>
             </Link>
@@ -169,8 +168,8 @@ export default function Landing() {
                 <a href="#" className="text-[#1d1d1f] dark:text-white">Licenses & Permits</a>
               </div>
             </div>
-            {/* <a href="#dashboard" className="text-lg font-medium text-[#1d1d1f] dark:text-white">Dashboard</a>
-            <a href="#reforms" className="text-lg font-medium text-[#1d1d1f] dark:text-white">Reforms</a> */}
+            {/* <a href="#dashboard" className="text-lg font-medium text-[#1d1d1f] dark:text-white">Dashboard</a> */}
+            {/* <a href="#reforms" className="text-lg font-medium text-[#1d1d1f] dark:text-white">Reforms</a> */}
             <div className="h-px bg-slate-200 dark:bg-slate-800 my-2"></div>
             <div className="flex flex-col gap-4">
               <Link href="/login">

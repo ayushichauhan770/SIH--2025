@@ -78,8 +78,6 @@ export default function JudiciaryDashboard() {
             <Link href="/">
               <a className="text-[#1d1d1f] dark:text-white text-sm font-medium hover:text-[#0071e3] transition-colors">Home</a>
             </Link>
-            <a href="#metrics" className="text-[#86868b] text-sm font-medium hover:text-[#0071e3] transition-colors">Metrics</a>
-            <a href="#allocation" className="text-[#86868b] text-sm font-medium hover:text-[#0071e3] transition-colors">Allocation</a>
           </div>
 
           <div className="flex items-center gap-4">
