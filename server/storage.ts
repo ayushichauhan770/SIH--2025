@@ -118,30 +118,23 @@ export class MemStorage implements IStorage {
     this.cases = new Map();
     this.hearings = new Map();
 
-<<<<<<< HEAD
-    // Load persisted data from disk
-    this.loadFromDisk();
-=======
     // Ensure data directory exists
     if (!fs.existsSync(path.join(process.cwd(), this.dataDir))) {
       fs.mkdirSync(path.join(process.cwd(), this.dataDir));
     }
 
-    // Try to load from disk first
+    // Load persisted data from disk
     this.loadFromDisk();
 
     // If no judges (fresh install or empty db), seed data
     if (this.judges.size === 0) {
       this.seedJudiciaryData();
-      this.seedJudiciaryData();
       this.saveToDisk();
     }
->>>>>>> 578c65f8ca1e11eedee3d65df53fd74bf92fcf30
   }
 
   private loadFromDisk() {
     try {
-<<<<<<< HEAD
       // Ensure data directory exists
       if (!fs.existsSync(this.dataDir)) {
         fs.mkdirSync(this.dataDir, { recursive: true });
@@ -262,6 +255,39 @@ export class MemStorage implements IStorage {
         console.log(`✅ Loaded ${this.warnings.size} warnings from disk`);
       }
 
+      // Load judges
+      const judgesFile = path.join(this.dataDir, 'judges.json');
+      if (fs.existsSync(judgesFile)) {
+        const judgesData = JSON.parse(fs.readFileSync(judgesFile, 'utf-8'));
+        this.judges = new Map(Object.entries(judgesData).map(([id, judge]: [string, any]) => [
+          id,
+          { ...judge, createdAt: new Date(judge.createdAt) }
+        ]));
+        console.log(`✅ Loaded ${this.judges.size} judges from disk`);
+      }
+
+      // Load cases
+      const casesFile = path.join(this.dataDir, 'cases.json');
+      if (fs.existsSync(casesFile)) {
+        const casesData = JSON.parse(fs.readFileSync(casesFile, 'utf-8'));
+        this.cases = new Map(Object.entries(casesData).map(([id, caseItem]: [string, any]) => [
+          id,
+          { ...caseItem, filedDate: new Date(caseItem.filedDate) }
+        ]));
+        console.log(`✅ Loaded ${this.cases.size} cases from disk`);
+      }
+
+      // Load hearings
+      const hearingsFile = path.join(this.dataDir, 'hearings.json');
+      if (fs.existsSync(hearingsFile)) {
+        const hearingsData = JSON.parse(fs.readFileSync(hearingsFile, 'utf-8'));
+        this.hearings = new Map(Object.entries(hearingsData).map(([id, hearing]: [string, any]) => [
+          id,
+          { ...hearing, scheduledDate: new Date(hearing.scheduledDate) }
+        ]));
+        console.log(`✅ Loaded ${this.hearings.size} hearings from disk`);
+      }
+
       console.log("✅ Data persistence loaded successfully!");
     } catch (error) {
       console.error("❌ Error loading data from disk:", error);
@@ -347,69 +373,32 @@ export class MemStorage implements IStorage {
         JSON.stringify(warningsData, null, 2),
         'utf-8'
       );
+
+      // Save judges
+      const judgesData = Object.fromEntries(this.judges);
+      fs.writeFileSync(
+        path.join(this.dataDir, 'judges.json'),
+        JSON.stringify(judgesData, null, 2),
+        'utf-8'
+      );
+
+      // Save cases
+      const casesData = Object.fromEntries(this.cases);
+      fs.writeFileSync(
+        path.join(this.dataDir, 'cases.json'),
+        JSON.stringify(casesData, null, 2),
+        'utf-8'
+      );
+
+      // Save hearings
+      const hearingsData = Object.fromEntries(this.hearings);
+      fs.writeFileSync(
+        path.join(this.dataDir, 'hearings.json'),
+        JSON.stringify(hearingsData, null, 2),
+        'utf-8'
+      );
     } catch (error) {
       console.error("❌ Error saving data to disk:", error);
-=======
-      if (fs.existsSync(this.dataFile)) {
-        const data = JSON.parse(fs.readFileSync(this.dataFile, 'utf-8'));
-        
-        // Helper to load map from array of values
-        const loadMap = (targetMap: Map<string, any>, sourceArray: any[], keyField: string = 'id') => {
-          if (Array.isArray(sourceArray)) {
-            sourceArray.forEach(item => targetMap.set(item[keyField], item));
-          }
-        };
-
-        loadMap(this.users, data.users);
-        loadMap(this.applications, data.applications);
-        
-        // History is a map of arrays, handle separately
-        if (data.applicationHistory) {
-          Object.entries(data.applicationHistory).forEach(([key, value]) => {
-            this.applicationHistory.set(key, value as ApplicationHistory[]);
-          });
-        }
-
-        loadMap(this.feedback, data.feedback);
-        loadMap(this.otpRecords, data.otpRecords);
-        loadMap(this.blockchainHashes, data.blockchainHashes);
-        loadMap(this.notifications, data.notifications);
-        loadMap(this.departments, data.departments);
-        loadMap(this.warnings, data.warnings);
-        loadMap(this.judges, data.judges);
-        loadMap(this.cases, data.cases);
-        loadMap(this.hearings, data.hearings);
-
-        console.log(`✅ Data loaded from disk: ${this.users.size} users, ${this.cases.size} cases, ${this.judges.size} judges`);
-      }
-    } catch (error) {
-      console.error("Failed to load data from disk:", error);
-      // Fallback to empty/seed data if load fails
-    }
-  }
-
-  private saveToDisk() {
-    try {
-      const data = {
-        users: Array.from(this.users.values()),
-        applications: Array.from(this.applications.values()),
-        applicationHistory: Object.fromEntries(this.applicationHistory),
-        feedback: Array.from(this.feedback.values()),
-        otpRecords: Array.from(this.otpRecords.values()),
-        blockchainHashes: Array.from(this.blockchainHashes.values()),
-        notifications: Array.from(this.notifications.values()),
-        departments: Array.from(this.departments.values()),
-        warnings: Array.from(this.warnings.values()),
-        judges: Array.from(this.judges.values()),
-        cases: Array.from(this.cases.values()),
-        hearings: Array.from(this.hearings.values()),
-      };
-
-      fs.writeFileSync(this.dataFile, JSON.stringify(data, null, 2));
-      console.log("💾 Data saved to disk");
-    } catch (error) {
-      console.error("Failed to save data to disk:", error);
->>>>>>> 578c65f8ca1e11eedee3d65df53fd74bf92fcf30
     }
   }
 
@@ -457,12 +446,7 @@ export class MemStorage implements IStorage {
       id,
     };
     this.users.set(id, user);
-<<<<<<< HEAD
     await this.saveToDisk();
-=======
-    this.users.set(id, user);
-    this.saveToDisk();
->>>>>>> 578c65f8ca1e11eedee3d65df53fd74bf92fcf30
     return user;
   }
 
@@ -972,7 +956,9 @@ export class MemStorage implements IStorage {
     this.notifications.clear();
     this.departments.clear();
     this.warnings.clear();
-<<<<<<< HEAD
+    this.judges.clear();
+    this.cases.clear();
+    this.hearings.clear();
     
     // Also delete all data files from disk
     try {
@@ -986,7 +972,10 @@ export class MemStorage implements IStorage {
           'blockchainHashes.json',
           'notifications.json',
           'departments.json',
-          'warnings.json'
+          'warnings.json',
+          'judges.json',
+          'cases.json',
+          'hearings.json'
         ];
         
         for (const file of files) {
@@ -1000,15 +989,6 @@ export class MemStorage implements IStorage {
       }
     } catch (error) {
       console.error("❌ Error deleting data files:", error);
-=======
-    this.judges.clear();
-    this.cases.clear();
-    this.hearings.clear();
-    
-    // Also clear from disk
-    if (fs.existsSync(this.dataFile)) {
-      fs.unlinkSync(this.dataFile);
->>>>>>> 578c65f8ca1e11eedee3d65df53fd74bf92fcf30
     }
     
     console.log("✅ All data cleared successfully!");
@@ -1295,9 +1275,5 @@ export class MemStorage implements IStorage {
   }
 }
 
-<<<<<<< HEAD
 // Use file-based persistent storage (data persists across server restarts)
-=======
-// Use in-memory storage with file persistence
->>>>>>> 578c65f8ca1e11eedee3d65df53fd74bf92fcf30
 export const storage = new MemStorage();

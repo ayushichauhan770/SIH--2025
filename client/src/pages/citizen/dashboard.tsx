@@ -356,7 +356,6 @@ export default function CitizenDashboard() {
                 </div>
               ) : (
                 <div className="space-y-4">
-<<<<<<< HEAD
                   {filteredApplications.map((app, index) => {
                     const colorVariants = [
                       "from-blue-50 via-cyan-50 to-teal-50 dark:from-blue-950/30 dark:via-cyan-950/30 dark:to-teal-950/30",
@@ -375,27 +374,6 @@ export default function CitizenDashboard() {
                       />
                     );
                   })}
-=======
-                  {/* Show Legal Cases First */}
-{/*
-                  {myCases && myCases.map(caseItem => (
-                    <CaseCard
-                      key={caseItem.id}
-                      caseItem={caseItem}
-                      className="!shadow-none !bg-[#f5f5f7] dark:!bg-slate-800 !rounded-[24px] hover:!bg-slate-200 dark:hover:!bg-slate-700"
-                    />
-                  ))}
-*/}
-                  
-                  {filteredApplications.map(app => (
-                    <ApplicationCard
-                      key={app.id}
-                      application={app}
-                      onViewDetails={() => handleViewDetails(app.id)}
-                      className="!shadow-none !bg-[#f5f5f7] dark:!bg-slate-800 !rounded-[24px] hover:!bg-slate-200 dark:hover:!bg-slate-700"
-                    />
-                  ))}
->>>>>>> 578c65f8ca1e11eedee3d65df53fd74bf92fcf30
                 </div>
               )}
             </div>

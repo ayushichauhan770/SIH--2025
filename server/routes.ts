@@ -1771,7 +1771,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }, 60 * 60 * 1000);
 
-<<<<<<< HEAD
   // Clear all data endpoint (for development/testing - use with caution!)
   app.post("/api/admin/clear-all-data", async (req: Request, res: Response) => {
     try {
@@ -1780,7 +1779,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "All data cleared successfully" });
     } catch (error: any) {
       console.error("Error clearing data:", error);
-=======
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Judiciary System Routes
   app.get("/api/judiciary/judges", async (req: Request, res: Response) => {
     try {
@@ -1839,9 +1841,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Assign
         await storage.assignCaseToJudge(caseItem.id, selectedJudge.id);
-        
+
         // Update local list to reflect changes (optional, for next iteration if we were tracking load locally)
-        
+
         allocations.push({
           caseId: caseItem.id,
           caseTitle: caseItem.title,
@@ -1859,33 +1861,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/judiciary/file-case", authenticateToken, async (req: Request, res: Response) => {
     try {
       const data = insertCaseSchema.parse(req.body);
-      
+
       // 1. Simulate Token Fee Check (Anti-Spam Cost)
       // In production: await paymentGateway.verifyTransaction(req.body.paymentId)
       // For SIH: We simulate this as always true, but in a real app, this fee prevents mass-spamming.
-      const isFeePaid = true; 
+      const isFeePaid = true;
       if (!isFeePaid) {
-         return res.status(402).json({ error: "Case filing fee not paid" });
+        return res.status(402).json({ error: "Case filing fee not paid" });
       }
 
       // 2. AI Pre-Check (Enhanced Validation)
       // Check for basic requirements and context
       const wordCount = data.description.split(" ").length;
       if (wordCount < 10) {
-         return res.status(400).json({ error: "Case description is too short (min 10 words). Please provide more details." });
+        return res.status(400).json({ error: "Case description is too short (min 10 words). Please provide more details." });
       }
 
       // Basic NLP Keyword Check (Simulated)
       // Ensure the description actually sounds like a legal matter
       const legalKeywords = ["court", "judge", "claim", "dispute", "rights", "petition", "appeal", "contract", "property", "crime", "illegal", "fraud", "damage", "agreement"];
       const hasLegalContext = legalKeywords.some(keyword => data.description.toLowerCase().includes(keyword));
-      
-      if (!hasLegalContext && wordCount < 30) { 
+
+      if (!hasLegalContext && wordCount < 30) {
         // If it's short and has no legal keywords, flag it.
         // If it's long (>30 words), we give it the benefit of doubt in this simple check.
-         return res.status(400).json({ error: "AI Validation Failed: Description does not appear to contain relevant legal context. Please verify your details." });
+        return res.status(400).json({ error: "AI Validation Failed: Description does not appear to contain relevant legal context. Please verify your details." });
       }
-      
+
       // 3. Faceless Scrutiny Allocation
       const citizen = await storage.getUser(req.user!.id);
       if (!citizen) return res.status(404).json({ error: "Citizen not found" });
@@ -1893,17 +1895,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let scrutinyOfficialId: string | undefined = undefined;
       // If citizen has a district, find an official from a DIFFERENT district
       if (citizen.district) {
-         const scrutinyOfficial = await storage.findScrutinyOfficial(citizen.district);
-         if (scrutinyOfficial) {
-            scrutinyOfficialId = scrutinyOfficial.id;
-         }
+        const scrutinyOfficial = await storage.findScrutinyOfficial(citizen.district);
+        if (scrutinyOfficial) {
+          scrutinyOfficialId = scrutinyOfficial.id;
+        }
       } else {
-         // Fallback if no district: assign any official or handle as generic
-         // For now, we'll try to find *any* official if district is missing
-         const scrutinyOfficial = await storage.findScrutinyOfficial("NON_EXISTENT_DISTRICT");
-          if (scrutinyOfficial) {
-            scrutinyOfficialId = scrutinyOfficial.id;
-         }
+        // Fallback if no district: assign any official or handle as generic
+        // For now, we'll try to find *any* official if district is missing
+        const scrutinyOfficial = await storage.findScrutinyOfficial("NON_EXISTENT_DISTRICT");
+        if (scrutinyOfficial) {
+          scrutinyOfficialId = scrutinyOfficial.id;
+        }
       }
 
       const citizenId = req.user!.id;
@@ -1911,25 +1913,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         scrutinyOfficialId,
         filingDistrict: citizen.district || undefined
       });
-      
+
       // Update official's assigned count if assigned
       if (scrutinyOfficialId) {
-         const official = await storage.getUser(scrutinyOfficialId); 
-         if (official) {
-             await storage.updateUserStats(
-                 official.id, 
-                 official.rating || 0, 
-                 official.solvedCount || 0, 
-                 (official.assignedCount || 0) + 1
-             );
-         }
+        const official = await storage.getUser(scrutinyOfficialId);
+        if (official) {
+          await storage.updateUserStats(
+            official.id,
+            official.rating || 0,
+            official.solvedCount || 0,
+            (official.assignedCount || 0) + 1
+          );
+        }
       }
 
-      res.json(newCase);  // Scrutiny Tasks for Officials
+      res.json(newCase);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Scrutiny Tasks for Officials
   app.get("/api/judiciary/scrutiny-tasks", authenticateToken, requireRole("official"), async (req: Request, res: Response) => {
     try {
       const cases = await storage.getScrutinyCasesForOfficial(req.user!.id);
-      
+
       // SANITIZATION: Explicitly exclude citizenId
       const sanitizedCases = cases.map(c => ({
         id: c.id,
@@ -1955,7 +1963,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { status, reason } = req.body;
       const caseItem = await storage.getCase(req.params.id);
-      
+
       if (!caseItem) return res.status(404).json({ error: "Case not found" });
       if (caseItem.scrutinyOfficialId !== req.user!.id) {
         return res.status(403).json({ error: "Not authorized to review this case" });
@@ -1963,25 +1971,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update case status
       const updatedCase = await storage.updateCaseStatus(req.params.id, status, reason);
-      
+
       // If approved (Pending), maybe notify citizen? (Out of scope for now)
       // If rejected, maybe notify citizen?
 
       res.json(updatedCase);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-    } catch (error: any) {
-      res.status(400).json({ error: error.message });
-    }
-  });
-
-  app.get("/api/judiciary/my-cases", authenticateToken, async (req: Request, res: Response) => {
-    try {
-      const allCases = await storage.getAllCases();
-      const myCases = allCases.filter(c => c.citizenId === req.user!.id);
-      res.json(myCases);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -1991,7 +1985,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { caseId } = req.body;
       if (!caseId) return res.status(400).json({ error: "Case ID is required" });
-      
+
       const hearing = await storage.assignNextDate(caseId);
       res.json(hearing);
     } catch (error: any) {
@@ -2023,7 +2017,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!caseItem) return res.status(404).json({ error: "Case not found" });
       res.json(caseItem);
     } catch (error: any) {
->>>>>>> 578c65f8ca1e11eedee3d65df53fd74bf92fcf30
       res.status(500).json({ error: error.message });
     }
   });
