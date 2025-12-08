@@ -6,8 +6,6 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/contexts/auth-context";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import FundingTransparency from "@/components/FundingTransparency";
-import PoliticianRatingSection from "@/components/PoliticianRatingSection";
 import { getAllDepartmentNames } from "@shared/sub-departments";
 
 interface DepartmentRating {
@@ -67,64 +65,6 @@ export default function Landing() {
             <a href="#" className="text-xl font-bold tracking-tight text-[#1d1d1f] dark:text-white">Accountability</a>
           </div>
           
-          <div className="hidden md:flex gap-8 h-full items-center">
-            <a href="#" className="text-[#1d1d1f] dark:text-white text-sm font-medium hover:text-[#0071e3] transition-colors">Home</a>
-            
-            {/* Mega Menu Trigger */}
-            <div className="relative group h-full flex items-center">
-              <button className="text-[#86868b] text-sm font-medium hover:text-[#0071e3] transition-colors py-2 flex items-center gap-1">
-                Services <ChevronRight className="h-3 w-3 rotate-90 transition-transform group-hover:-rotate-90" />
-              </button>
-              
-              {/* Mega Dropdown */}
-              <div className="fixed top-[50px] left-0 right-0 z-40 flex justify-center px-6 transition-all duration-300 delay-300 group-hover:delay-0 opacity-0 invisible group-hover:opacity-100 group-hover:visible pointer-events-none group-hover:pointer-events-auto">
-                <div className="w-full max-w-7xl pt-10">
-                  <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-slate-100 dark:border-slate-800 shadow-xl rounded-[32px] overflow-hidden">
-                    <div className="py-12 px-12 grid grid-cols-3 gap-16">
-                      <div>
-                        <h3 className="text-xs font-bold text-[#86868b] uppercase tracking-wider mb-6">Browse Services</h3>
-                        <div className="space-y-4">
-                          {['Birth/Death Certificates', 'Complain & Feedback', 'Electricity and Power', 'Land & Property Records', 'Licenses & Permits'].map(item => (
-                            <a key={item} href="#" className="block text-[15px] text-[#1d1d1f] dark:text-white hover:text-[#0071e3] transition-colors font-medium">
-                              {item}
-                            </a>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <h3 className="text-xs font-bold text-[#86868b] uppercase tracking-wider mb-6">Quick Access</h3>
-                        <div className="space-y-4">
-                          {[
-                            { name: 'Track Application', href: '/track' },
-                            { name: 'Application Status', href: '/track' },
-                            { name: 'Download Forms', href: '#' },
-                            { name: 'Payment History', href: '#' }
-                          ].map(item => (
-                            <a key={item.name} href={item.href} className="block text-[15px] text-[#1d1d1f] dark:text-white hover:text-[#0071e3] transition-colors font-medium">
-                              {item.name}
-                            </a>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <h3 className="text-xs font-bold text-[#86868b] uppercase tracking-wider mb-6">Special Services</h3>
-                        <div className="space-y-4">
-                          {['Senior Citizens', 'Women & Child', 'Rural Services', 'Student Schemes'].map(item => (
-                            <a key={item} href="#" className="block text-[15px] text-[#1d1d1f] dark:text-white hover:text-[#0071e3] transition-colors font-medium">
-                              {item}
-                            </a>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <a href="#dashboard" className="text-[#86868b] text-sm font-medium hover:text-[#0071e3] transition-colors">Dashboard</a>
-            <a href="#reforms" className="text-[#86868b] text-sm font-medium hover:text-[#0071e3] transition-colors">Reforms</a>
-          </div>
 
           <div className="hidden md:flex gap-4 items-center">
             <Button variant="ghost" size="icon" className="rounded-full text-[#1d1d1f] dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-[#0071e3]">
@@ -388,54 +328,6 @@ export default function Landing() {
       <section className="py-20 px-6 bg-white dark:bg-slate-900">
         <div className="max-w-7xl mx-auto space-y-20">
           
-          {/* Reforms */}
-          <div>
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <span className="inline-block px-4 py-1.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-[#0071e3] text-sm font-semibold mb-4">
-                Institutional Framework
-              </span>
-              <h2 className="text-4xl font-bold text-[#1d1d1f] dark:text-white mb-4">Policy Reforms</h2>
-              <p className="text-[#86868b] text-lg">
-                Foundational changes ensuring the entire governance structure aligns with accountability.
-              </p>
-            </div>
-
-            <FundingTransparency />
-            
-            <div className="my-12">
-              <PoliticianRatingSection />
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-8">
-               <Card className="border-0 shadow-sm bg-[#F5F5F7] dark:bg-slate-800 rounded-[32px] overflow-hidden">
-                  <CardContent className="p-8 flex items-start gap-6">
-                    <div className="p-4 rounded-2xl bg-purple-100 dark:bg-purple-900/30 text-purple-600 shrink-0">
-                       <Shield size={28} />
-                    </div>
-                    <div>
-                       <h3 className="text-xl font-bold text-[#1d1d1f] dark:text-white mb-2">Judicial Accountability</h3>
-                       <p className="text-[#86868b] leading-relaxed">
-                         AI-driven blind case allocation and public performance metrics for judges to ensure unbiased and timely justice.
-                       </p>
-                    </div>
-                  </CardContent>
-               </Card>
-               <Card className="border-0 shadow-sm bg-[#F5F5F7] dark:bg-slate-800 rounded-[32px] overflow-hidden">
-                  <CardContent className="p-8 flex items-start gap-6">
-                    <div className="p-4 rounded-2xl bg-pink-100 dark:bg-pink-900/30 text-pink-600 shrink-0">
-                       <Award size={28} />
-                    </div>
-                    <div>
-                       <h3 className="text-xl font-bold text-[#1d1d1f] dark:text-white mb-2">Electoral Reforms</h3>
-                       <p className="text-[#86868b] leading-relaxed">
-                         Amending laws to incorporate consequences from the rating system, barring underperforming politicians from contesting.
-                       </p>
-                    </div>
-                  </CardContent>
-               </Card>
-            </div>
-          </div>
-
           {/* Public Dashboard */}
           <div>
             <div className="text-center mb-12">

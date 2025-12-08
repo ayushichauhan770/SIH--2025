@@ -20,6 +20,7 @@ export default function ForgotPassword() {
       const [showNewPassword, setShowNewPassword] = useState(false);
       const [activeTab, setActiveTab] = useState("email");
       const [identifier, setIdentifier] = useState("");
+      const [identifierType, setIdentifierType] = useState<"email" | "phone">("email");
 
       const [formData, setFormData] = useState({
             email: "",
@@ -48,7 +49,9 @@ export default function ForgotPassword() {
                         console.log("OTP exposed for testing:", response.otp);
                   }
 
-                  setIdentifier(activeTab === "email" ? formData.email : formData.phone);
+                  const currentIdentifier = activeTab === "email" ? formData.email : formData.phone;
+                  setIdentifier(currentIdentifier);
+                  setIdentifierType(activeTab === "email" ? "email" : "phone");
                   setShowOTP(true);
 
                   toast({
@@ -70,7 +73,16 @@ export default function ForgotPassword() {
 
       const handleOTPVerify = async (otp: string): Promise<boolean> => {
             try {
-                  const payload = activeTab === "email"
+                  if (!identifier) {
+                        toast({
+                              title: "Error",
+                              description: "Identifier not found. Please start over.",
+                              variant: "destructive",
+                        });
+                        return false;
+                  }
+
+                  const payload = identifierType === "email"
                         ? { email: identifier, otp, purpose: "reset-password" }
                         : { phone: identifier, otp, purpose: "reset-password" };
 
@@ -83,6 +95,8 @@ export default function ForgotPassword() {
 
                   setShowOTP(false);
                   setShowNewPassword(true);
+                  // Ensure identifier is preserved
+                  console.log("OTP verified, identifier preserved:", identifier, "type:", identifierType);
                   return true;
             } catch (error: any) {
                   toast({
@@ -118,21 +132,35 @@ export default function ForgotPassword() {
             setIsLoading(true);
 
             try {
-                  const payload = activeTab === "email"
+                  if (!identifier) {
+                        toast({
+                              title: "Error",
+                              description: "Identifier not found. Please start over.",
+                              variant: "destructive",
+                        });
+                        setIsLoading(false);
+                        return;
+                  }
+
+                  const payload = identifierType === "email"
                         ? { email: identifier, newPassword: formData.newPassword }
                         : { phone: identifier, newPassword: formData.newPassword };
 
-                  await apiRequest("POST", "/api/auth/reset-password", payload);
+                  console.log("Resetting password with payload:", { ...payload, newPassword: "***" });
+
+                  const response = await apiRequest<{ message: string; username: string }>("POST", "/api/auth/reset-password", payload);
 
                   toast({
                         title: "Password Reset Successful",
-                        description: "You can now login with your new password",
+                        description: `Password has been successfully reset for username: ${response.username}. You can now login with your new password.`,
                   });
 
                   // Reset form and redirect to login
                   setFormData({ email: "", phone: "", newPassword: "", confirmPassword: "" });
                   setShowNewPassword(false);
-                  setTimeout(() => setLocation("/login"), 2000);
+                  setIdentifier("");
+                  setIdentifierType("email");
+                  setTimeout(() => setLocation("/login"), 3000);
             } catch (error: any) {
                   toast({
                         title: "Reset Failed",
@@ -298,11 +326,11 @@ export default function ForgotPassword() {
                         open={showOTP}
                         onClose={() => {
                               setShowOTP(false);
-                              setIdentifier("");
+                              // Don't clear identifier here, keep it for password reset
                         }}
                         onVerify={handleOTPVerify}
-                        email={activeTab === "email" ? identifier : undefined}
-                        phone={activeTab === "phone" ? identifier : undefined}
+                        email={identifierType === "email" ? identifier : undefined}
+                        phone={identifierType === "phone" ? identifier : undefined}
                         purpose="reset-password"
                   />
             </div>

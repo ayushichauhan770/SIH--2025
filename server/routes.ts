@@ -937,6 +937,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("[OTP Generate] Request body:", req.body);
       const data = generateOtpSchema.parse(req.body);
+      
+      // For password reset, validate that user exists
+      if (data.purpose === "reset-password") {
+        if (data.email) {
+          const user = await storage.getUserByEmail(data.email);
+          if (!user) {
+            return res.status(404).json({ error: "No account found with this email address" });
+          }
+        } else if (data.phone) {
+          const user = await storage.getUserByPhone(data.phone);
+          if (!user) {
+            return res.status(404).json({ error: "No account found with this phone number" });
+          }
+        }
+      }
+      
       const otp = generateOTP();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
@@ -1094,22 +1110,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Password must be at least 6 characters" });
       }
 
+      if (!email && !phone) {
+        return res.status(400).json({ error: "Email or phone number is required" });
+      }
+
       let user: User | undefined;
       let identifier = "";
       let type: "phone" | "email" = "email";
 
       if (email) {
-        user = await storage.getUserByEmail(email);
         identifier = email;
         type = "email";
+        user = await storage.getUserByEmail(email);
+        console.log(`[Reset Password] Looking up user by email: ${email}, found: ${user ? user.username : 'not found'}`);
       } else if (phone) {
-        user = await storage.getUserByPhone(phone);
         identifier = phone;
         type = "phone";
+        user = await storage.getUserByPhone(phone);
+        console.log(`[Reset Password] Looking up user by phone: ${phone}, found: ${user ? user.username : 'not found'}`);
       }
 
       if (!user) {
-        return res.status(404).json({ error: "User not found" });
+        console.log(`[Reset Password] User not found for ${type}: ${identifier}`);
+        return res.status(404).json({ error: "User not found. Please verify your email or phone number." });
       }
 
       // Verify that OTP was verified for reset-password purpose
@@ -1122,7 +1145,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hashedPassword = await bcrypt.hash(newPassword, 10);
       await storage.updateUserPassword(user.id, hashedPassword);
 
-      res.json({ message: "Password reset successful" });
+      res.json({ 
+        message: "Password reset successful",
+        username: user.username 
+      });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }

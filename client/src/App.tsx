@@ -8,6 +8,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
+import ForgotPassword from "@/pages/forgot-password";
 import CitizenDashboard from "@/pages/citizen/dashboard";
 import SubmitApplication from "@/pages/citizen/submit-application";
 import TrackApplication from "@/pages/citizen/track-application";
@@ -42,6 +43,7 @@ function Router() {
       <Route path="/" component={Landing} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
+      <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/election/candidates" component={CandidateSelection} />
 
       <Route path="/citizen/dashboard">

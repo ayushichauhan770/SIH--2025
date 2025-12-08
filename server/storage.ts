@@ -101,12 +101,221 @@ export class MemStorage implements IStorage {
     this.departments = new Map();
     this.warnings = new Map();
 
-    // Persistence disabled as per user request
-    // this.loadFromDisk();
+    // Load persisted data from disk
+    this.loadFromDisk();
   }
 
-  // private loadFromDisk() { ... }
-  // private async saveToDisk() { ... }
+  private loadFromDisk() {
+    try {
+      // Ensure data directory exists
+      if (!fs.existsSync(this.dataDir)) {
+        fs.mkdirSync(this.dataDir, { recursive: true });
+        console.log("📁 Created data directory");
+        return;
+      }
+
+      // Load users
+      const usersFile = path.join(this.dataDir, 'users.json');
+      if (fs.existsSync(usersFile)) {
+        const usersData = JSON.parse(fs.readFileSync(usersFile, 'utf-8'));
+        this.users = new Map(Object.entries(usersData).map(([id, user]: [string, any]) => [
+          id,
+          { ...user, createdAt: new Date(user.createdAt) }
+        ]));
+        console.log(`✅ Loaded ${this.users.size} users from disk`);
+      }
+
+      // Load applications
+      const appsFile = path.join(this.dataDir, 'applications.json');
+      if (fs.existsSync(appsFile)) {
+        const appsData = JSON.parse(fs.readFileSync(appsFile, 'utf-8'));
+        this.applications = new Map(Object.entries(appsData).map(([id, app]: [string, any]) => [
+          id,
+          {
+            ...app,
+            submittedAt: new Date(app.submittedAt),
+            lastUpdatedAt: new Date(app.lastUpdatedAt),
+            assignedAt: app.assignedAt ? new Date(app.assignedAt) : null,
+            approvedAt: app.approvedAt ? new Date(app.approvedAt) : null,
+            autoApprovalDate: new Date(app.autoApprovalDate)
+          }
+        ]));
+        console.log(`✅ Loaded ${this.applications.size} applications from disk`);
+      }
+
+      // Load application history
+      const historyFile = path.join(this.dataDir, 'applicationHistory.json');
+      if (fs.existsSync(historyFile)) {
+        const historyData = JSON.parse(fs.readFileSync(historyFile, 'utf-8'));
+        this.applicationHistory = new Map(Object.entries(historyData).map(([appId, histories]: [string, any]) => [
+          appId,
+          histories.map((h: any) => ({
+            ...h,
+            updatedAt: new Date(h.updatedAt)
+          }))
+        ]));
+        console.log(`✅ Loaded application history from disk`);
+      }
+
+      // Load feedback
+      const feedbackFile = path.join(this.dataDir, 'feedback.json');
+      if (fs.existsSync(feedbackFile)) {
+        const feedbackData = JSON.parse(fs.readFileSync(feedbackFile, 'utf-8'));
+        this.feedback = new Map(Object.entries(feedbackData).map(([id, fb]: [string, any]) => [
+          id,
+          { ...fb, createdAt: new Date(fb.createdAt) }
+        ]));
+        console.log(`✅ Loaded ${this.feedback.size} feedback records from disk`);
+      }
+
+      // Load OTP records
+      const otpFile = path.join(this.dataDir, 'otpRecords.json');
+      if (fs.existsSync(otpFile)) {
+        const otpData = JSON.parse(fs.readFileSync(otpFile, 'utf-8'));
+        this.otpRecords = new Map(Object.entries(otpData).map(([id, otp]: [string, any]) => [
+          id,
+          {
+            ...otp,
+            createdAt: new Date(otp.createdAt),
+            expiresAt: new Date(otp.expiresAt)
+          }
+        ]));
+        console.log(`✅ Loaded ${this.otpRecords.size} OTP records from disk`);
+      }
+
+      // Load blockchain hashes
+      const blockchainFile = path.join(this.dataDir, 'blockchainHashes.json');
+      if (fs.existsSync(blockchainFile)) {
+        const blockchainData = JSON.parse(fs.readFileSync(blockchainFile, 'utf-8'));
+        this.blockchainHashes = new Map(Object.entries(blockchainData).map(([id, hash]: [string, any]) => [
+          id,
+          { ...hash, timestamp: new Date(hash.timestamp) }
+        ]));
+        console.log(`✅ Loaded ${this.blockchainHashes.size} blockchain hashes from disk`);
+      }
+
+      // Load notifications
+      const notificationsFile = path.join(this.dataDir, 'notifications.json');
+      if (fs.existsSync(notificationsFile)) {
+        const notificationsData = JSON.parse(fs.readFileSync(notificationsFile, 'utf-8'));
+        this.notifications = new Map(Object.entries(notificationsData).map(([id, notif]: [string, any]) => [
+          id,
+          { ...notif, createdAt: new Date(notif.createdAt) }
+        ]));
+        console.log(`✅ Loaded ${this.notifications.size} notifications from disk`);
+      }
+
+      // Load departments
+      const departmentsFile = path.join(this.dataDir, 'departments.json');
+      if (fs.existsSync(departmentsFile)) {
+        const departmentsData = JSON.parse(fs.readFileSync(departmentsFile, 'utf-8'));
+        this.departments = new Map(Object.entries(departmentsData).map(([id, dept]: [string, any]) => [
+          id,
+          { ...dept, createdAt: new Date(dept.createdAt) }
+        ]));
+        console.log(`✅ Loaded ${this.departments.size} departments from disk`);
+      }
+
+      // Load warnings
+      const warningsFile = path.join(this.dataDir, 'warnings.json');
+      if (fs.existsSync(warningsFile)) {
+        const warningsData = JSON.parse(fs.readFileSync(warningsFile, 'utf-8'));
+        this.warnings = new Map(Object.entries(warningsData).map(([id, warning]: [string, any]) => [
+          id,
+          { ...warning, sentAt: new Date(warning.sentAt) }
+        ]));
+        console.log(`✅ Loaded ${this.warnings.size} warnings from disk`);
+      }
+
+      console.log("✅ Data persistence loaded successfully!");
+    } catch (error) {
+      console.error("❌ Error loading data from disk:", error);
+      console.log("Starting with empty data...");
+    }
+  }
+
+  private async saveToDisk() {
+    try {
+      // Ensure data directory exists
+      if (!fs.existsSync(this.dataDir)) {
+        fs.mkdirSync(this.dataDir, { recursive: true });
+      }
+
+      // Save users
+      const usersData = Object.fromEntries(this.users);
+      fs.writeFileSync(
+        path.join(this.dataDir, 'users.json'),
+        JSON.stringify(usersData, null, 2),
+        'utf-8'
+      );
+
+      // Save applications
+      const appsData = Object.fromEntries(this.applications);
+      fs.writeFileSync(
+        path.join(this.dataDir, 'applications.json'),
+        JSON.stringify(appsData, null, 2),
+        'utf-8'
+      );
+
+      // Save application history
+      const historyData = Object.fromEntries(this.applicationHistory);
+      fs.writeFileSync(
+        path.join(this.dataDir, 'applicationHistory.json'),
+        JSON.stringify(historyData, null, 2),
+        'utf-8'
+      );
+
+      // Save feedback
+      const feedbackData = Object.fromEntries(this.feedback);
+      fs.writeFileSync(
+        path.join(this.dataDir, 'feedback.json'),
+        JSON.stringify(feedbackData, null, 2),
+        'utf-8'
+      );
+
+      // Save OTP records
+      const otpData = Object.fromEntries(this.otpRecords);
+      fs.writeFileSync(
+        path.join(this.dataDir, 'otpRecords.json'),
+        JSON.stringify(otpData, null, 2),
+        'utf-8'
+      );
+
+      // Save blockchain hashes
+      const blockchainData = Object.fromEntries(this.blockchainHashes);
+      fs.writeFileSync(
+        path.join(this.dataDir, 'blockchainHashes.json'),
+        JSON.stringify(blockchainData, null, 2),
+        'utf-8'
+      );
+
+      // Save notifications
+      const notificationsData = Object.fromEntries(this.notifications);
+      fs.writeFileSync(
+        path.join(this.dataDir, 'notifications.json'),
+        JSON.stringify(notificationsData, null, 2),
+        'utf-8'
+      );
+
+      // Save departments
+      const departmentsData = Object.fromEntries(this.departments);
+      fs.writeFileSync(
+        path.join(this.dataDir, 'departments.json'),
+        JSON.stringify(departmentsData, null, 2),
+        'utf-8'
+      );
+
+      // Save warnings
+      const warningsData = Object.fromEntries(this.warnings);
+      fs.writeFileSync(
+        path.join(this.dataDir, 'warnings.json'),
+        JSON.stringify(warningsData, null, 2),
+        'utf-8'
+      );
+    } catch (error) {
+      console.error("❌ Error saving data to disk:", error);
+    }
+  }
 
   async getUser(id: string): Promise<User | undefined> {
     return this.users.get(id);
@@ -150,7 +359,7 @@ export class MemStorage implements IStorage {
       id,
     };
     this.users.set(id, user);
-    // await this.saveToDisk();
+    await this.saveToDisk();
     return user;
   }
 
@@ -158,7 +367,7 @@ export class MemStorage implements IStorage {
     const user = this.users.get(id);
     if (!user) throw new Error("User not found");
     this.users.set(id, { ...user, password });
-    // await this.saveToDisk();
+    await this.saveToDisk();
   }
 
   async createApplication(insertApplication: InsertApplication): Promise<Application> {
@@ -198,7 +407,7 @@ export class MemStorage implements IStorage {
 
     this.applications.set(id, application);
     await this.addApplicationHistory(id, "Submitted", insertApplication.citizenId, "Application submitted");
-    // await this.saveToDisk();
+    await this.saveToDisk();
     return application;
   }
 
@@ -287,7 +496,7 @@ export class MemStorage implements IStorage {
       await this.createBlockchainHash(id, hash, blockNumber);
     }
 
-    // await this.saveToDisk();
+    await this.saveToDisk();
     return updated;
   }
 
@@ -305,7 +514,7 @@ export class MemStorage implements IStorage {
 
     this.applications.set(id, updated);
     await this.addApplicationHistory(id, "Assigned", officialId, "Application assigned to official");
-    // await this.saveToDisk();
+    await this.saveToDisk();
     return updated;
   }
 
@@ -344,7 +553,7 @@ export class MemStorage implements IStorage {
     };
 
     this.feedback.set(id, feedback);
-    // await this.saveToDisk();
+    await this.saveToDisk();
     return feedback;
   }
 
@@ -358,6 +567,7 @@ export class MemStorage implements IStorage {
       comment: comment ?? feedback.comment,
     };
     this.feedback.set(id, updated);
+    await this.saveToDisk();
     return updated;
   }
 
@@ -377,6 +587,7 @@ export class MemStorage implements IStorage {
     const feedback = this.feedback.get(id);
     if (feedback) {
       this.feedback.set(id, { ...feedback, verified: true });
+      await this.saveToDisk();
     }
   }
 
@@ -455,6 +666,7 @@ export class MemStorage implements IStorage {
     };
 
     this.notifications.set(id, notification);
+    await this.saveToDisk();
     return notification;
   }
 
@@ -468,6 +680,7 @@ export class MemStorage implements IStorage {
     const notification = this.notifications.get(id);
     if (notification) {
       this.notifications.set(id, { ...notification, read: true });
+      await this.saveToDisk();
     }
   }
 
@@ -481,7 +694,7 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
     };
     this.departments.set(id, department);
-    // await this.saveToDisk();
+    await this.saveToDisk();
     return department;
   }
 
@@ -502,7 +715,7 @@ export class MemStorage implements IStorage {
       read: false,
     };
     this.warnings.set(id, warning);
-    // await this.saveToDisk();
+    await this.saveToDisk();
     return warning;
   }
 
@@ -516,6 +729,7 @@ export class MemStorage implements IStorage {
     const warning = this.warnings.get(id);
     if (warning) {
       this.warnings.set(id, { ...warning, read: true });
+      await this.saveToDisk();
     }
   }
 
@@ -524,7 +738,7 @@ export class MemStorage implements IStorage {
     if (!user) throw new Error("User not found");
     const updated = { ...user, rating, solvedCount, assignedCount };
     this.users.set(userId, updated);
-    // await this.saveToDisk();
+    await this.saveToDisk();
     return updated;
   }
 
@@ -540,7 +754,7 @@ export class MemStorage implements IStorage {
       lastUpdatedAt: new Date(),
     };
     this.applications.set(id, updated);
-    // await this.saveToDisk();
+    await this.saveToDisk();
     return updated;
   }
 
@@ -553,7 +767,7 @@ export class MemStorage implements IStorage {
       lastUpdatedAt: new Date(),
     };
     this.applications.set(id, updated);
-    // await this.saveToDisk();
+    await this.saveToDisk();
     return updated;
   }
 
@@ -568,6 +782,35 @@ export class MemStorage implements IStorage {
     this.notifications.clear();
     this.departments.clear();
     this.warnings.clear();
+    
+    // Also delete all data files from disk
+    try {
+      if (fs.existsSync(this.dataDir)) {
+        const files = [
+          'users.json',
+          'applications.json',
+          'applicationHistory.json',
+          'feedback.json',
+          'otpRecords.json',
+          'blockchainHashes.json',
+          'notifications.json',
+          'departments.json',
+          'warnings.json'
+        ];
+        
+        for (const file of files) {
+          const filePath = path.join(this.dataDir, file);
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+            console.log(`   Deleted ${file}`);
+          }
+        }
+        console.log("✅ All data files deleted from disk");
+      }
+    } catch (error) {
+      console.error("❌ Error deleting data files:", error);
+    }
+    
     console.log("✅ All data cleared successfully!");
   }
 
@@ -577,5 +820,5 @@ export class MemStorage implements IStorage {
   }
 }
 
-// Use in-memory storage (data resets on server restart)
+// Use file-based persistent storage (data persists across server restarts)
 export const storage = new MemStorage();

@@ -9,12 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Shield, ArrowLeft, FileText, Upload, CheckCircle, Info } from "lucide-react";
+import { Shield, ArrowLeft, FileText, Upload, CheckCircle, Info, Loader, AlertCircle } from "lucide-react";
 import { Link } from "wouter";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getSubDepartmentsForDepartment, getAllDepartmentNames } from "@shared/sub-departments";
 import { NotificationBell } from "@/components/notification-bell";
 import { useQuery } from "@tanstack/react-query";
+import { validateImageAsGovtDocument } from "@/lib/image-scanner";
 import type { Notification } from "@shared/schema";
 
 export default function SubmitApplication() {
@@ -30,6 +31,8 @@ export default function SubmitApplication() {
     additionalInfo: "",
     image: "",
   });
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanResult, setScanResult] = useState<{ valid: boolean; message: string } | null>(null);
 
   const { data: notifications = [] } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
@@ -99,24 +102,57 @@ export default function SubmitApplication() {
           description: "Please upload an image smaller than 50MB",
           variant: "destructive",
         });
-        e.target.value = ""; // Clear the input
+        e.target.value = "";
         return;
       }
 
       try {
+        // First compress the image
         const compressedImage = await compressImage(file);
-        setFormData({ ...formData, image: compressedImage });
-        toast({
-          title: "Image uploaded",
-          description: "Image has been compressed and ready to submit",
-        });
+
+        // Start AI scanning
+        setIsScanning(true);
+        setScanResult(null);
+
+        const validationResult = await validateImageAsGovtDocument(compressedImage);
+
+        if (validationResult.valid) {
+          // Valid document detected
+          setFormData({ ...formData, image: compressedImage });
+          setScanResult({
+            valid: true,
+            message: validationResult.message
+          });
+          toast({
+            title: "✓ Valid Document",
+            description: validationResult.message,
+          });
+        } else {
+          // Invalid document - show error and don't set image
+          setScanResult({
+            valid: false,
+            message: validationResult.message
+          });
+          toast({
+            title: "Invalid Document",
+            description: validationResult.message,
+            variant: "destructive",
+          });
+          e.target.value = "";
+        }
       } catch (error) {
         toast({
           title: "Upload failed",
           description: "Failed to process image",
           variant: "destructive",
         });
+        setScanResult({
+          valid: false,
+          message: "Error scanning image. Please try again."
+        });
         e.target.value = "";
+      } finally {
+        setIsScanning(false);
       }
     }
   };
@@ -211,7 +247,7 @@ export default function SubmitApplication() {
                 All fields marked with * are required
               </CardDescription>
             </CardHeader>
-            
+
             <CardContent className="p-8">
               <form onSubmit={handleSubmit} className="space-y-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -286,39 +322,100 @@ export default function SubmitApplication() {
                 </div>
 
                 <div className="space-y-3">
-                  <Label htmlFor="image" className="text-sm font-semibold text-[#1d1d1f] dark:text-white">Attachments</Label>
-                  <div className="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-6 text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer relative group">
+                  <Label htmlFor="image" className="text-sm font-semibold text-[#1d1d1f] dark:text-white">Attachments (Government Documents)</Label>
+                  <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer relative group ${isScanning ? 'border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/10' :
+                    scanResult?.valid ? 'border-green-300 dark:border-green-700 bg-green-50/50 dark:bg-green-900/10' :
+                      scanResult?.valid === false ? 'border-red-300 dark:border-red-700 bg-red-50/50 dark:bg-red-900/10' :
+                        'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                    }`}>
                     <Input
                       id="image"
                       type="file"
                       accept="image/*"
                       onChange={handleImageUpload}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                      disabled={isScanning}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 disabled:cursor-not-allowed"
                     />
                     <div className="flex flex-col items-center gap-2">
-                      <div className="p-3 rounded-full bg-blue-50 dark:bg-blue-900/20 text-[#0071e3] group-hover:scale-110 transition-transform">
-                        <Upload className="h-6 w-6" />
+                      <div className={`p-3 rounded-full group-hover:scale-110 transition-transform ${isScanning ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600' :
+                        scanResult?.valid ? 'bg-green-100 dark:bg-green-900/30 text-green-600' :
+                          scanResult?.valid === false ? 'bg-red-100 dark:bg-red-900/30 text-red-600' :
+                            'bg-blue-50 dark:bg-blue-900/20 text-[#0071e3]'
+                        }`}>
+                        {isScanning ? (
+                          <Loader className="h-6 w-6 animate-spin" />
+                        ) : scanResult?.valid ? (
+                          <CheckCircle className="h-6 w-6" />
+                        ) : scanResult?.valid === false ? (
+                          <AlertCircle className="h-6 w-6" />
+                        ) : (
+                          <Upload className="h-6 w-6" />
+                        )}
                       </div>
                       <div className="space-y-1">
-                        <p className="text-sm font-medium text-[#1d1d1f] dark:text-white">Click to upload image</p>
-                        <p className="text-xs text-[#86868b]">Max 50MB (Auto-compressed)</p>
+                        {isScanning ? (
+                          <>
+                            <p className="text-sm font-medium text-[#1d1d1f] dark:text-white">Scanning document...</p>
+                            <p className="text-xs text-[#86868b]">AI is analyzing the image</p>
+                          </>
+                        ) : formData.image ? (
+                          <>
+                            <p className="text-sm font-medium text-green-600 dark:text-green-400">Document verified</p>
+                            <p className="text-xs text-[#86868b]">Valid text document detected</p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm font-medium text-[#1d1d1f] dark:text-white">Click to upload image</p>
+                            <p className="text-xs text-[#86868b]">Max 50MB (Auto-compressed) - Government Documents only</p>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
-                  
+
+                  {scanResult && !formData.image && (
+                    <div className={`mt-3 p-3 rounded-lg flex gap-2 ${scanResult.valid
+                      ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900'
+                      : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900'
+                      }`}>
+                      <div className="flex-shrink-0 mt-0.5">
+                        {scanResult.valid ? (
+                          <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        ) : (
+                          <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                        )}
+                      </div>
+                      <p className={`text-sm ${scanResult.valid
+                        ? 'text-green-800 dark:text-green-200'
+                        : 'text-red-800 dark:text-red-200'
+                        }`}>
+                        {scanResult.message}
+                      </p>
+                    </div>
+                  )}
+
                   {formData.image && (
-                    <div className="mt-4 relative group inline-block">
-                      <img src={formData.image} alt="Preview" className="h-32 w-32 object-cover rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm" />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => setFormData({ ...formData, image: "" })}
-                      >
-                        <span className="sr-only">Remove</span>
-                        <div className="h-3 w-3 bg-white rounded-sm rotate-45 transform origin-center" />
-                      </Button>
+                    <div className="mt-4 space-y-3">
+                      <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900 rounded-lg">
+                        <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                        <p className="text-sm text-green-800 dark:text-green-200">Document verified and ready</p>
+                      </div>
+                      <div className="relative group inline-block">
+                        <img src={formData.image} alt="Preview" className="h-32 w-32 object-cover rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm" />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => {
+                            setFormData({ ...formData, image: "" });
+                            setScanResult(null);
+                          }}
+                        >
+                          <span className="sr-only">Remove</span>
+                          <div className="h-3 w-3 bg-white rounded-sm rotate-45 transform origin-center" />
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>

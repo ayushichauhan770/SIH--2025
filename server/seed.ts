@@ -3,8 +3,23 @@ import bcrypt from "bcryptjs";
 import { getAllDepartmentNames } from "@shared/sub-departments";
 
 export async function seedData() {
-      // Always clear all data first to ensure fresh start
-      await storage.clearAllData();
+      // Check if data already exists by checking for admin user
+      const adminUser = await storage.getUserByUsername("admin");
+      const existingDepartments = await storage.getAllDepartments();
+      
+      // Only seed if no data exists (no admin user and no departments)
+      if (!adminUser && existingDepartments.length === 0) {
+        console.log("🌱 No existing data found. Seeding initial data...");
+      } else {
+        console.log("📊 Existing data found. Preserving user accounts and data.");
+        if (adminUser) {
+          console.log(`   Found existing admin user.`);
+        }
+        if (existingDepartments.length > 0) {
+          console.log(`   Found ${existingDepartments.length} departments.`);
+        }
+        return; // Don't seed if data already exists
+      }
 
       console.log("🌱 Seeding fresh initial data...");
 
