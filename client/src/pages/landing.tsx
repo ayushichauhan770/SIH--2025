@@ -97,8 +97,8 @@ export default function Landing() {
                           {[
                             { name: 'Track Application', href: '/track' },
                             { name: 'Application Status', href: '/track' },
-                            { name: 'Judiciary Dashboard', href: '/judiciary' },
-                            { name: 'Litigant Portal', href: '/judiciary/portal' },
+                            // { name: 'Judiciary Dashboard', href: '/judiciary' },
+                            // { name: 'Litigant Portal', href: '/judiciary/portal' },
                             { name: 'Payment History', href: '#' }
                           ].map(item => (
                             <a key={item.name} href={item.href} className="block text-[15px] text-[#1d1d1f] dark:text-white hover:text-[#0071e3] transition-colors font-medium">
@@ -124,9 +124,9 @@ export default function Landing() {
             </div>
 
 
-            <Link href="/judiciary">
+            {/* <Link href="/judiciary">
               <a className="text-[#86868b] text-sm font-medium hover:text-[#0071e3] transition-colors">Judiciary</a>
-            </Link>
+            </Link> */}
           </div>
 
           <div className="hidden md:flex gap-4 items-center">
