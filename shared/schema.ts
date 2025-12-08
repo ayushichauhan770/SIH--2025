@@ -14,6 +14,7 @@ export const users = pgTable("users", {
   aadharNumber: text("aadhar_number"),
   department: text("department"),
   subDepartment: text("sub_department"),
+  district: text("district"), // For geographical allocation logic
   rating: integer("rating").default(0),
   assignedCount: integer("assigned_count").default(0),
   solvedCount: integer("solved_count").default(0),
@@ -115,6 +116,7 @@ export const insertUserSchema = createInsertSchema(users).omit({
   rating: true,
   assignedCount: true,
   solvedCount: true,
+  createdAt: true,
 });
 
 export const loginSchema = z.object({
@@ -216,3 +218,77 @@ export interface Candidate {
   manifestoSummary: string;
   votes: number;
 }
+
+// Judiciary System Schemas
+export const judges = pgTable("judges", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  specialization: text("specialization").notNull(), // Criminal, Civil, Constitutional
+  experience: integer("experience").notNull(), // Years
+  reputationScore: integer("reputation_score").notNull(), // 0-100
+  casesSolved: integer("cases_solved").default(0),
+  avgResolutionTime: integer("avg_resolution_time").notNull(), // Days
+  image: text("image"),
+  status: text("status").default("Available"), // Available, Busy
+  district: text("district"),
+  casesPending: integer("cases_pending").default(0),
+  casesDisposed: integer("cases_disposed").default(0),
+  publicRating: integer("public_rating").default(0), // 0-5
+  performanceScore: integer("performance_score").default(0), // 0-100
+});
+
+export const cases = pgTable("cases", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  type: text("type").notNull(), // Criminal, Civil
+  status: text("status").default("Pending"), // Pending, Allocated, Closed
+  priority: text("priority").default("Medium"), // High, Medium, Low
+  filedDate: timestamp("filed_date").defaultNow().notNull(),
+  allocatedJudgeId: varchar("allocated_judge_id"), // FK to judges
+  caseNumber: text("case_number").unique(),
+  citizenId: varchar("citizen_id"), // Link to user
+  
+  // Faceless Scrutiny Fields
+  scrutinyOfficialId: varchar("scrutiny_official_id"),
+  isAnonymized: boolean("is_anonymized").default(true),
+  rejectionReason: text("rejection_reason"),
+  filingDistrict: text("filing_district"),
+});
+
+export const hearings = pgTable("hearings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  caseId: varchar("case_id").notNull(),
+  judgeId: varchar("judge_id").notNull(),
+  date: timestamp("date").notNull(),
+  isVideoRecorded: boolean("is_video_recorded").default(false),
+  videoLink: text("video_link"),
+  status: text("status").notNull(), // Scheduled, Adjourned, Completed
+});
+
+export const insertJudgeSchema = createInsertSchema(judges).omit({
+  id: true,
+});
+
+export const insertCaseSchema = createInsertSchema(cases).omit({
+  id: true,
+  filedDate: true,
+  allocatedJudgeId: true,
+  citizenId: true,
+  scrutinyOfficialId: true,
+  isAnonymized: true,
+  rejectionReason: true,
+});
+
+export const insertHearingSchema = createInsertSchema(hearings).omit({
+  id: true,
+});
+
+export type Judge = typeof judges.$inferSelect;
+export type InsertJudge = z.infer<typeof insertJudgeSchema>;
+
+export type Case = typeof cases.$inferSelect;
+export type InsertCase = z.infer<typeof insertCaseSchema>;
+
+export type Hearing = typeof hearings.$inferSelect;
+export type InsertHearing = z.infer<typeof insertHearingSchema>;

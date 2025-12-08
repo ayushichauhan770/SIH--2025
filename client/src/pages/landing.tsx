@@ -150,9 +150,73 @@ export default function Landing() {
             <div className="p-1.5 rounded-full bg-[#0071e3] shadow-lg shadow-blue-500/20">
               <Shield className="h-5 w-5 text-white" />
             </div>
-            <a href="#" className="text-xl font-bold tracking-tight text-[#1d1d1f] dark:text-white">Accountability</a>
+            <a href="/" className="text-xl font-bold tracking-tight text-[#1d1d1f] dark:text-white">Accountability</a>
           </div>
           
+<<<<<<< HEAD
+=======
+          <div className="hidden md:flex gap-8 h-full items-center">
+            <a href="#" className="text-[#1d1d1f] dark:text-white text-sm font-medium hover:text-[#0071e3] transition-colors">Home</a>
+            
+            {/* Mega Menu Trigger */}
+            <div className="relative group h-full flex items-center">
+              <button className="text-[#86868b] text-sm font-medium hover:text-[#0071e3] transition-colors py-2 flex items-center gap-1">
+                Services <ChevronRight className="h-3 w-3 rotate-90 transition-transform group-hover:-rotate-90" />
+              </button>
+              
+              {/* Mega Dropdown */}
+              <div className="fixed top-[50px] left-0 right-0 z-40 flex justify-center px-6 transition-all duration-300 delay-300 group-hover:delay-0 opacity-0 invisible group-hover:opacity-100 group-hover:visible pointer-events-none group-hover:pointer-events-auto">
+                <div className="w-full max-w-7xl pt-10">
+                  <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-slate-100 dark:border-slate-800 shadow-xl rounded-[32px] overflow-hidden">
+                    <div className="py-12 px-12 grid grid-cols-3 gap-16">
+                      <div>
+                        <h3 className="text-xs font-bold text-[#86868b] uppercase tracking-wider mb-6">Browse Services</h3>
+                        <div className="space-y-4">
+                          {['Birth/Death Certificates', 'Complain & Feedback', 'Electricity and Power', 'Land & Property Records', 'Licenses & Permits'].map(item => (
+                            <a key={item} href="#" className="block text-[15px] text-[#1d1d1f] dark:text-white hover:text-[#0071e3] transition-colors font-medium">
+                              {item}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <h3 className="text-xs font-bold text-[#86868b] uppercase tracking-wider mb-6">Quick Access</h3>
+                        <div className="space-y-4">
+                          {[
+                            { name: 'Track Application', href: '/track' },
+                            { name: 'Application Status', href: '/track' },
+                            // { name: 'Judiciary Dashboard', href: '/judiciary' },
+                            // { name: 'Litigant Portal', href: '/judiciary/portal' },
+                            { name: 'Payment History', href: '#' }
+                          ].map(item => (
+                            <a key={item.name} href={item.href} className="block text-[15px] text-[#1d1d1f] dark:text-white hover:text-[#0071e3] transition-colors font-medium">
+                              {item.name}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <h3 className="text-xs font-bold text-[#86868b] uppercase tracking-wider mb-6">Special Services</h3>
+                        <div className="space-y-4">
+                          {['Senior Citizens', 'Women & Child', 'Rural Services', 'Student Schemes'].map(item => (
+                            <a key={item} href="#" className="block text-[15px] text-[#1d1d1f] dark:text-white hover:text-[#0071e3] transition-colors font-medium">
+                              {item}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+
+            {/* <Link href="/judiciary">
+              <a className="text-[#86868b] text-sm font-medium hover:text-[#0071e3] transition-colors">Judiciary</a>
+            </Link> */}
+          </div>
+>>>>>>> 578c65f8ca1e11eedee3d65df53fd74bf92fcf30
 
           <div className="hidden md:flex gap-4 items-center">
             <Button variant="ghost" size="icon" className="rounded-full text-[#1d1d1f] dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-[#0071e3]">
@@ -198,8 +262,8 @@ export default function Landing() {
                 <a href="#" className="text-[#1d1d1f] dark:text-white">Licenses & Permits</a>
               </div>
             </div>
-            <a href="#dashboard" className="text-lg font-medium text-[#1d1d1f] dark:text-white">Dashboard</a>
-            <a href="#reforms" className="text-lg font-medium text-[#1d1d1f] dark:text-white">Reforms</a>
+            {/* <a href="#dashboard" className="text-lg font-medium text-[#1d1d1f] dark:text-white">Dashboard</a> */}
+            {/* <a href="#reforms" className="text-lg font-medium text-[#1d1d1f] dark:text-white">Reforms</a> */}
             <div className="h-px bg-slate-200 dark:bg-slate-800 my-2"></div>
             <div className="flex flex-col gap-4">
               <Link href="/register">

@@ -17,6 +17,12 @@ import Contact from "@/pages/contact";
 import OfficialDashboard from "@/pages/official/dashboard";
 import AdminDashboard from "@/pages/admin/dashboard";
 import CandidateSelection from "@/pages/candidate-selection";
+import JudiciaryDashboard from "@/pages/judiciary/dashboard";
+import FileCase from "@/pages/judiciary/file-case";
+import LitigantPortal from "@/pages/judiciary/litigant-portal";
+import CaseDetails from "@/pages/judiciary/case-details";
+import ScrutinyPortal from "@/pages/official/scrutiny-portal";
+
 import { SessionGuard } from "@/components/session-guard";
 import { ChatbotWidget } from "@/components/chatbot-widget";
 
@@ -47,6 +53,11 @@ function Router() {
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/contact" component={Contact} />
       <Route path="/election/candidates" component={CandidateSelection} />
+      <Route path="/judiciary" component={JudiciaryDashboard} />
+      <Route path="/judiciary/dashboard" component={JudiciaryDashboard} />
+      <Route path="/judiciary/file" component={FileCase} />
+      <Route path="/judiciary/portal" component={LitigantPortal} />
+      <Route path="/judiciary/cases/:id" component={CaseDetails} />
 
       <Route path="/citizen/dashboard">
         {() => <ProtectedRoute component={CitizenDashboard} allowedRoles={["citizen"]} />}
@@ -66,10 +77,14 @@ function Router() {
         {() => <ProtectedRoute component={OfficialDashboard} allowedRoles={["official"]} />}
       </Route>
 
+      {/* New Scrutiny Portal Route */}
+      <Route path="/official/scrutiny">
+         {() => <ProtectedRoute component={ScrutinyPortal} allowedRoles={["official"]} />}
+      </Route>
+
       <Route path="/admin/dashboard">
         {() => <ProtectedRoute component={AdminDashboard} allowedRoles={["admin"]} />}
       </Route>
-
       <Route component={NotFound} />
     </Switch>
   );

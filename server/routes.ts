@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import { loginSchema, insertUserSchema, insertApplicationSchema, updateApplicationStatusSchema, insertFeedbackSchema, verifyOtpSchema, generateOtpSchema, insertDepartmentSchema, insertWarningSchema } from "@shared/schema";
+import { loginSchema, insertUserSchema, insertApplicationSchema, updateApplicationStatusSchema, insertFeedbackSchema, verifyOtpSchema, generateOtpSchema, insertDepartmentSchema, insertWarningSchema, insertCaseSchema } from "@shared/schema";
 import type { User, Application } from "@shared/schema";
 import { sendEmailOTP, verifyEmailConfig } from "./email-service";
 import { sendSMSOTP } from "./sms-service";
@@ -1771,6 +1771,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }, 60 * 60 * 1000);
 
+<<<<<<< HEAD
   // Clear all data endpoint (for development/testing - use with caution!)
   app.post("/api/admin/clear-all-data", async (req: Request, res: Response) => {
     try {
@@ -1779,6 +1780,250 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "All data cleared successfully" });
     } catch (error: any) {
       console.error("Error clearing data:", error);
+=======
+  // Judiciary System Routes
+  app.get("/api/judiciary/judges", async (req: Request, res: Response) => {
+    try {
+      const allJudges = await storage.getAllJudges();
+      res.json(allJudges);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/judiciary/cases", async (req: Request, res: Response) => {
+    try {
+      const allCases = await storage.getAllCases();
+      res.json(allCases);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/judiciary/my-cases", authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const cases = await storage.getCasesByCitizenId(req.user!.id);
+      res.json(cases);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/judiciary/allocate", async (req: Request, res: Response) => {
+    try {
+      // 1. Fetch pending cases and available judges
+      const pendingCases = await storage.getPendingCases();
+      const availableJudges = await storage.getAvailableJudges();
+
+      if (pendingCases.length === 0) {
+        return res.json({ message: "No pending cases to allocate", allocations: [] });
+      }
+
+      if (availableJudges.length === 0) {
+        return res.status(400).json({ error: "No available judges for allocation" });
+      }
+
+      const allocations: any[] = [];
+
+      // 2. AI Allocation Logic (Simulated)
+      // Iterate through pending cases and assign to the best matching judge
+      for (const caseItem of pendingCases) {
+        // Filter judges by specialization matching case type (e.g., Criminal -> Criminal Law)
+        // For simplicity, we'll assume broad matching or random assignment for now
+        // In a real system, this would use ML models to match case complexity with judge expertise
+
+        // Simple Load Balancing: Pick judge with fewest active cases (simulated by 'casesSolved' for now, or random)
+        // Let's pick a random available judge for "Blind Allocation"
+        const randomJudgeIndex = Math.floor(Math.random() * availableJudges.length);
+        const selectedJudge = availableJudges[randomJudgeIndex];
+
+        // Assign
+        await storage.assignCaseToJudge(caseItem.id, selectedJudge.id);
+        
+        // Update local list to reflect changes (optional, for next iteration if we were tracking load locally)
+        
+        allocations.push({
+          caseId: caseItem.id,
+          caseTitle: caseItem.title,
+          judgeId: selectedJudge.id,
+          judgeName: selectedJudge.name
+        });
+      }
+
+      res.json({ message: "Allocation completed", allocations });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/judiciary/file-case", authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const data = insertCaseSchema.parse(req.body);
+      
+      // 1. Simulate Token Fee Check (Anti-Spam Cost)
+      // In production: await paymentGateway.verifyTransaction(req.body.paymentId)
+      // For SIH: We simulate this as always true, but in a real app, this fee prevents mass-spamming.
+      const isFeePaid = true; 
+      if (!isFeePaid) {
+         return res.status(402).json({ error: "Case filing fee not paid" });
+      }
+
+      // 2. AI Pre-Check (Enhanced Validation)
+      // Check for basic requirements and context
+      const wordCount = data.description.split(" ").length;
+      if (wordCount < 10) {
+         return res.status(400).json({ error: "Case description is too short (min 10 words). Please provide more details." });
+      }
+
+      // Basic NLP Keyword Check (Simulated)
+      // Ensure the description actually sounds like a legal matter
+      const legalKeywords = ["court", "judge", "claim", "dispute", "rights", "petition", "appeal", "contract", "property", "crime", "illegal", "fraud", "damage", "agreement"];
+      const hasLegalContext = legalKeywords.some(keyword => data.description.toLowerCase().includes(keyword));
+      
+      if (!hasLegalContext && wordCount < 30) { 
+        // If it's short and has no legal keywords, flag it.
+        // If it's long (>30 words), we give it the benefit of doubt in this simple check.
+         return res.status(400).json({ error: "AI Validation Failed: Description does not appear to contain relevant legal context. Please verify your details." });
+      }
+      
+      // 3. Faceless Scrutiny Allocation
+      const citizen = await storage.getUser(req.user!.id);
+      if (!citizen) return res.status(404).json({ error: "Citizen not found" });
+
+      let scrutinyOfficialId: string | undefined = undefined;
+      // If citizen has a district, find an official from a DIFFERENT district
+      if (citizen.district) {
+         const scrutinyOfficial = await storage.findScrutinyOfficial(citizen.district);
+         if (scrutinyOfficial) {
+            scrutinyOfficialId = scrutinyOfficial.id;
+         }
+      } else {
+         // Fallback if no district: assign any official or handle as generic
+         // For now, we'll try to find *any* official if district is missing
+         const scrutinyOfficial = await storage.findScrutinyOfficial("NON_EXISTENT_DISTRICT");
+          if (scrutinyOfficial) {
+            scrutinyOfficialId = scrutinyOfficial.id;
+         }
+      }
+
+      const citizenId = req.user!.id;
+      const newCase = await storage.createCase(data, citizenId, {
+        scrutinyOfficialId,
+        filingDistrict: citizen.district || undefined
+      });
+      
+      // Update official's assigned count if assigned
+      if (scrutinyOfficialId) {
+         const official = await storage.getUser(scrutinyOfficialId); 
+         if (official) {
+             await storage.updateUserStats(
+                 official.id, 
+                 official.rating || 0, 
+                 official.solvedCount || 0, 
+                 (official.assignedCount || 0) + 1
+             );
+         }
+      }
+
+      res.json(newCase);  // Scrutiny Tasks for Officials
+  app.get("/api/judiciary/scrutiny-tasks", authenticateToken, requireRole("official"), async (req: Request, res: Response) => {
+    try {
+      const cases = await storage.getScrutinyCasesForOfficial(req.user!.id);
+      
+      // SANITIZATION: Explicitly exclude citizenId
+      const sanitizedCases = cases.map(c => ({
+        id: c.id,
+        title: c.title,
+        description: c.description,
+        type: c.type,
+        status: c.status,
+        priority: c.priority,
+        caseNumber: c.caseNumber,
+        filingDate: c.filedDate,
+        filingDistrict: c.filingDistrict,
+        scrutinyOfficialId: c.scrutinyOfficialId,
+        isAnonymized: true
+      }));
+
+      res.json(sanitizedCases);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/judiciary/case/:id/scrutiny-decision", authenticateToken, requireRole("official"), async (req: Request, res: Response) => {
+    try {
+      const { status, reason } = req.body;
+      const caseItem = await storage.getCase(req.params.id);
+      
+      if (!caseItem) return res.status(404).json({ error: "Case not found" });
+      if (caseItem.scrutinyOfficialId !== req.user!.id) {
+        return res.status(403).json({ error: "Not authorized to review this case" });
+      }
+
+      // Update case status
+      const updatedCase = await storage.updateCaseStatus(req.params.id, status, reason);
+      
+      // If approved (Pending), maybe notify citizen? (Out of scope for now)
+      // If rejected, maybe notify citizen?
+
+      res.json(updatedCase);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/judiciary/my-cases", authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const allCases = await storage.getAllCases();
+      const myCases = allCases.filter(c => c.citizenId === req.user!.id);
+      res.json(myCases);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/judiciary/auto-schedule", async (req: Request, res: Response) => {
+    try {
+      const { caseId } = req.body;
+      if (!caseId) return res.status(400).json({ error: "Case ID is required" });
+      
+      const hearing = await storage.assignNextDate(caseId);
+      res.json(hearing);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/judiciary/performance/:judgeId", async (req: Request, res: Response) => {
+    try {
+      const judge = await storage.getJudgePerformance(req.params.judgeId);
+      res.json(judge);
+    } catch (error: any) {
+      res.status(404).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/judiciary/hearings/:caseId", async (req: Request, res: Response) => {
+    try {
+      const hearings = await storage.getHearingsByCaseId(req.params.caseId);
+      res.json(hearings);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/judiciary/cases/:id", authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const caseItem = await storage.getCase(req.params.id);
+      if (!caseItem) return res.status(404).json({ error: "Case not found" });
+      res.json(caseItem);
+    } catch (error: any) {
+>>>>>>> 578c65f8ca1e11eedee3d65df53fd74bf92fcf30
       res.status(500).json({ error: error.message });
     }
   });
