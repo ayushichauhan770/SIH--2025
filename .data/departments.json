@@ -1,289 +1,289 @@
 {
-  "1ee64a6e-5dc1-4af4-a221-9ed3f4c5079f": {
+  "15df4c3d-45ea-45a1-92e1-385c2cae0142": {
     "name": "Aadhaar – Unique Identification Authority of India (UIDAI)",
     "description": "Government services for Aadhaar",
     "image": null,
-    "id": "1ee64a6e-5dc1-4af4-a221-9ed3f4c5079f",
-    "createdAt": "2025-12-08T05:22:59.608Z"
+    "id": "15df4c3d-45ea-45a1-92e1-385c2cae0142",
+    "createdAt": "2025-12-08T07:22:44.348Z"
   },
-  "69dad967-0d30-44c7-8964-f25e7e7c1e4a": {
+  "b18ac798-fb97-4fe8-ac53-4e175085b50e": {
     "name": "Animal Husbandry & Dairying – Department of Animal Husbandry and Dairying",
     "description": "Government services for Animal Husbandry & Dairying",
     "image": null,
-    "id": "69dad967-0d30-44c7-8964-f25e7e7c1e4a",
-    "createdAt": "2025-12-08T05:22:59.614Z"
+    "id": "b18ac798-fb97-4fe8-ac53-4e175085b50e",
+    "createdAt": "2025-12-08T07:22:44.352Z"
   },
-  "7f8de09e-72f7-4708-81a5-79b8210c1037": {
+  "8d7a46c0-7774-48ea-8cf4-24d52637f6a7": {
     "name": "Agriculture – Ministry of Agriculture and Farmers Welfare",
     "description": "Government services for Agriculture",
     "image": null,
-    "id": "7f8de09e-72f7-4708-81a5-79b8210c1037",
-    "createdAt": "2025-12-08T05:22:59.626Z"
+    "id": "8d7a46c0-7774-48ea-8cf4-24d52637f6a7",
+    "createdAt": "2025-12-08T07:22:44.361Z"
   },
-  "6641a8db-94cc-4526-b898-dcc673d39f9c": {
+  "7c301265-3b4b-450d-ae1b-6b68ead44814": {
     "name": "CBSE – Central Board of Secondary Education",
     "description": "Government services for CBSE",
     "image": null,
-    "id": "6641a8db-94cc-4526-b898-dcc673d39f9c",
-    "createdAt": "2025-12-08T05:22:59.639Z"
+    "id": "7c301265-3b4b-450d-ae1b-6b68ead44814",
+    "createdAt": "2025-12-08T07:22:44.370Z"
   },
-  "0ada3657-b6e8-4818-8a0c-f87edd93f0b7": {
+  "621c99f4-631d-4458-9d32-8846fe20bbbe": {
     "name": "Central Public Works Department (CPWD)",
     "description": "Government services for Central Public Works Department (CPWD)",
     "image": null,
-    "id": "0ada3657-b6e8-4818-8a0c-f87edd93f0b7",
-    "createdAt": "2025-12-08T05:22:59.652Z"
+    "id": "621c99f4-631d-4458-9d32-8846fe20bbbe",
+    "createdAt": "2025-12-08T07:22:44.374Z"
   },
-  "31140d37-22d5-4c1d-9a7f-b32ee2dd248c": {
+  "bdbaf9b1-3f9b-4287-a3f2-c03185e1d9b1": {
     "name": "Consumer Affairs – Department of Consumer Affairs",
     "description": "Government services for Consumer Affairs",
     "image": null,
-    "id": "31140d37-22d5-4c1d-9a7f-b32ee2dd248c",
-    "createdAt": "2025-12-08T05:22:59.663Z"
+    "id": "bdbaf9b1-3f9b-4287-a3f2-c03185e1d9b1",
+    "createdAt": "2025-12-08T07:22:44.378Z"
   },
-  "f510d984-c06c-4923-aed6-c0c1a8632da0": {
+  "613cb31c-dbf0-48b9-a7b8-7a2f771b41c8": {
     "name": "Corporate Affairs – Ministry of Corporate Affairs",
     "description": "Government services for Corporate Affairs",
     "image": null,
-    "id": "f510d984-c06c-4923-aed6-c0c1a8632da0",
-    "createdAt": "2025-12-08T05:22:59.674Z"
+    "id": "613cb31c-dbf0-48b9-a7b8-7a2f771b41c8",
+    "createdAt": "2025-12-08T07:22:44.382Z"
   },
-  "72fe6a90-fe62-48b8-b1eb-31ca962a5679": {
+  "7b68360b-b5e0-4b8e-86ce-2ff394b1740e": {
     "name": "Education – Ministry of Education",
     "description": "Government services for Education",
     "image": null,
-    "id": "72fe6a90-fe62-48b8-b1eb-31ca962a5679",
-    "createdAt": "2025-12-08T05:22:59.681Z"
+    "id": "7b68360b-b5e0-4b8e-86ce-2ff394b1740e",
+    "createdAt": "2025-12-08T07:22:44.387Z"
   },
-  "c5de9ee2-8ae8-41a8-89ae-b04967a10d1b": {
+  "6db54912-a22f-48fc-9926-948c599b7f58": {
     "name": "Electricity – Ministry of Power",
     "description": "Government services for Electricity",
     "image": null,
-    "id": "c5de9ee2-8ae8-41a8-89ae-b04967a10d1b",
-    "createdAt": "2025-12-08T05:22:59.693Z"
+    "id": "6db54912-a22f-48fc-9926-948c599b7f58",
+    "createdAt": "2025-12-08T07:22:44.389Z"
   },
-  "ca2034ec-bfd9-4d09-9e85-79e0a051aa0f": {
+  "9fd82355-a0ce-4469-9a28-2c776b4f2e11": {
     "name": "Election Commission of India (ECI)",
     "description": "Government services for Election Commission of India (ECI)",
     "image": null,
-    "id": "ca2034ec-bfd9-4d09-9e85-79e0a051aa0f",
-    "createdAt": "2025-12-08T05:22:59.700Z"
+    "id": "9fd82355-a0ce-4469-9a28-2c776b4f2e11",
+    "createdAt": "2025-12-08T07:22:44.392Z"
   },
-  "cee77ffa-b69e-4a08-959f-f144fe9c49ad": {
+  "0351f393-2ab3-4268-9eb4-121188793c00": {
     "name": "Employees' Provident Fund Organisation (EPFO)",
     "description": "Government services for Employees' Provident Fund Organisation (EPFO)",
     "image": null,
-    "id": "cee77ffa-b69e-4a08-959f-f144fe9c49ad",
-    "createdAt": "2025-12-08T05:22:59.704Z"
+    "id": "0351f393-2ab3-4268-9eb4-121188793c00",
+    "createdAt": "2025-12-08T07:22:44.395Z"
   },
-  "db87d585-ee8b-42be-a202-1beb93c230aa": {
+  "27883124-2484-4a05-ba71-20ca95332cc8": {
     "name": "Employees' State Insurance Corporation (ESIC)",
     "description": "Government services for Employees' State Insurance Corporation (ESIC)",
     "image": null,
-    "id": "db87d585-ee8b-42be-a202-1beb93c230aa",
-    "createdAt": "2025-12-08T05:22:59.710Z"
+    "id": "27883124-2484-4a05-ba71-20ca95332cc8",
+    "createdAt": "2025-12-08T07:22:44.398Z"
   },
-  "90f1530c-8b8a-462c-acc1-dfec2cbac3ee": {
+  "944772ee-db5c-4d04-bdad-9dd5c927de55": {
     "name": "Finance – Ministry of Finance",
     "description": "Government services for Finance",
     "image": null,
-    "id": "90f1530c-8b8a-462c-acc1-dfec2cbac3ee",
-    "createdAt": "2025-12-08T05:22:59.712Z"
+    "id": "944772ee-db5c-4d04-bdad-9dd5c927de55",
+    "createdAt": "2025-12-08T07:22:44.400Z"
   },
-  "a10de9a4-00ca-4d3f-b0af-3f30104ceaa5": {
+  "88b17b7a-387d-443f-9c22-10cc46722f92": {
     "name": "Food & Civil Supplies – Department of Food and Public Distribution",
     "description": "Government services for Food & Civil Supplies",
     "image": null,
-    "id": "a10de9a4-00ca-4d3f-b0af-3f30104ceaa5",
-    "createdAt": "2025-12-08T05:22:59.716Z"
+    "id": "88b17b7a-387d-443f-9c22-10cc46722f92",
+    "createdAt": "2025-12-08T07:22:44.404Z"
   },
-  "e4fc6600-a741-4687-a4fe-fb5318627ab8": {
+  "97e560b5-42a4-4067-9436-fe8bbd4e7b4c": {
     "name": "Forest – Ministry of Environment, Forest and Climate Change",
     "description": "Government services for Forest",
     "image": null,
-    "id": "e4fc6600-a741-4687-a4fe-fb5318627ab8",
-    "createdAt": "2025-12-08T05:22:59.718Z"
+    "id": "97e560b5-42a4-4067-9436-fe8bbd4e7b4c",
+    "createdAt": "2025-12-08T07:22:44.406Z"
   },
-  "5c922759-7eaa-474f-a09e-b3357b7139ce": {
+  "b817856c-3368-4cfa-8d6b-be02a57774ef": {
     "name": "Health – Ministry of Health and Family Welfare",
     "description": "Government services for Health",
     "image": null,
-    "id": "5c922759-7eaa-474f-a09e-b3357b7139ce",
-    "createdAt": "2025-12-08T05:22:59.720Z"
+    "id": "b817856c-3368-4cfa-8d6b-be02a57774ef",
+    "createdAt": "2025-12-08T07:22:44.409Z"
   },
-  "f221be20-8eee-403c-b92c-e68a3011c316": {
+  "01e37967-3da9-4a7f-94c3-34d3977f94e5": {
     "name": "Home Affairs – Ministry of Home Affairs",
     "description": "Government services for Home Affairs",
     "image": null,
-    "id": "f221be20-8eee-403c-b92c-e68a3011c316",
-    "createdAt": "2025-12-08T05:22:59.723Z"
+    "id": "01e37967-3da9-4a7f-94c3-34d3977f94e5",
+    "createdAt": "2025-12-08T07:22:44.411Z"
   },
-  "96f26af2-678d-4f2f-a22c-9d51dcd2d0e6": {
+  "0dfa1a90-d935-4239-a62d-098bdfedce12": {
     "name": "Income Tax Department (CBDT)",
     "description": "Government services for Income Tax Department (CBDT)",
     "image": null,
-    "id": "96f26af2-678d-4f2f-a22c-9d51dcd2d0e6",
-    "createdAt": "2025-12-08T05:22:59.726Z"
+    "id": "0dfa1a90-d935-4239-a62d-098bdfedce12",
+    "createdAt": "2025-12-08T07:22:44.413Z"
   },
-  "f49815aa-2f23-41cd-bdf3-f0e16485cf58": {
+  "04e9ed22-4339-4b2d-9d0a-71cca99a2a65": {
     "name": "Industrial Development – Department for Promotion of Industry and Internal Trade (DPIIT)",
     "description": "Government services for Industrial Development",
     "image": null,
-    "id": "f49815aa-2f23-41cd-bdf3-f0e16485cf58",
-    "createdAt": "2025-12-08T05:22:59.728Z"
+    "id": "04e9ed22-4339-4b2d-9d0a-71cca99a2a65",
+    "createdAt": "2025-12-08T07:22:44.415Z"
   },
-  "8314063d-896b-4318-84af-c4c160db22b6": {
+  "5dd61fb2-b84d-47b5-b5fa-4865f397de9c": {
     "name": "Labour – Ministry of Labour and Employment",
     "description": "Government services for Labour",
     "image": null,
-    "id": "8314063d-896b-4318-84af-c4c160db22b6",
-    "createdAt": "2025-12-08T05:22:59.731Z"
+    "id": "5dd61fb2-b84d-47b5-b5fa-4865f397de9c",
+    "createdAt": "2025-12-08T07:22:44.417Z"
   },
-  "430fc57c-b187-4f1d-a09a-4411c3e8eda9": {
+  "95520511-d13c-4c85-90de-15450211e471": {
     "name": "Minority Affairs – Ministry of Minority Affairs",
     "description": "Government services for Minority Affairs",
     "image": null,
-    "id": "430fc57c-b187-4f1d-a09a-4411c3e8eda9",
-    "createdAt": "2025-12-08T05:22:59.733Z"
+    "id": "95520511-d13c-4c85-90de-15450211e471",
+    "createdAt": "2025-12-08T07:22:44.419Z"
   },
-  "27f150e1-ce38-4969-bacb-c2fb15e3d1f7": {
+  "a9042e22-c9f0-4431-a05f-77510dd0181a": {
     "name": "Municipal Corporation / Urban Local Bodies (ULBs)",
     "description": "Government services for Municipal Corporation / Urban Local Bodies (ULBs)",
     "image": null,
-    "id": "27f150e1-ce38-4969-bacb-c2fb15e3d1f7",
-    "createdAt": "2025-12-08T05:22:59.736Z"
+    "id": "a9042e22-c9f0-4431-a05f-77510dd0181a",
+    "createdAt": "2025-12-08T07:22:44.422Z"
   },
-  "30f48066-cb59-4025-833e-882c04556cf6": {
+  "1b807ab7-96bc-4d9e-800d-a0eb760dfee4": {
     "name": "Panchayati Raj – Ministry of Panchayati Raj",
     "description": "Government services for Panchayati Raj",
     "image": null,
-    "id": "30f48066-cb59-4025-833e-882c04556cf6",
-    "createdAt": "2025-12-08T05:22:59.738Z"
+    "id": "1b807ab7-96bc-4d9e-800d-a0eb760dfee4",
+    "createdAt": "2025-12-08T07:22:44.423Z"
   },
-  "2c56dc08-29a9-49af-b52d-0bf153c33a5a": {
+  "19c2512b-2caa-4d95-af89-b29b241e45b6": {
     "name": "Passport – Ministry of External Affairs (Passport Seva)",
     "description": "Government services for Passport",
     "image": null,
-    "id": "2c56dc08-29a9-49af-b52d-0bf153c33a5a",
-    "createdAt": "2025-12-08T05:22:59.741Z"
+    "id": "19c2512b-2caa-4d95-af89-b29b241e45b6",
+    "createdAt": "2025-12-08T07:22:44.425Z"
   },
-  "1c0dc00f-6282-4711-9b71-bc4492483796": {
+  "d079f2c3-2880-4607-b570-1bb46d0d1a7a": {
     "name": "Personnel & Training – Department of Personnel and Training (DoPT)",
     "description": "Government services for Personnel & Training",
     "image": null,
-    "id": "1c0dc00f-6282-4711-9b71-bc4492483796",
-    "createdAt": "2025-12-08T05:22:59.743Z"
+    "id": "d079f2c3-2880-4607-b570-1bb46d0d1a7a",
+    "createdAt": "2025-12-08T07:22:44.426Z"
   },
-  "5ed4bcc3-65f9-4820-a789-0d5d92effeeb": {
+  "8b9e56bc-bd86-47db-a8c1-30344bfa2f7f": {
     "name": "Police – State Police Department",
     "description": "Government services for Police",
     "image": null,
-    "id": "5ed4bcc3-65f9-4820-a789-0d5d92effeeb",
-    "createdAt": "2025-12-08T05:22:59.746Z"
+    "id": "8b9e56bc-bd86-47db-a8c1-30344bfa2f7f",
+    "createdAt": "2025-12-08T07:22:44.428Z"
   },
-  "98336eb0-daea-4de4-9e12-4494651750fa": {
+  "103fba3a-42e4-4836-885f-a3fa2a902e21": {
     "name": "Pollution – Central Pollution Control Board (CPCB)",
     "description": "Government services for Pollution",
     "image": null,
-    "id": "98336eb0-daea-4de4-9e12-4494651750fa",
-    "createdAt": "2025-12-08T05:22:59.750Z"
+    "id": "103fba3a-42e4-4836-885f-a3fa2a902e21",
+    "createdAt": "2025-12-08T07:22:44.430Z"
   },
-  "03111777-5af9-49d9-9107-c466722cbbca": {
+  "7c21220f-c92a-4434-8315-df382643457d": {
     "name": "Post Office – Department of Posts",
     "description": "Government services for Post Office",
     "image": null,
-    "id": "03111777-5af9-49d9-9107-c466722cbbca",
-    "createdAt": "2025-12-08T05:22:59.753Z"
+    "id": "7c21220f-c92a-4434-8315-df382643457d",
+    "createdAt": "2025-12-08T07:22:44.431Z"
   },
-  "bd4fed5e-af88-476d-81db-8f17570ef811": {
+  "c331d166-7d46-4473-ac0c-fc385741966c": {
     "name": "Public Grievances – Department of Administrative Reforms and Public Grievances (DARPG)",
     "description": "Government services for Public Grievances",
     "image": null,
-    "id": "bd4fed5e-af88-476d-81db-8f17570ef811",
-    "createdAt": "2025-12-08T05:22:59.757Z"
+    "id": "c331d166-7d46-4473-ac0c-fc385741966c",
+    "createdAt": "2025-12-08T07:22:44.433Z"
   },
-  "ed99ba09-204c-47a7-993e-4df856f0fc6f": {
+  "d10e29e4-6296-4573-82bb-b98302db84ea": {
     "name": "Public Works – Public Works Department (PWD)",
     "description": "Government services for Public Works",
     "image": null,
-    "id": "ed99ba09-204c-47a7-993e-4df856f0fc6f",
-    "createdAt": "2025-12-08T05:22:59.765Z"
+    "id": "d10e29e4-6296-4573-82bb-b98302db84ea",
+    "createdAt": "2025-12-08T07:22:44.435Z"
   },
-  "806c3a61-f178-465c-b267-ec343cbe8444": {
+  "e0b11fb3-de0a-4684-ac36-0ae615e0b047": {
     "name": "Railways – Ministry of Railways",
     "description": "Government services for Railways",
     "image": null,
-    "id": "806c3a61-f178-465c-b267-ec343cbe8444",
-    "createdAt": "2025-12-08T05:22:59.777Z"
+    "id": "e0b11fb3-de0a-4684-ac36-0ae615e0b047",
+    "createdAt": "2025-12-08T07:22:44.437Z"
   },
-  "43d2b766-2156-423c-8e53-b0604fcd0eb5": {
+  "4eaffd2c-15ab-4fd2-9245-b9f21b25b6fa": {
     "name": "Revenue – Department of Revenue (Ministry of Finance)",
     "description": "Government services for Revenue",
     "image": null,
-    "id": "43d2b766-2156-423c-8e53-b0604fcd0eb5",
-    "createdAt": "2025-12-08T05:22:59.784Z"
+    "id": "4eaffd2c-15ab-4fd2-9245-b9f21b25b6fa",
+    "createdAt": "2025-12-08T07:22:44.439Z"
   },
-  "3259fb45-ead1-4c4e-b092-362d44394904": {
+  "365edf13-6d2a-40b1-8a39-7ae827aa1b46": {
     "name": "Road Transport – Ministry of Road Transport and Highways (MoRTH)",
     "description": "Government services for Road Transport",
     "image": null,
-    "id": "3259fb45-ead1-4c4e-b092-362d44394904",
-    "createdAt": "2025-12-08T05:22:59.791Z"
+    "id": "365edf13-6d2a-40b1-8a39-7ae827aa1b46",
+    "createdAt": "2025-12-08T07:22:44.440Z"
   },
-  "458be869-6722-4246-b09c-6451196448a4": {
+  "4ee4bb06-c148-447e-8b52-7f2c7ebe3b3a": {
     "name": "Rural Development – Ministry of Rural Development",
     "description": "Government services for Rural Development",
     "image": null,
-    "id": "458be869-6722-4246-b09c-6451196448a4",
-    "createdAt": "2025-12-08T05:22:59.798Z"
+    "id": "4ee4bb06-c148-447e-8b52-7f2c7ebe3b3a",
+    "createdAt": "2025-12-08T07:22:44.443Z"
   },
-  "97fd834e-6ffe-4637-bb38-f6f7163bee82": {
+  "cf4a1e84-fae8-492d-9042-4b2ff9965741": {
     "name": "Science & Technology – Ministry of Science and Technology",
     "description": "Government services for Science & Technology",
     "image": null,
-    "id": "97fd834e-6ffe-4637-bb38-f6f7163bee82",
-    "createdAt": "2025-12-08T05:22:59.808Z"
+    "id": "cf4a1e84-fae8-492d-9042-4b2ff9965741",
+    "createdAt": "2025-12-08T07:22:44.445Z"
   },
-  "78f71070-18f6-48ba-9b3e-a92336a7e2df": {
+  "673fa2a2-9c59-41bf-9d01-5d8f229ab2b2": {
     "name": "Skills – Ministry of Skill Development and Entrepreneurship",
     "description": "Government services for Skills",
     "image": null,
-    "id": "78f71070-18f6-48ba-9b3e-a92336a7e2df",
-    "createdAt": "2025-12-08T05:22:59.813Z"
+    "id": "673fa2a2-9c59-41bf-9d01-5d8f229ab2b2",
+    "createdAt": "2025-12-08T07:22:44.447Z"
   },
-  "eacf0ace-7b2e-40e8-ac33-d75e882b7342": {
+  "f991bf96-50d9-481a-b138-ee97c4f4e259": {
     "name": "Social Justice – Ministry of Social Justice and Empowerment",
     "description": "Government services for Social Justice",
     "image": null,
-    "id": "eacf0ace-7b2e-40e8-ac33-d75e882b7342",
-    "createdAt": "2025-12-08T05:22:59.824Z"
+    "id": "f991bf96-50d9-481a-b138-ee97c4f4e259",
+    "createdAt": "2025-12-08T07:22:44.449Z"
   },
-  "a51b08e1-d90d-48ae-8d39-a5558a223d5c": {
+  "90a2e32c-1e5a-4bc6-9bab-7556e1e26ce7": {
     "name": "Telecommunications – Department of Telecommunications (DoT)",
     "description": "Government services for Telecommunications",
     "image": null,
-    "id": "a51b08e1-d90d-48ae-8d39-a5558a223d5c",
-    "createdAt": "2025-12-08T05:22:59.835Z"
+    "id": "90a2e32c-1e5a-4bc6-9bab-7556e1e26ce7",
+    "createdAt": "2025-12-08T07:22:44.451Z"
   },
-  "36fd46ba-8928-4025-9b09-1f37b373ab20": {
+  "4140c37e-70d7-4d4c-a161-2aaa59ed5ccb": {
     "name": "Urban Development – Ministry of Housing and Urban Affairs (MoHUA)",
     "description": "Government services for Urban Development",
     "image": null,
-    "id": "36fd46ba-8928-4025-9b09-1f37b373ab20",
-    "createdAt": "2025-12-08T05:22:59.850Z"
+    "id": "4140c37e-70d7-4d4c-a161-2aaa59ed5ccb",
+    "createdAt": "2025-12-08T07:22:44.452Z"
   },
-  "26ca5ebc-062e-4dd3-bd45-da282ee2c3c5": {
+  "8ce7eb79-5279-493d-a90e-cd666af5ec15": {
     "name": "Water – Ministry of Jal Shakti",
     "description": "Government services for Water",
     "image": null,
-    "id": "26ca5ebc-062e-4dd3-bd45-da282ee2c3c5",
-    "createdAt": "2025-12-08T05:22:59.864Z"
+    "id": "8ce7eb79-5279-493d-a90e-cd666af5ec15",
+    "createdAt": "2025-12-08T07:22:44.454Z"
   },
-  "4b139b2a-c5c1-47d6-91d5-699847ce1c48": {
+  "f79bd9c2-8c65-4bdf-a922-6fd25fae3800": {
     "name": "Women & Child Development – Ministry of Women and Child Development",
     "description": "Government services for Women & Child Development",
     "image": null,
-    "id": "4b139b2a-c5c1-47d6-91d5-699847ce1c48",
-    "createdAt": "2025-12-08T05:22:59.873Z"
+    "id": "f79bd9c2-8c65-4bdf-a922-6fd25fae3800",
+    "createdAt": "2025-12-08T07:22:44.455Z"
   }
 }

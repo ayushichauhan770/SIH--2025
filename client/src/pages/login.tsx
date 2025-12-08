@@ -259,7 +259,14 @@ export default function Login() {
   // Step 2: Login Form
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F5F5F7] dark:bg-slate-950 font-['Outfit',sans-serif] p-4">
-      <div className="fixed top-6 right-6 z-50">
+      <div className="fixed top-6 right-6 z-50 flex items-center gap-3">
+        <Button
+          variant="outline"
+          onClick={() => setLocation("/register")}
+          className="rounded-full border-slate-200 dark:border-slate-700 hover:bg-[#F5F5F7] dark:hover:bg-slate-800 text-[#1d1d1f] dark:text-white font-medium"
+        >
+          Get Started
+        </Button>
         <ThemeToggle />
       </div>
 

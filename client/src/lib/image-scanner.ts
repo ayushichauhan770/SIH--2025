@@ -212,20 +212,20 @@ export async function validateImageAsDocument(
             details: result,
         };
     } else {
-        let message = '✗ This image does not appear to be a text document.';
+        let message = 'This image is not a document.';
 
         switch (result.documentType) {
             case 'empty':
-                message = '✗ No text detected in this image. Please upload a document with readable text.';
+                message = 'This image is not a document. Please upload a document image (scanned document, certificate, ID card, etc.).';
                 break;
             case 'photo':
-                message = '✗ This appears to be a photo or picture. Please upload a text document instead (PDF screenshot, scanned document, etc.).';
+                message = 'This image is not a document. Please upload a document image instead (scanned document, certificate, ID card, etc.).';
                 break;
             case 'diagram':
-                message = '✗ This appears to be a diagram or graphic. Please upload a document with text content.';
+                message = 'This image is not a document. Please upload a document image with text content.';
                 break;
             case 'mixed':
-                message = '✗ Very little text detected. Please ensure your document image has clear, readable text.';
+                message = 'This image is not a document. Please upload a document image with clear, readable text.';
                 break;
         }
 

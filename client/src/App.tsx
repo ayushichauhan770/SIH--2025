@@ -13,6 +13,7 @@ import CitizenDashboard from "@/pages/citizen/dashboard";
 import SubmitApplication from "@/pages/citizen/submit-application";
 import TrackApplication from "@/pages/citizen/track-application";
 import ApplicationDetails from "@/pages/citizen/application-details";
+import Contact from "@/pages/contact";
 import OfficialDashboard from "@/pages/official/dashboard";
 import AdminDashboard from "@/pages/admin/dashboard";
 import CandidateSelection from "@/pages/candidate-selection";
@@ -44,6 +45,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
       <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/contact" component={Contact} />
       <Route path="/election/candidates" component={CandidateSelection} />
 
       <Route path="/citizen/dashboard">

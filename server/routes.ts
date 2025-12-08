@@ -599,11 +599,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Get unassigned applications for the department and sub-department
         const allUnassignedApps = await storage.getUnassignedApplicationsByDepartment(user.department);
-        
+
         // Filter by sub-department if official has one assigned
         let unassignedApps = allUnassignedApps;
         if (user.subDepartment) {
-          unassignedApps = allUnassignedApps.filter(app => 
+          unassignedApps = allUnassignedApps.filter(app =>
             app.subDepartment === user.subDepartment || !app.subDepartment
           );
         }
@@ -622,8 +622,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         unassignedApps.forEach(app => appMap.set(app.id, app));
         assignedAppsWithRatings.forEach(app => appMap.set(app.id, app));
 
+        // Sort by priority (High > Medium > Low), then by submission date
+        const priorityOrder = { High: 3, Medium: 2, Low: 1 };
         applications = Array.from(appMap.values())
-          .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+          .sort((a, b) => {
+            const priorityDiff = (priorityOrder[b.priority as keyof typeof priorityOrder] || 0) - (priorityOrder[a.priority as keyof typeof priorityOrder] || 0);
+            if (priorityDiff !== 0) return priorityDiff;
+            return new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();
+          });
       }
       res.json(applications);
     } catch (error: any) {
@@ -723,12 +729,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Determine which official should receive this rating
       let targetOfficialId = application.officialId;
-      
+
       // If no official is assigned but department exists, find an official from that department
       if (!targetOfficialId && application.department) {
         const allOfficials = await storage.getAllOfficials();
         const normalizedDept = application.department.split('–')[0].trim();
-        
+
         let deptOfficials = allOfficials.filter(u => {
           if (!u.department) return false;
           const uDept = u.department.split('–')[0].trim();
@@ -737,7 +743,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // If sub-department exists, prefer officials with matching sub-department
         if (application.subDepartment && deptOfficials.length > 0) {
-          const subDeptOfficials = deptOfficials.filter(u => 
+          const subDeptOfficials = deptOfficials.filter(u =>
             u.subDepartment === application.subDepartment
           );
           if (subDeptOfficials.length > 0) {
@@ -756,7 +762,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         citizenId: req.user!.id,
         officialId: targetOfficialId, // Include the official who handled the application/department
       });
-      
+
       const feedback = await storage.createFeedback(data);
 
       // Update Official Rating
@@ -833,12 +839,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Determine which official should receive this rating
       // Priority: 1. Assigned official, 2. Find official from department
       let targetOfficialId = application.officialId;
-      
+
       // If no official is assigned but department exists, find an official from that department
       if (!targetOfficialId && application.department) {
         const allOfficials = await storage.getAllOfficials();
         const normalizedDept = application.department.split('–')[0].trim();
-        
+
         // Find officials matching the department
         let deptOfficials = allOfficials.filter(u => {
           if (!u.department) return false;
@@ -848,7 +854,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // If sub-department exists, prefer officials with matching sub-department
         if (application.subDepartment && deptOfficials.length > 0) {
-          const subDeptOfficials = deptOfficials.filter(u => 
+          const subDeptOfficials = deptOfficials.filter(u =>
             u.subDepartment === application.subDepartment
           );
           if (subDeptOfficials.length > 0) {
@@ -888,7 +894,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               official.solvedCount || 0,
               official.assignedCount || 0
             );
-            
+
             console.log(`Updated rating for official ${official.fullName}: ${avgRating.toFixed(1)}/5.0 (${allRatings.length} ratings)`);
           }
         }
@@ -937,7 +943,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("[OTP Generate] Request body:", req.body);
       const data = generateOtpSchema.parse(req.body);
-      
+
       // For password reset, validate that user exists
       if (data.purpose === "reset-password") {
         if (data.email) {
@@ -952,7 +958,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       }
-      
+
       const otp = generateOTP();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
@@ -1145,9 +1151,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hashedPassword = await bcrypt.hash(newPassword, 10);
       await storage.updateUserPassword(user.id, hashedPassword);
 
-      res.json({ 
+      res.json({
         message: "Password reset successful",
-        username: user.username 
+        username: user.username
       });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -1287,12 +1293,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (rating) {
           // Determine which official should receive this rating
           let targetOfficialId = app.officialId;
-          
+
           // If no official is assigned but department exists, find an official from that department
           if (!targetOfficialId && app.department) {
             const allOfficials = await storage.getAllOfficials();
             const normalizedDept = app.department.split('–')[0].trim();
-            
+
             let deptOfficials = allOfficials.filter(u => {
               if (!u.department) return false;
               const uDept = u.department.split('–')[0].trim();
@@ -1301,7 +1307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             // If sub-department exists, prefer officials with matching sub-department
             if (app.subDepartment && deptOfficials.length > 0) {
-              const subDeptOfficials = deptOfficials.filter(u => 
+              const subDeptOfficials = deptOfficials.filter(u =>
                 u.subDepartment === app.subDepartment
               );
               if (subDeptOfficials.length > 0) {
@@ -1363,12 +1369,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           try {
             // Determine which official should receive this rating
             let targetOfficialId = app.officialId;
-            
+
             // If no official is assigned but department exists, find an official from that department
             if (!targetOfficialId && app.department) {
               const allOfficials = await storage.getAllOfficials();
               const normalizedDept = app.department.split('–')[0].trim();
-              
+
               let deptOfficials = allOfficials.filter(u => {
                 if (!u.department) return false;
                 const uDept = u.department.split('–')[0].trim();
@@ -1377,7 +1383,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
               // If sub-department exists, prefer officials with matching sub-department
               if (app.subDepartment && deptOfficials.length > 0) {
-                const subDeptOfficials = deptOfficials.filter(u => 
+                const subDeptOfficials = deptOfficials.filter(u =>
                   u.subDepartment === app.subDepartment
                 );
                 if (subDeptOfficials.length > 0) {
@@ -1436,28 +1442,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const dept = app.department.trim();
             const newOfficial = await autoAssignApplication(app.id, dept, subDept, nextLevel);
             if (newOfficial) {
-              res.json({ 
+              res.json({
                 message: ratingSaved ? "Your feedback has been recorded. Application escalated and reassigned" : "Application escalated and reassigned",
                 official: newOfficial.officialName,
-                ratingSubmitted: ratingSaved 
+                ratingSubmitted: ratingSaved
               });
             } else {
-              res.json({ 
+              res.json({
                 message: ratingSaved ? "Your feedback has been recorded. Application escalated but no new official found. Pending assignment." : "Application escalated but no new official found. Pending assignment.",
-                ratingSubmitted: ratingSaved 
+                ratingSubmitted: ratingSaved
               });
             }
           } else {
             // Rating was saved successfully, but escalation failed due to missing department
-            res.json({ 
+            res.json({
               message: ratingSaved ? "Your feedback has been recorded successfully. Application will be reviewed." : "Application will be reviewed.",
-              ratingSubmitted: ratingSaved 
+              ratingSubmitted: ratingSaved
             });
           }
         } catch (escalationError: any) {
           // Rating was saved successfully, but escalation encountered an error
           console.error('Error during escalation after rating:', escalationError);
-          res.json({ 
+          res.json({
             message: ratingSaved ? "Your feedback has been recorded successfully. Application escalation encountered an issue but your rating was saved." : "Application escalation encountered an issue.",
             ratingSubmitted: ratingSaved,
             warning: ratingSaved ? "Please contact support if the application status doesn't update." : undefined
@@ -1550,10 +1556,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/department-rating", authenticateToken, requireRole("admin"), async (req: Request, res: Response) => {
     try {
       console.log("[Department Rating] Request from user:", req.user?.username);
-      
+
       const admin = await storage.getUser(req.user!.id);
       console.log("[Department Rating] Admin found:", admin?.fullName, "Department:", admin?.department);
-      
+
       if (!admin || !admin.department) {
         console.log("[Department Rating] No department assigned");
         return res.json({
@@ -1566,16 +1572,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all officials in the admin's department
       const allOfficials = await storage.getAllOfficials();
       console.log("[Department Rating] Total officials in system:", allOfficials.length);
-      
+
       const normalizedAdminDept = admin.department.split('–')[0].trim();
       console.log("[Department Rating] Normalized admin dept:", normalizedAdminDept);
-      
+
       const deptOfficials = allOfficials.filter(official => {
         if (!official.department) return false;
         const officialDept = official.department.split('–')[0].trim();
         return officialDept === normalizedAdminDept;
       });
-      
+
       console.log("[Department Rating] Officials in department:", deptOfficials.length);
 
       if (deptOfficials.length === 0) {
@@ -1609,7 +1615,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalRatings: allRatings.length,
         officialCount: deptOfficials.length,
       };
-      
+
       console.log("[Department Rating] Sending response:", result);
       res.json(result);
     } catch (error: any) {
@@ -1644,12 +1650,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rejectedCount = deptApps.filter(app => app.status === "Rejected").length;
       const pendingCount = deptApps.filter(app => ["Submitted", "Assigned", "In Progress"].includes(app.status)).length;
 
+      // Count solved and unsolved applications
+      // Solved: applications that are approved/auto-approved and marked as solved
+      const solvedCount = deptApps.filter(app =>
+        (app.status === "Approved" || app.status === "Auto-Approved") && app.isSolved === true
+      ).length;
+
+      // Unsolved: applications that are approved/auto-approved but not marked as solved, or rejected
+      const unsolvedCount = deptApps.filter(app =>
+        ((app.status === "Approved" || app.status === "Auto-Approved") && (app.isSolved === false || app.isSolved === null)) ||
+        app.status === "Rejected"
+      ).length;
+
+      // Count warnings sent to officials in this department
+      const allOfficials = await storage.getAllOfficials();
+      const deptOfficials = allOfficials.filter(o =>
+        o.department &&
+        o.department.split('–')[0].trim() === normalizedDept
+      );
+
+      let warningsSentCount = 0;
+      for (const official of deptOfficials) {
+        const warnings = await storage.getWarnings(official.id);
+        warningsSentCount += warnings.length;
+      }
+
       res.json({
         totalApplications: firstTimeApps.length,
         assignedCount,
         approvedCount,
         rejectedCount,
         pendingCount,
+        solvedCount,
+        unsolvedCount,
+        warningsSent: warningsSentCount,
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -1662,7 +1696,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fetch all departments from the database
       const allDepartments = await storage.getAllDepartments();
       const allOfficials = await storage.getAllOfficials();
-      
+
       // Calculate ratings for each department based on citizen feedback
       const departmentRatingsArray = await Promise.all(
         allDepartments.map(async (dept) => {
@@ -1711,7 +1745,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Calculate overall website rating (average of all citizen ratings)
       const allRatings = departmentRatingsArray.reduce((acc, dept) => acc + dept.totalRatings, 0);
-      const totalRatingSum = departmentRatingsArray.reduce((acc, dept) => 
+      const totalRatingSum = departmentRatingsArray.reduce((acc, dept) =>
         acc + (dept.averageRating * dept.totalRatings), 0
       );
       const websiteRating = allRatings > 0

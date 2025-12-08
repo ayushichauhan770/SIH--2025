@@ -110,54 +110,58 @@ export default function CitizenDashboard() {
         {/* Horizontal Stats Row - Compact */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card
-            className={`group relative border-0 overflow-hidden bg-white dark:bg-slate-900 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-pointer rounded-[24px] flex flex-row items-center gap-4 p-4 ${filterStatus === 'all' ? 'ring-2 ring-[#0071e3]' : ''}`}
+            className={`group relative border-0 overflow-hidden bg-gradient-to-br from-blue-50 via-blue-100/50 to-indigo-50 dark:from-blue-950/30 dark:via-blue-900/20 dark:to-indigo-950/30 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer rounded-[24px] flex flex-row items-center gap-4 p-4 ${filterStatus === 'all' ? 'ring-2 ring-[#0071e3] shadow-md' : ''}`}
             onClick={() => setFilterStatus("all")}
           >
-            <div className="p-2.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-[#0071e3]">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-400/10 to-indigo-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="p-2.5 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/30 relative z-10">
               <LayoutDashboard className="h-5 w-5" />
             </div>
-            <div>
+            <div className="relative z-10">
               <div className="text-xl font-bold text-[#1d1d1f] dark:text-white leading-none">{stats.total}</div>
-              <div className="text-xs font-medium text-[#86868b] mt-1">Total</div>
+              <div className="text-xs font-medium text-[#86868b] dark:text-slate-400 mt-1">Total</div>
             </div>
           </Card>
 
           <Card
-            className={`group relative border-0 overflow-hidden bg-white dark:bg-slate-900 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-pointer rounded-[24px] flex flex-row items-center gap-4 p-4 ${filterStatus === 'pending' ? 'ring-2 ring-orange-500' : ''}`}
+            className={`group relative border-0 overflow-hidden bg-gradient-to-br from-orange-50 via-amber-100/50 to-yellow-50 dark:from-orange-950/30 dark:via-amber-900/20 dark:to-yellow-950/30 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer rounded-[24px] flex flex-row items-center gap-4 p-4 ${filterStatus === 'pending' ? 'ring-2 ring-orange-500 shadow-md' : ''}`}
             onClick={() => setFilterStatus("pending")}
           >
-            <div className="p-2.5 rounded-full bg-orange-50 dark:bg-orange-900/20 text-orange-500">
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-400/10 to-amber-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="p-2.5 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-lg shadow-orange-500/30 relative z-10">
               <Clock className="h-5 w-5" />
             </div>
-            <div>
+            <div className="relative z-10">
               <div className="text-xl font-bold text-[#1d1d1f] dark:text-white leading-none">{stats.pending}</div>
-              <div className="text-xs font-medium text-[#86868b] mt-1">Pending</div>
+              <div className="text-xs font-medium text-[#86868b] dark:text-slate-400 mt-1">Pending</div>
             </div>
           </Card>
 
           <Card
-            className={`group relative border-0 overflow-hidden bg-white dark:bg-slate-900 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-pointer rounded-[24px] flex flex-row items-center gap-4 p-4 ${filterStatus === 'approved' ? 'ring-2 ring-green-500' : ''}`}
+            className={`group relative border-0 overflow-hidden bg-gradient-to-br from-green-50 via-emerald-100/50 to-teal-50 dark:from-green-950/30 dark:via-emerald-900/20 dark:to-teal-950/30 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer rounded-[24px] flex flex-row items-center gap-4 p-4 ${filterStatus === 'approved' ? 'ring-2 ring-green-500 shadow-md' : ''}`}
             onClick={() => setFilterStatus("approved")}
           >
-            <div className="p-2.5 rounded-full bg-green-50 dark:bg-green-900/20 text-green-500">
+            <div className="absolute inset-0 bg-gradient-to-br from-green-400/10 to-emerald-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="p-2.5 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/30 relative z-10">
               <CheckCircle className="h-5 w-5" />
             </div>
-            <div>
+            <div className="relative z-10">
               <div className="text-xl font-bold text-[#1d1d1f] dark:text-white leading-none">{stats.approved}</div>
-              <div className="text-xs font-medium text-[#86868b] mt-1">Approved</div>
+              <div className="text-xs font-medium text-[#86868b] dark:text-slate-400 mt-1">Approved</div>
             </div>
           </Card>
 
           <Card
-            className={`group relative border-0 overflow-hidden bg-white dark:bg-slate-900 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-pointer rounded-[24px] flex flex-row items-center gap-4 p-4 ${filterStatus === 'rejected' ? 'ring-2 ring-red-500' : ''}`}
+            className={`group relative border-0 overflow-hidden bg-gradient-to-br from-red-50 via-rose-100/50 to-pink-50 dark:from-red-950/30 dark:via-rose-900/20 dark:to-pink-950/30 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer rounded-[24px] flex flex-row items-center gap-4 p-4 ${filterStatus === 'rejected' ? 'ring-2 ring-red-500 shadow-md' : ''}`}
             onClick={() => setFilterStatus("rejected")}
           >
-            <div className="p-2.5 rounded-full bg-red-50 dark:bg-red-900/20 text-red-500">
+            <div className="absolute inset-0 bg-gradient-to-br from-red-400/10 to-rose-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="p-2.5 rounded-full bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/30 relative z-10">
               <XCircle className="h-5 w-5" />
             </div>
-            <div>
+            <div className="relative z-10">
               <div className="text-xl font-bold text-[#1d1d1f] dark:text-white leading-none">{stats.rejected}</div>
-              <div className="text-xs font-medium text-[#86868b] mt-1">Rejected</div>
+              <div className="text-xs font-medium text-[#86868b] dark:text-slate-400 mt-1">Rejected</div>
             </div>
           </Card>
         </div>
@@ -168,21 +172,22 @@ export default function CitizenDashboard() {
           <div className="space-y-6">
             <div className="grid grid-cols-1 gap-4">
               <Card 
-                className="group relative border-0 overflow-hidden bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer rounded-[32px] h-40"
+                className="group relative border-0 overflow-hidden bg-gradient-to-br from-[#0071e3] via-blue-600 to-indigo-700 dark:from-blue-600 dark:via-indigo-700 dark:to-purple-800 text-white shadow-lg hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 cursor-pointer rounded-[32px] h-40"
                 onClick={() => setLocation("/citizen/submit")} 
                 data-testid="card-new-application"
               >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10" />
-                <CardHeader className="h-full flex flex-col justify-between p-6">
+                <div className="absolute top-0 right-0 w-40 h-40 bg-white/20 rounded-full blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500" />
+                <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-400/20 rounded-full blur-2xl -ml-12 -mb-12 group-hover:scale-125 transition-transform duration-500" />
+                <CardHeader className="h-full flex flex-col justify-between p-6 relative z-10">
                   <div className="flex justify-between items-start">
-                    <div className="p-2.5 rounded-2xl bg-white/20 backdrop-blur-md">
+                    <div className="p-2.5 rounded-2xl bg-white/30 backdrop-blur-md shadow-lg group-hover:scale-110 transition-transform">
                       <Plus className="h-5 w-5" />
                     </div>
-                    <ArrowRight className="h-5 w-5 opacity-50 group-hover:opacity-100 transition-opacity" />
+                    <ArrowRight className="h-5 w-5 opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                   </div>
                   <div>
                     <CardTitle className="text-xl font-bold tracking-tight mb-1">New Application</CardTitle>
-                    <CardDescription className="text-white/70 dark:text-black/60 font-medium text-xs">
+                    <CardDescription className="text-white/90 font-medium text-xs">
                       Start a new request
                     </CardDescription>
                   </div>
@@ -190,20 +195,21 @@ export default function CitizenDashboard() {
               </Card>
 
               <Card 
-                className="group relative border-0 overflow-hidden bg-white dark:bg-slate-900 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 cursor-pointer rounded-[32px] h-40"
+                className="group relative border-0 overflow-hidden bg-gradient-to-br from-purple-50 via-violet-100/50 to-fuchsia-50 dark:from-purple-950/40 dark:via-violet-900/30 dark:to-fuchsia-950/40 shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all duration-300 cursor-pointer rounded-[32px] h-40"
                 onClick={() => setLocation("/citizen/track")} 
                 data-testid="card-track-application"
               >
-                <CardHeader className="h-full flex flex-col justify-between p-6">
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-400/10 to-fuchsia-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <CardHeader className="h-full flex flex-col justify-between p-6 relative z-10">
                   <div className="flex justify-between items-start">
-                    <div className="p-2.5 rounded-2xl bg-purple-50 dark:bg-purple-900/20 text-purple-600">
+                    <div className="p-2.5 rounded-2xl bg-gradient-to-br from-purple-500 to-fuchsia-600 text-white shadow-lg shadow-purple-500/30 group-hover:scale-110 transition-transform">
                       <Search className="h-5 w-5" />
                     </div>
-                    <ArrowRight className="h-5 w-5 text-slate-300 group-hover:text-[#0071e3] transition-colors" />
+                    <ArrowRight className="h-5 w-5 text-purple-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
                   </div>
                   <div>
                     <CardTitle className="text-xl font-bold tracking-tight text-[#1d1d1f] dark:text-white mb-1">Track Status</CardTitle>
-                    <CardDescription className="text-[#86868b] font-medium text-xs">
+                    <CardDescription className="text-[#86868b] dark:text-slate-400 font-medium text-xs">
                       Check existing requests
                     </CardDescription>
                   </div>
@@ -266,14 +272,24 @@ export default function CitizenDashboard() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {filteredApplications.map(app => (
-                    <ApplicationCard
-                      key={app.id}
-                      application={app}
-                      onViewDetails={() => handleViewDetails(app.id)}
-                      className="!shadow-none !bg-[#f5f5f7] dark:!bg-slate-800 !rounded-[24px] hover:!bg-slate-200 dark:hover:!bg-slate-700"
-                    />
-                  ))}
+                  {filteredApplications.map((app, index) => {
+                    const colorVariants = [
+                      "from-blue-50 via-cyan-50 to-teal-50 dark:from-blue-950/30 dark:via-cyan-950/30 dark:to-teal-950/30",
+                      "from-purple-50 via-pink-50 to-rose-50 dark:from-purple-950/30 dark:via-pink-950/30 dark:to-rose-950/30",
+                      "from-orange-50 via-amber-50 to-yellow-50 dark:from-orange-950/30 dark:via-amber-950/30 dark:to-yellow-950/30",
+                      "from-green-50 via-emerald-50 to-lime-50 dark:from-green-950/30 dark:via-emerald-950/30 dark:to-lime-950/30",
+                      "from-indigo-50 via-violet-50 to-purple-50 dark:from-indigo-950/30 dark:via-violet-950/30 dark:to-purple-950/30",
+                    ];
+                    const bgClass = colorVariants[index % colorVariants.length];
+                    return (
+                      <ApplicationCard
+                        key={app.id}
+                        application={app}
+                        onViewDetails={() => handleViewDetails(app.id)}
+                        className={`!shadow-sm !bg-gradient-to-br ${bgClass} !rounded-[24px] hover:!shadow-md hover:!scale-[1.01] transition-all duration-300`}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </div>

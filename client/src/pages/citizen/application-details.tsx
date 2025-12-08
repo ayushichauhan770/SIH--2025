@@ -171,21 +171,22 @@ export default function ApplicationDetails() {
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
           
           {/* Header Card */}
-          <Card className="border-0 shadow-sm bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden">
-            <div className="p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <Card className="group relative border-0 overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50/50 to-purple-50 dark:from-blue-950/40 dark:via-indigo-950/30 dark:to-purple-950/40 shadow-sm hover:shadow-lg transition-all duration-300 rounded-[32px]">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-400/10 via-indigo-400/10 to-purple-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="relative z-10 p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
               <div>
                 <div className="flex items-center gap-3 mb-2">
-                  <Badge className={`${statusColors[application.status]} px-3 py-1 rounded-full text-sm font-semibold border-0 shadow-none`}>
+                  <Badge className={`${statusColors[application.status]} px-3 py-1 rounded-full text-sm font-semibold border-0 shadow-lg`}>
                     {application.status}
                   </Badge>
-                  <span className="text-sm text-[#86868b] font-mono">#{application.trackingId}</span>
+                  <span className="text-sm text-[#86868b] dark:text-slate-400 font-mono">#{application.trackingId}</span>
                 </div>
                 <h1 className="text-3xl font-bold text-[#1d1d1f] dark:text-white tracking-tight">
                   {application.applicationType}
                 </h1>
               </div>
               <div className="flex gap-3">
-                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#f5f5f7] dark:bg-slate-800">
+                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm shadow-sm">
                   <Calendar className="h-4 w-4 text-[#86868b]" />
                   <span className="text-sm font-medium text-[#1d1d1f] dark:text-white">
                     {new Date(application.submittedAt).toLocaleDateString()}
@@ -198,16 +199,17 @@ export default function ApplicationDetails() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column: Details & Documents */}
             <div className="lg:col-span-2 space-y-6">
-              <Card className="border-0 shadow-sm bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden">
-                <CardHeader className="border-b border-slate-100 dark:border-slate-800 p-6">
+              <Card className="group relative border-0 overflow-hidden bg-gradient-to-br from-white via-blue-50/30 to-cyan-50/30 dark:from-slate-900 dark:via-blue-950/30 dark:to-cyan-950/30 shadow-sm hover:shadow-lg transition-all duration-300 rounded-[32px]">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-400/5 to-cyan-400/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <CardHeader className="relative z-10 border-b border-slate-100 dark:border-slate-800 p-6">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-[#0071e3]">
+                    <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 text-white shadow-lg shadow-blue-500/30">
                       <FileText className="h-5 w-5" />
                     </div>
                     <CardTitle className="text-lg font-bold text-[#1d1d1f] dark:text-white">Description</CardTitle>
                   </div>
                 </CardHeader>
-                <CardContent className="p-6">
+                <CardContent className="p-6 relative z-10">
                   <p className="text-[#1d1d1f] dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
                     {application.description}
                   </p>
@@ -228,10 +230,13 @@ export default function ApplicationDetails() {
               </Card>
 
               {application.remarks && application.remarks.trim() && (
-                <Card className="border-0 shadow-sm bg-blue-50/50 dark:bg-blue-900/10 rounded-[32px] overflow-hidden border-l-4 border-l-[#0071e3]">
-                  <CardContent className="p-6">
+                <Card className="group relative border-0 overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50/50 to-purple-50 dark:from-blue-950/40 dark:via-indigo-950/30 dark:to-purple-950/40 shadow-sm hover:shadow-lg transition-all duration-300 rounded-[32px] border-l-4 border-l-[#0071e3]">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-400/10 to-indigo-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <CardContent className="relative z-10 p-6">
                     <div className="flex items-start gap-3">
-                      <MessageSquare className="h-5 w-5 text-[#0071e3] mt-0.5 flex-shrink-0" />
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md">
+                        <MessageSquare className="h-5 w-5" />
+                      </div>
                       <div>
                         <h3 className="font-bold text-[#1d1d1f] dark:text-white mb-1">Official Remarks</h3>
                         <p className="text-sm text-[#1d1d1f] dark:text-slate-300 whitespace-pre-wrap">
@@ -244,16 +249,17 @@ export default function ApplicationDetails() {
               )}
 
               {showRating && (
-                <Card className="border-0 shadow-sm bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden">
-                  <CardHeader className="border-b border-slate-100 dark:border-slate-800 p-6">
+                <Card className="group relative border-0 overflow-hidden bg-gradient-to-br from-white via-yellow-50/30 to-amber-50/30 dark:from-slate-900 dark:via-yellow-950/30 dark:to-amber-950/30 shadow-sm hover:shadow-lg transition-all duration-300 rounded-[32px]">
+                  <div className="absolute inset-0 bg-gradient-to-br from-yellow-400/5 to-amber-400/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <CardHeader className="relative z-10 border-b border-slate-100 dark:border-slate-800 p-6">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-xl bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600">
+                      <div className="p-2 rounded-xl bg-gradient-to-br from-yellow-500 to-amber-600 text-white shadow-lg shadow-yellow-500/30">
                         <Star className="h-5 w-5" />
                       </div>
                       <CardTitle className="text-lg font-bold text-[#1d1d1f] dark:text-white">Feedback & Rating</CardTitle>
                     </div>
                   </CardHeader>
-                  <CardContent className="p-6">
+                  <CardContent className="p-6 relative z-10">
                     {isSolved === null ? (
                       <div className="space-y-6 text-center py-4">
                         {(application.escalationLevel || 0) > 0 && (
@@ -305,18 +311,19 @@ export default function ApplicationDetails() {
             <div className="space-y-6">
               {/* Official Info Card */}
               {official && (
-                <Card className="border-0 shadow-sm bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden">
-                  <CardHeader className="border-b border-slate-100 dark:border-slate-800 p-6">
+                <Card className="group relative border-0 overflow-hidden bg-gradient-to-br from-white via-purple-50/30 to-pink-50/30 dark:from-slate-900 dark:via-purple-950/30 dark:to-pink-950/30 shadow-sm hover:shadow-lg transition-all duration-300 rounded-[32px]">
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-400/5 to-pink-400/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <CardHeader className="relative z-10 border-b border-slate-100 dark:border-slate-800 p-6">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-600">
+                      <div className="p-2 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 text-white shadow-lg shadow-purple-500/30">
                         <User className="h-5 w-5" />
                       </div>
                       <CardTitle className="text-lg font-bold text-[#1d1d1f] dark:text-white">Assigned Official</CardTitle>
                     </div>
                   </CardHeader>
-                  <CardContent className="p-6">
+                  <CardContent className="p-6 relative z-10">
                     <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-full bg-[#f5f5f7] dark:bg-slate-800 flex items-center justify-center text-lg font-bold text-[#86868b]">
+                      <div className="h-12 w-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 text-white flex items-center justify-center text-lg font-bold shadow-lg">
                         {official.fullName.charAt(0)}
                       </div>
                       <div>
@@ -339,16 +346,17 @@ export default function ApplicationDetails() {
               )}
 
               {/* Timeline Card */}
-              <Card className="border-0 shadow-sm bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden">
-                <CardHeader className="border-b border-slate-100 dark:border-slate-800 p-6">
+              <Card className="group relative border-0 overflow-hidden bg-gradient-to-br from-white via-orange-50/30 to-amber-50/30 dark:from-slate-900 dark:via-orange-950/30 dark:to-amber-950/30 shadow-sm hover:shadow-lg transition-all duration-300 rounded-[32px]">
+                <div className="absolute inset-0 bg-gradient-to-br from-orange-400/5 to-amber-400/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <CardHeader className="relative z-10 border-b border-slate-100 dark:border-slate-800 p-6">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-orange-50 dark:bg-orange-900/20 text-orange-500">
+                    <div className="p-2 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-lg shadow-orange-500/30">
                       <Clock className="h-5 w-5" />
                     </div>
                     <CardTitle className="text-lg font-bold text-[#1d1d1f] dark:text-white">Timeline</CardTitle>
                   </div>
                 </CardHeader>
-                <CardContent className="p-6">
+                <CardContent className="p-6 relative z-10">
                   <StatusStepper
                     currentStatus={application.status}
                     history={history.map(h => ({

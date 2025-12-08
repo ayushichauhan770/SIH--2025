@@ -36,25 +36,113 @@ export default function Landing() {
   });
 
   const allDepartmentNames = getAllDepartmentNames();
-  const displayDepartments = (ratingsData?.departments || allDepartmentNames.map((name, index) => ({
-    department_id: `dept-${index}`,
-    department_name: name,
-    averageRating: 0,
-    totalRatings: 0,
-    officialCount: 0,
-  }))).sort((a, b) => {
+  
+  // Create a map of all departments with their ratings
+  const departmentMap = new Map<string, DepartmentRating>();
+  
+  // First, add all departments with default values
+  allDepartmentNames.forEach((name, index) => {
+    departmentMap.set(name, {
+      department_id: `dept-${index}`,
+      department_name: name,
+      averageRating: 0,
+      totalRatings: 0,
+      officialCount: 0,
+    });
+  });
+  
+  // Then, update with actual rating data if available
+  if (ratingsData?.departments) {
+    ratingsData.departments.forEach((dept) => {
+      departmentMap.set(dept.department_name, dept);
+    });
+  }
+  
+  // Convert map to array and sort: departments with ratings first (descending), then zero ratings
+  const displayDepartments = Array.from(departmentMap.values()).sort((a, b) => {
+    // First, prioritize departments with ratings over those without
+    const aHasRating = a.averageRating > 0;
+    const bHasRating = b.averageRating > 0;
+    
+    if (aHasRating && !bHasRating) return -1; // a comes first
+    if (!aHasRating && bHasRating) return 1;  // b comes first
+    
+    // If both have ratings or both don't, sort by rating value (descending)
     if (a.averageRating !== b.averageRating) {
       return b.averageRating - a.averageRating;
     }
+    
+    // If ratings are equal, sort alphabetically
     return a.department_name.localeCompare(b.department_name);
   });
+
+  // Helper function to get icon and description for a department
+  const getDepartmentInfo = (deptName: string) => {
+    const name = deptName.toLowerCase();
+    if (name.includes('aadhaar') || name.includes('uidai')) {
+      return { icon: Shield, desc: 'Identity Management' };
+    } else if (name.includes('passport')) {
+      return { icon: FileText, desc: 'Travel Documents' };
+    } else if (name.includes('birth') || name.includes('death')) {
+      return { icon: FileText, desc: 'Vital Records' };
+    } else if (name.includes('finance') || name.includes('tax') || name.includes('payment')) {
+      return { icon: CheckCircle, desc: 'Financial Services' };
+    } else if (name.includes('driving') || name.includes('license') || name.includes('rto')) {
+      return { icon: FileText, desc: 'RTO Services' };
+    } else if (name.includes('property') || name.includes('land') || name.includes('revenue')) {
+      return { icon: FileText, desc: 'Land Records' };
+    } else if (name.includes('electricity') || name.includes('power')) {
+      return { icon: FileText, desc: 'Bill & Meter' };
+    } else if (name.includes('grievance') || name.includes('complaint')) {
+      return { icon: Bell, desc: 'Redressal System' };
+    } else if (name.includes('health')) {
+      return { icon: Activity, desc: 'Healthcare Services' };
+    } else if (name.includes('education')) {
+      return { icon: FileText, desc: 'Educational Services' };
+    } else if (name.includes('police')) {
+      return { icon: Shield, desc: 'Law Enforcement' };
+    } else if (name.includes('municipal') || name.includes('urban')) {
+      return { icon: Building2, desc: 'Urban Services' };
+    } else {
+      return { icon: FileText, desc: 'Government Services' };
+    }
+  };
 
   const handleSubmitApplication = () => {
     setLocation("/login?role=citizen");
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-slate-950 font-['Outfit',sans-serif] selection:bg-blue-500/30">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-slate-950 font-['Outfit',sans-serif] selection:bg-blue-500/30 relative overflow-hidden">
+      {/* Animated Background Gradient */}
+      <div className="fixed inset-0 -z-10">
+        {/* Base Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-100/60 via-purple-100/40 via-pink-100/50 via-cyan-100/30 to-indigo-100/40 dark:from-blue-950/30 dark:via-purple-950/20 dark:via-pink-950/25 dark:via-cyan-950/15 dark:to-indigo-950/20 animate-gradient-xy"></div>
+        
+        {/* Secondary Gradient Layer */}
+        <div className="absolute inset-0 bg-gradient-to-tr from-emerald-50/40 via-teal-50/30 to-violet-50/40 dark:from-emerald-950/15 dark:via-teal-950/10 dark:to-violet-950/15 animate-gradient-xy animation-delay-2000"></div>
+        
+        {/* Animated Blob Shapes - More Colors */}
+        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-400/25 dark:bg-blue-500/12 rounded-full blur-3xl animate-blob"></div>
+        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-400/25 dark:bg-purple-500/12 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
+        <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-pink-400/25 dark:bg-pink-500/12 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
+        <div className="absolute top-1/2 right-1/4 w-72 h-72 bg-cyan-400/20 dark:bg-cyan-500/10 rounded-full blur-3xl animate-blob animation-delay-6000"></div>
+        <div className="absolute bottom-1/4 left-1/4 w-80 h-80 bg-indigo-400/20 dark:bg-indigo-500/10 rounded-full blur-3xl animate-blob animation-delay-8000"></div>
+        
+        {/* Additional Colorful Blobs */}
+        <div className="absolute top-1/3 left-1/3 w-64 h-64 bg-emerald-400/20 dark:bg-emerald-500/10 rounded-full blur-3xl animate-blob animation-delay-3000"></div>
+        <div className="absolute bottom-1/3 right-1/3 w-72 h-72 bg-teal-400/20 dark:bg-teal-500/10 rounded-full blur-3xl animate-blob animation-delay-5000"></div>
+        <div className="absolute top-2/3 left-2/3 w-56 h-56 bg-violet-400/20 dark:bg-violet-500/10 rounded-full blur-3xl animate-blob animation-delay-7000"></div>
+        <div className="absolute top-1/4 right-1/2 w-60 h-60 bg-rose-400/18 dark:bg-rose-500/9 rounded-full blur-3xl animate-blob animation-delay-9000"></div>
+        <div className="absolute bottom-1/2 left-1/2 w-68 h-68 bg-amber-400/18 dark:bg-amber-500/9 rounded-full blur-3xl animate-blob animation-delay-10000"></div>
+        
+        {/* Enhanced Mesh Gradient Overlay with More Colors */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(59,130,246,0.15),transparent_50%),radial-gradient(circle_at_80%_70%,rgba(147,51,234,0.15),transparent_50%),radial-gradient(circle_at_50%_50%,rgba(236,72,153,0.1),transparent_50%),radial-gradient(circle_at_10%_80%,rgba(6,182,212,0.1),transparent_50%),radial-gradient(circle_at_90%_20%,rgba(99,102,241,0.1),transparent_50%),radial-gradient(circle_at_40%_60%,rgba(16,185,129,0.08),transparent_50%)] dark:bg-[radial-gradient(circle_at_20%_30%,rgba(59,130,246,0.08),transparent_50%),radial-gradient(circle_at_80%_70%,rgba(147,51,234,0.08),transparent_50%),radial-gradient(circle_at_50%_50%,rgba(236,72,153,0.05),transparent_50%),radial-gradient(circle_at_10%_80%,rgba(6,182,212,0.05),transparent_50%),radial-gradient(circle_at_90%_20%,rgba(99,102,241,0.05),transparent_50%),radial-gradient(circle_at_40%_60%,rgba(16,185,129,0.04),transparent_50%)]"></div>
+        
+        {/* Colorful Grid Pattern Overlay */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(59,130,246,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(147,51,234,0.03)_1px,transparent_1px)] bg-[size:4rem_4rem] dark:bg-[linear-gradient(to_right,rgba(59,130,246,0.015)_1px,transparent_1px),linear-gradient(to_bottom,rgba(147,51,234,0.015)_1px,transparent_1px)]"></div>
+      </div>
+
       {/* Fixed Navbar with Mega Menu */}
       <nav className="fixed top-6 left-0 right-0 z-50 flex justify-center px-6 pointer-events-none">
         <div className="w-full max-w-7xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/50 dark:border-slate-800/50 shadow-sm rounded-full px-6 py-3 pointer-events-auto flex justify-between items-center relative transition-all duration-300">
@@ -74,6 +162,11 @@ export default function Landing() {
               <Bell className="h-5 w-5" />
             </Button>
             <ThemeToggle />
+            <Link href="/register">
+              <Button variant="outline" className="rounded-full border-slate-200 dark:border-slate-700 hover:bg-[#F5F5F7] dark:hover:bg-slate-800 text-[#1d1d1f] dark:text-white px-6 ml-2">
+                Get Started
+              </Button>
+            </Link>
             <Link href="/login">
               <Button className="rounded-full bg-[#0071e3] hover:bg-[#0077ED] text-white shadow-lg shadow-blue-500/20 px-6 ml-2">
                 Login
@@ -109,6 +202,11 @@ export default function Landing() {
             <a href="#reforms" className="text-lg font-medium text-[#1d1d1f] dark:text-white">Reforms</a>
             <div className="h-px bg-slate-200 dark:bg-slate-800 my-2"></div>
             <div className="flex flex-col gap-4">
+              <Link href="/register">
+                <Button variant="outline" className="w-full rounded-full border-slate-200 dark:border-slate-700 hover:bg-[#F5F5F7] dark:hover:bg-slate-800 text-[#1d1d1f] dark:text-white h-12 text-lg">
+                  Get Started
+                </Button>
+              </Link>
               <Link href="/login">
                 <Button className="w-full rounded-full bg-[#0071e3] hover:bg-[#0077ED] text-white h-12 text-lg">
                   Login
@@ -294,32 +392,33 @@ export default function Landing() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              { title: "Aadhaar Services", desc: "Identity Management", icon: Shield, rating: 4.8 },
-              { title: "Passport Services", desc: "Travel Documents", icon: FileText, rating: 4.5 },
-              { title: "Birth Certificate", desc: "Vital Records", icon: FileText, rating: 4.7 },
-              { title: "Digital Payment", desc: "UPI & Tax Payments", icon: CheckCircle, rating: 4.9 },
-              { title: "Driving License", desc: "RTO Services", icon: FileText, rating: 4.3 },
-              { title: "Property Reg.", desc: "Land Records", icon: FileText, rating: 4.2 },
-              { title: "Power Supply", desc: "Bill & Meter", icon: FileText, rating: 3.8 },
-              { title: "Grievance", desc: "Redressal System", icon: Bell, rating: 4.1 },
-            ].map((service, idx) => (
-              <Card key={idx} className="border-0 shadow-sm bg-white dark:bg-slate-900 rounded-[24px] hover:shadow-md transition-all duration-300 cursor-pointer group">
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="p-3 rounded-2xl bg-[#F5F5F7] dark:bg-slate-800 text-[#0071e3] group-hover:bg-[#0071e3] group-hover:text-white transition-colors">
-                      <service.icon size={24} />
+            {displayDepartments.slice(0, 10).map((dept) => {
+              const { icon: IconComponent, desc } = getDepartmentInfo(dept.department_name);
+              const rating = dept.averageRating > 0 ? dept.averageRating.toFixed(1) : '0.0';
+              // Extract short name (before "–" if present)
+              const shortName = dept.department_name.split('–')[0].trim();
+              
+              return (
+                <Card key={dept.department_id} className="border-0 shadow-sm bg-white dark:bg-slate-900 rounded-[24px] hover:shadow-md transition-all duration-300 cursor-pointer group">
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="p-3 rounded-2xl bg-[#F5F5F7] dark:bg-slate-800 text-[#0071e3] group-hover:bg-[#0071e3] group-hover:text-white transition-colors">
+                        <IconComponent size={24} />
+                      </div>
+                      <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#F5F5F7] dark:bg-slate-800 text-xs font-bold text-[#1d1d1f] dark:text-white">
+                        <Star size={12} className="fill-yellow-400 text-yellow-400" />
+                        {rating}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#F5F5F7] dark:bg-slate-800 text-xs font-bold text-[#1d1d1f] dark:text-white">
-                      <Star size={12} className="fill-yellow-400 text-yellow-400" />
-                      {service.rating}
-                    </div>
-                  </div>
-                  <h3 className="text-lg font-bold text-[#1d1d1f] dark:text-white mb-1">{service.title}</h3>
-                  <p className="text-sm text-[#86868b]">{service.desc}</p>
-                </CardContent>
-              </Card>
-            ))}
+                    <h3 className="text-lg font-bold text-[#1d1d1f] dark:text-white mb-1">{shortName}</h3>
+                    <p className="text-sm text-[#86868b]">{desc}</p>
+                    {dept.totalRatings > 0 && (
+                      <p className="text-xs text-[#86868b] mt-1">{dept.totalRatings} {dept.totalRatings === 1 ? 'rating' : 'ratings'}</p>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>

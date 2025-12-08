@@ -392,7 +392,7 @@ export class MemStorage implements IStorage {
       department: insertApplication.department || department,
       subDepartment: insertApplication.subDepartment || null,
       status: "Submitted",
-      priority: insertApplication.priority ?? "Normal",
+      priority: insertApplication.priority ?? "Low", // Default to Low for unassigned applications
       remarks: insertApplication.remarks ?? null,
       submittedAt: now,
       lastUpdatedAt: now,
@@ -426,15 +426,27 @@ export class MemStorage implements IStorage {
   }
 
   async getOfficialApplications(officialId?: string): Promise<Application[]> {
+    // Update priorities before returning
+    await this.updateApplicationPriorities();
+    
     if (officialId) {
       return Array.from(this.applications.values())
         .filter(app => app.officialId === officialId)
-        .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+        .sort((a, b) => {
+          // Sort by priority first (High > Medium > Low), then by submission date
+          const priorityOrder = { High: 3, Medium: 2, Low: 1 };
+          const priorityDiff = (priorityOrder[b.priority as keyof typeof priorityOrder] || 0) - (priorityOrder[a.priority as keyof typeof priorityOrder] || 0);
+          if (priorityDiff !== 0) return priorityDiff;
+          return new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();
+        });
     }
     return Array.from(this.applications.values());
   }
 
   async getUnassignedApplicationsByDepartment(department: string): Promise<Application[]> {
+    // Update priorities before returning
+    await this.updateApplicationPriorities();
+    
     // Normalize department name (handle "Health – Ministry..." vs "Health")
     const normalizedDept = department.split('–')[0].trim();
 
@@ -450,7 +462,13 @@ export class MemStorage implements IStorage {
         const appDept = app.department.split('–')[0].trim();
         return appDept === normalizedDept;
       })
-      .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+      .sort((a, b) => {
+        // Sort by priority first (High > Medium > Low), then by submission date
+        const priorityOrder = { High: 3, Medium: 2, Low: 1 };
+        const priorityDiff = (priorityOrder[b.priority as keyof typeof priorityOrder] || 0) - (priorityOrder[a.priority as keyof typeof priorityOrder] || 0);
+        if (priorityDiff !== 0) return priorityDiff;
+        return new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();
+      });
   }
 
   async getOfficialCurrentWorkload(officialId: string): Promise<number> {
@@ -471,9 +489,73 @@ export class MemStorage implements IStorage {
     return Array.from(this.users.values()).filter(u => u.role === "official");
   }
 
+  /**
+   * Calculate priority based on days since submission
+   * - Low: 0-9 days
+   * - Medium: 10-19 days
+   * - High: 20+ days
+   */
+  private calculatePriority(submittedAt: Date): "Low" | "Medium" | "High" {
+    const now = new Date();
+    const daysSinceSubmission = Math.floor((now.getTime() - new Date(submittedAt).getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysSinceSubmission >= 20) {
+      return "High";
+    } else if (daysSinceSubmission >= 10) {
+      return "Medium";
+    } else {
+      return "Low";
+    }
+  }
+
+  /**
+   * Update priorities for all unassigned applications based on days since submission
+   */
+  async updateApplicationPriorities(): Promise<void> {
+    const now = new Date();
+    let updated = false;
+
+    for (const [id, app] of this.applications.entries()) {
+      // Only update priority for unassigned applications
+      if (app.status === "Submitted" && app.officialId === null) {
+        const newPriority = this.calculatePriority(app.submittedAt);
+        
+        // Only update if priority has changed
+        if (app.priority !== newPriority) {
+          app.priority = newPriority;
+          app.lastUpdatedAt = now;
+          updated = true;
+          
+          // Add history entry for priority change
+          const daysSinceSubmission = Math.floor((now.getTime() - new Date(app.submittedAt).getTime()) / (1000 * 60 * 60 * 24));
+          await this.addApplicationHistory(
+            id,
+            app.status,
+            "system",
+            `Priority automatically updated to ${newPriority} (${daysSinceSubmission} days since submission)`
+          );
+        }
+      }
+    }
+
+    // Save to disk if any updates were made
+    if (updated) {
+      await this.saveToDisk();
+    }
+  }
+
   async getAllApplications(): Promise<Application[]> {
+    // Update priorities before returning
+    await this.updateApplicationPriorities();
+    
+    // Sort by priority (High > Medium > Low), then by submission date
+    const priorityOrder = { High: 3, Medium: 2, Low: 1 };
     return Array.from(this.applications.values())
-      .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+      .sort((a, b) => {
+        const priorityDiff = (priorityOrder[b.priority as keyof typeof priorityOrder] || 0) - (priorityOrder[a.priority as keyof typeof priorityOrder] || 0);
+        if (priorityDiff !== 0) return priorityDiff;
+        return new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();
+      });
   }
 
   async updateApplicationStatus(id: string, status: string, updatedBy: string, comment?: string): Promise<Application> {

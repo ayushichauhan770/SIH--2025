@@ -26,14 +26,15 @@ const statusConfig: Record<string, { color: string, bg: string, border: string }
 const priorityConfig: Record<string, { color: string, bg: string }> = {
   "High": { color: "text-red-700", bg: "bg-red-100 dark:bg-red-900/40" },
   "Medium": { color: "text-orange-700", bg: "bg-orange-100 dark:bg-orange-900/40" },
-  "Normal": { color: "text-slate-600", bg: "bg-slate-100 dark:bg-slate-800" },
+  "Low": { color: "text-slate-600", bg: "bg-slate-100 dark:bg-slate-800" },
+  "Normal": { color: "text-slate-600", bg: "bg-slate-100 dark:bg-slate-800" }, // Legacy support
 };
 
 export function ApplicationCard({ application, onViewDetails, showActions, onAccept, onUpdate, className }: ApplicationCardProps) {
   const hasRemarks = application.remarks && application.remarks.trim().length > 0;
   const hasImage = application.image && application.image.trim().length > 0;
   const status = statusConfig[application.status] || statusConfig["Submitted"];
-  const priority = priorityConfig[application.priority || "Normal"];
+  const priority = priorityConfig[application.priority || "Low"];
 
   return (
     <Card

@@ -28,17 +28,11 @@ const statusColors: Record<string, string> = {
       "Auto-Approved": "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
 };
 
-const priorityColors: Record<string, string> = {
-      "High": "bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400",
-      "Medium": "bg-orange-50 text-orange-600 border-orange-200 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-400",
-      "Normal": "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900/20 dark:border-slate-800 dark:text-slate-400",
-};
 
 export function ApplicationDetailsDialog({ application, open, onClose, canUpdateStatus }: ApplicationDetailsDialogProps) {
       const { toast } = useToast();
       const [updateStatus, setUpdateStatus] = useState("");
       const [comment, setComment] = useState("");
-      const [priority, setPriority] = useState("");
       const [remarks, setRemarks] = useState("");
 
       const { data: citizen } = useQuery<UserType>({
@@ -54,7 +48,6 @@ export function ApplicationDetailsDialog({ application, open, onClose, canUpdate
       useEffect(() => {
             if (application) {
                   setUpdateStatus(application.status);
-                  setPriority(application.priority || "Normal");
                   setRemarks(application.remarks || "");
             }
       }, [application]);
@@ -68,9 +61,8 @@ export function ApplicationDetailsDialog({ application, open, onClose, canUpdate
                         comment,
                   });
 
-                  if (priority !== application.priority || remarks !== application.remarks) {
+                  if (remarks !== application.remarks) {
                         await apiRequest("PATCH", `/api/applications/${application.id}`, {
-                              priority,
                               remarks,
                         });
                   }
@@ -115,9 +107,6 @@ export function ApplicationDetailsDialog({ application, open, onClose, canUpdate
                                     <div className="flex gap-2">
                                           <Badge className={`rounded-full px-3 py-1 text-xs font-bold border-0 ${statusColors[application.status]}`}>
                                                 {application.status}
-                                          </Badge>
-                                          <Badge variant="outline" className={`rounded-full px-3 py-1 text-xs font-bold ${priorityColors[application.priority || "Normal"]}`}>
-                                                {application.priority || "Normal"} Priority
                                           </Badge>
                                     </div>
                               </div>
@@ -235,19 +224,6 @@ export function ApplicationDetailsDialog({ application, open, onClose, canUpdate
                                                       </Select>
                                                 </div>
 
-                                                <div className="space-y-2">
-                                                      <Label className="text-xs font-bold text-[#86868b] uppercase">Priority</Label>
-                                                      <Select value={priority} onValueChange={setPriority}>
-                                                            <SelectTrigger className="h-12 rounded-xl bg-[#F5F5F7] dark:bg-slate-800 border-0">
-                                                                  <SelectValue placeholder="Select priority" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                  <SelectItem value="High">High Priority</SelectItem>
-                                                                  <SelectItem value="Medium">Medium Priority</SelectItem>
-                                                                  <SelectItem value="Normal">Normal Priority</SelectItem>
-                                                            </SelectContent>
-                                                      </Select>
-                                                </div>
                                           </div>
 
                                           <div className="space-y-4">

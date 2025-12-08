@@ -15,7 +15,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { getSubDepartmentsForDepartment, getAllDepartmentNames } from "@shared/sub-departments";
 import { NotificationBell } from "@/components/notification-bell";
 import { useQuery } from "@tanstack/react-query";
-import { validateImageAsGovtDocument } from "@/lib/image-scanner";
+import { validateImageAsDocument } from "@/lib/image-scanner";
 import type { Notification } from "@shared/schema";
 
 export default function SubmitApplication() {
@@ -114,7 +114,7 @@ export default function SubmitApplication() {
         setIsScanning(true);
         setScanResult(null);
 
-        const validationResult = await validateImageAsGovtDocument(compressedImage);
+        const validationResult = await validateImageAsDocument(compressedImage);
 
         if (validationResult.valid) {
           // Valid document detected
@@ -125,18 +125,20 @@ export default function SubmitApplication() {
           });
           toast({
             title: "✓ Valid Document",
-            description: validationResult.message,
+            description: "Document detected successfully. Image uploaded.",
           });
         } else {
-          // Invalid document - show error and don't set image
+          // Invalid - not a document - show error popup
+          const errorMessage = "This image is not a document. Please upload a document image (scanned document, certificate, ID card, etc.).";
           setScanResult({
             valid: false,
-            message: validationResult.message
+            message: errorMessage
           });
           toast({
-            title: "Invalid Document",
-            description: validationResult.message,
+            title: "Invalid Image",
+            description: "This image is not a document",
             variant: "destructive",
+            duration: 5000,
           });
           e.target.value = "";
         }
@@ -366,7 +368,7 @@ export default function SubmitApplication() {
                         ) : (
                           <>
                             <p className="text-sm font-medium text-[#1d1d1f] dark:text-white">Click to upload image</p>
-                            <p className="text-xs text-[#86868b]">Max 50MB (Auto-compressed) - Government Documents only</p>
+                            <p className="text-xs text-[#86868b]">Max 50MB (Auto-compressed) - Documents only</p>
                           </>
                         )}
                       </div>

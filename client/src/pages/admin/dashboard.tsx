@@ -30,11 +30,13 @@ import { useToast } from "@/hooks/use-toast";
 function ApplicationRowWithCitizen({
   app,
   statusColors,
-  officialId
+  officialId,
+  onRowClick
 }: {
   app: Application;
   statusColors: Record<string, string>;
   officialId: string;
+  onRowClick?: (app: Application) => void;
 }) {
   const { data: citizen } = useQuery<{ fullName: string } | null>({
     queryKey: ["/api/users", app.citizenId],
@@ -62,11 +64,25 @@ function ApplicationRowWithCitizen({
             <span className="font-bold text-sm text-yellow-700 dark:text-yellow-500">{feedback.rating}</span>
           </div>
         ) : (
-          <span className="text-muted-foreground text-xs italic">No rating</span>
+          <span className="text-xs text-[#86868b] italic">No rating</span>
         )}
       </TableCell>
       <TableCell className="text-sm text-[#86868b]">
         {formatDistanceToNow(new Date(app.submittedAt), { addSuffix: true })}
+      </TableCell>
+      <TableCell>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRowClick?.(app);
+          }}
+          className="rounded-full hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20 dark:hover:text-blue-400"
+        >
+          <Eye className="h-4 w-4 mr-1" />
+          Details
+        </Button>
       </TableCell>
     </TableRow>
   );
@@ -81,7 +97,6 @@ export default function AdminDashboard() {
   const [warningMessage, setWarningMessage] = useState("");
   const [isWarningOpen, setIsWarningOpen] = useState(false);
   const [isOfficialDetailOpen, setIsOfficialDetailOpen] = useState(false);
-  const [officialSearch, setOfficialSearch] = useState("");
 
   const { data: deptStats } = useQuery<{
     totalApplications: number;
@@ -89,6 +104,9 @@ export default function AdminDashboard() {
     approvedCount: number;
     rejectedCount: number;
     pendingCount: number;
+    solvedCount: number;
+    unsolvedCount: number;
+    warningsSent: number;
   }>({
     queryKey: ["/api/admin/department-stats"],
     enabled: !!user?.department,
@@ -156,18 +174,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const sortedOfficials = (officials || [])
-    .filter(o => {
-      if (!o.department || !user?.department) return false;
-      const officialDept = o.department.split(/[–-]/)[0].trim();
-      const adminDept = user.department.split(/[–-]/)[0].trim();
-      const matchesDepartment = officialDept === adminDept;
-      const matchesSearch = !officialSearch ||
-        o.fullName.toLowerCase().includes(officialSearch.toLowerCase()) ||
-        (o.email && o.email.toLowerCase().includes(officialSearch.toLowerCase()));
-      return matchesDepartment && matchesSearch;
-    })
-    .sort((a, b) => (a.rating || 0) - (b.rating || 0));
 
   const statusColors: Record<string, string> = {
     "Submitted": "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
@@ -195,23 +201,20 @@ export default function AdminDashboard() {
                 </p>
               </div>
             </div>
-            
+
             {/* Department Rating Badge */}
-            <div className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full border ${
-              departmentRating && departmentRating.averageRating > 0 
-                ? "bg-yellow-50 border-yellow-100 dark:bg-yellow-900/20 dark:border-yellow-900/30" 
-                : "bg-slate-50 border-slate-100 dark:bg-slate-800 dark:border-slate-700"
-            }`}>
-              <Star className={`h-3.5 w-3.5 ${
-                departmentRating && departmentRating.averageRating > 0 
-                  ? "text-yellow-500 fill-yellow-500" 
-                  : "text-slate-400"
-              }`} />
-              <span className={`text-xs font-bold ${
-                departmentRating && departmentRating.averageRating > 0 
-                  ? "text-yellow-700 dark:text-yellow-500" 
-                  : "text-slate-500"
+            <div className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full border ${departmentRating && departmentRating.averageRating > 0
+              ? "bg-yellow-50 border-yellow-100 dark:bg-yellow-900/20 dark:border-yellow-900/30"
+              : "bg-slate-50 border-slate-100 dark:bg-slate-800 dark:border-slate-700"
               }`}>
+              <Star className={`h-3.5 w-3.5 ${departmentRating && departmentRating.averageRating > 0
+                ? "text-yellow-500 fill-yellow-500"
+                : "text-slate-400"
+                }`} />
+              <span className={`text-xs font-bold ${departmentRating && departmentRating.averageRating > 0
+                ? "text-yellow-700 dark:text-yellow-500"
+                : "text-slate-500"
+                }`}>
                 {departmentRating ? departmentRating.averageRating.toFixed(1) : "0.0"}
               </span>
             </div>
@@ -233,7 +236,7 @@ export default function AdminDashboard() {
       {/* Main Content */}
       <main className="flex-1 overflow-auto pt-28 pb-10 px-6">
         <div className="max-w-7xl mx-auto space-y-8">
-          
+
           {/* Header Section */}
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
@@ -254,146 +257,118 @@ export default function AdminDashboard() {
               { title: "Approved", value: deptStats?.approvedCount || 0, icon: CheckCircle, color: "text-green-600", bg: "bg-green-50 dark:bg-green-900/20" },
               { title: "Rejected", value: deptStats?.rejectedCount || 0, icon: XCircle, color: "text-red-600", bg: "bg-red-50 dark:bg-red-900/20" },
             ].map((stat, i) => (
-              <div key={i} className="bg-white dark:bg-slate-900 p-6 rounded-[32px] shadow-sm hover:shadow-md transition-all duration-300 group">
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`p-3 rounded-2xl ${stat.bg} ${stat.color} group-hover:scale-110 transition-transform duration-300`}>
+              <div key={i} className="group relative border-0 overflow-hidden bg-gradient-to-br from-white via-slate-50/50 to-slate-100/50 dark:from-slate-900 dark:via-slate-800/50 dark:to-slate-900/50 p-6 rounded-[32px] shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-400/5 to-slate-400/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="absolute top-0 right-0 w-32 h-32 bg-slate-400/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500" />
+                <div className="relative z-10 flex items-center justify-between mb-4">
+                  <div className={`p-3 rounded-2xl ${stat.bg} ${stat.color} group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
                     <stat.icon className="h-6 w-6" />
                   </div>
-                  <span className="text-xs font-bold text-[#86868b] uppercase tracking-wider">
+                  <span className="text-xs font-bold text-[#86868b] dark:text-slate-400 uppercase tracking-wider">
                     {stat.title}
                   </span>
                 </div>
-                <div className="text-4xl font-bold text-[#1d1d1f] dark:text-white">
+                <div className="relative z-10 text-4xl font-bold text-[#1d1d1f] dark:text-white">
                   {stat.value}
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Officials Table Section */}
+          {/* Department Officials Section */}
           <div className="bg-white dark:bg-slate-900 rounded-[32px] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-bold text-[#1d1d1f] dark:text-white">Department Officials</h2>
-                <p className="text-sm text-[#86868b]">Performance metrics and management</p>
-              </div>
-              <div className="relative w-full md:w-72">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#86868b]" />
-                <Input
-                  placeholder="Search officials..."
-                  value={officialSearch}
-                  onChange={(e) => setOfficialSearch(e.target.value)}
-                  className="pl-10 h-10 rounded-full bg-[#F5F5F7] dark:bg-slate-800 border-0 focus-visible:ring-1 focus-visible:ring-blue-500"
-                />
-              </div>
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+              <h2 className="text-xl font-bold text-[#1d1d1f] dark:text-white">Department Officials</h2>
+              <p className="text-sm text-[#86868b]">Click on an official to view details</p>
             </div>
 
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent border-b border-slate-100 dark:border-slate-800">
-                    <TableHead className="font-bold text-[#86868b] uppercase text-xs tracking-wider pl-6">Official</TableHead>
-                    <TableHead className="font-bold text-[#86868b] uppercase text-xs tracking-wider">Contact</TableHead>
-                    <TableHead className="font-bold text-[#86868b] uppercase text-xs tracking-wider">Rating</TableHead>
-                    <TableHead className="font-bold text-[#86868b] uppercase text-xs tracking-wider">Workload</TableHead>
-                    <TableHead className="font-bold text-[#86868b] uppercase text-xs tracking-wider">Status</TableHead>
-                    <TableHead className="font-bold text-[#86868b] uppercase text-xs tracking-wider text-right pr-6">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortedOfficials.map(official => {
-                    const hasPendingAlert = (applications?.filter(app =>
-                      app.officialId === official.id &&
-                      ["Assigned", "In Progress"].includes(app.status)
-                    ).length || 0) >= 3;
+            <div className="p-6">
+              {(() => {
+                const departmentOfficials = (officials || []).filter(o => {
+                  if (!o.department || !user?.department) return false;
+                  const officialDept = o.department.split(/[–-]/)[0].trim();
+                  const adminDept = user.department.split(/[–-]/)[0].trim();
+                  return officialDept === adminDept;
+                }).sort((a, b) => (b.rating || 0) - (a.rating || 0));
 
-                    return (
-                      <TableRow key={official.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100 dark:border-slate-800">
-                        <TableCell className="pl-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-                              {official.fullName.charAt(0)}
+                if (departmentOfficials.length === 0) {
+                  return (
+                    <div className="text-center py-12">
+                      <Users className="h-12 w-12 text-slate-200 dark:text-slate-800 mx-auto mb-4" />
+                      <p className="text-[#86868b] font-medium">No officials found</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {departmentOfficials.map(official => {
+                      const officialApps = applications?.filter(app => app.officialId === official.id) || [];
+                      const solvedCount = officialApps.filter(app =>
+                        (app.status === "Approved" || app.status === "Auto-Approved") && app.isSolved === true
+                      ).length;
+                      const unsolvedCount = officialApps.filter(app =>
+                        ((app.status === "Approved" || app.status === "Auto-Approved") && (app.isSolved === false || app.isSolved === null)) ||
+                        app.status === "Rejected"
+                      ).length;
+                      const totalCount = officialApps.length;
+
+                      return (
+                        <div
+                          key={official.id}
+                          onClick={() => {
+                            setSelectedOfficial(official);
+                            setIsOfficialDetailOpen(true);
+                          }}
+                          className="group relative border-0 overflow-hidden bg-gradient-to-br from-white via-slate-50/50 to-slate-100/50 dark:from-slate-900 dark:via-slate-800/50 dark:to-slate-900/50 p-6 rounded-[24px] shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer"
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-br from-blue-400/5 to-purple-400/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                          <div className="relative z-10">
+                            <div className="flex items-center gap-4 mb-4">
+                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                                {official.fullName.charAt(0)}
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-bold text-[#1d1d1f] dark:text-white">{official.fullName}</div>
+                                <div className="text-xs text-[#86868b] font-mono">{official.id.slice(0, 8)}...</div>
+                              </div>
                             </div>
-                            <div>
-                              <div className="font-bold text-[#1d1d1f] dark:text-white">{official.fullName}</div>
-                              <div className="text-xs text-[#86868b] font-mono">{official.id.slice(0, 8)}...</div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="flex items-center gap-1 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-1 rounded-lg">
+                                <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
+                                <span className="font-bold text-sm text-yellow-700 dark:text-yellow-500">{official.rating?.toFixed(1) || "0.0"}</span>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-[#86868b]">Total Applications</span>
+                                <span className="font-bold text-[#1d1d1f] dark:text-white">{totalCount}</span>
+                              </div>
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-[#86868b]">Solved</span>
+                                <span className="font-semibold text-green-600 dark:text-green-400">{solvedCount}</span>
+                              </div>
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-[#86868b]">Unsolved</span>
+                                <span className="font-semibold text-orange-600 dark:text-orange-400">{unsolvedCount}</span>
+                              </div>
+                            </div>
+                            <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                              <div className="flex items-center gap-2 text-xs text-[#86868b]">
+                                <Eye className="h-3 w-3" />
+                                <span>Click to view details</span>
+                              </div>
                             </div>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col text-sm">
-                            <span className="text-[#1d1d1f] dark:text-white">{official.email || "N/A"}</span>
-                            <span className="text-[#86868b] text-xs">{official.phone || "N/A"}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-1 rounded-lg w-fit">
-                            <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
-                            <span className="font-bold text-sm text-yellow-700 dark:text-yellow-500">{official.rating?.toFixed(1) || "0.0"}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            <span className="font-bold text-[#1d1d1f] dark:text-white">{applications?.filter(app => app.officialId === official.id).length || 0}</span>
-                            <span className="text-[#86868b]"> total</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {hasPendingAlert ? (
-                            <Badge variant="destructive" className="rounded-full px-3 py-1 text-xs font-bold animate-pulse">
-                              <AlertTriangle className="h-3 w-3 mr-1" />
-                              Overloaded
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="rounded-full px-3 py-1 text-xs font-bold border-green-200 text-green-600 bg-green-50 dark:bg-green-900/20 dark:border-green-900">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Healthy
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right pr-6">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedOfficial(official);
-                                setIsOfficialDetailOpen(true);
-                              }}
-                              className="rounded-full hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20 dark:hover:text-blue-400"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedOfficial(official);
-                                setIsWarningOpen(true);
-                              }}
-                              className="rounded-full hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                            >
-                              <AlertTriangle className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {sortedOfficials.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-12">
-                        <div className="flex flex-col items-center gap-3">
-                          <Users className="h-12 w-12 text-slate-200 dark:text-slate-800" />
-                          <p className="text-[#86868b] font-medium">No officials found</p>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           </div>
+
         </div>
       </main>
 
@@ -423,12 +398,13 @@ export default function AdminDashboard() {
 
           <div className="p-6 space-y-6">
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               {[
                 { label: "Assigned", value: officialStats?.assigned || 0, color: "text-purple-600", bg: "bg-purple-50" },
                 { label: "Approved", value: officialStats?.approved || 0, color: "text-green-600", bg: "bg-green-50" },
                 { label: "Rejected", value: officialStats?.rejected || 0, color: "text-red-600", bg: "bg-red-50" },
                 { label: "Solved", value: officialStats?.solved || 0, color: "text-blue-600", bg: "bg-blue-50" },
+                { label: "Warnings", value: officialStats?.warningsSent || 0, color: "text-orange-600", bg: "bg-orange-50" },
               ].map((stat, i) => (
                 <div key={i} className="bg-white dark:bg-slate-900 p-4 rounded-[24px] shadow-sm text-center">
                   <div className="text-2xl font-bold text-[#1d1d1f] dark:text-white mb-1">{stat.value}</div>
@@ -450,6 +426,7 @@ export default function AdminDashboard() {
                     <TableHead className="text-xs font-bold uppercase text-[#86868b]">Status</TableHead>
                     <TableHead className="text-xs font-bold uppercase text-[#86868b]">Rating</TableHead>
                     <TableHead className="text-xs font-bold uppercase text-[#86868b]">Time</TableHead>
+                    <TableHead className="text-xs font-bold uppercase text-[#86868b] text-right">Details</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -461,6 +438,7 @@ export default function AdminDashboard() {
                         app={app}
                         statusColors={statusColors}
                         officialId={selectedOfficial?.id || ''}
+                        onRowClick={(app) => setSelectedApp(app)}
                       />
                     ))}
                 </TableBody>
@@ -481,7 +459,7 @@ export default function AdminDashboard() {
                   className="bg-[#F5F5F7] dark:bg-slate-800 border-0 rounded-xl resize-none"
                   rows={3}
                 />
-                <Button 
+                <Button
                   onClick={handleSendWarning}
                   disabled={!warningMessage.trim()}
                   className="w-full rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold h-12"
@@ -491,7 +469,7 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
-          
+
           <div className="p-6 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 sticky bottom-0 z-10">
             <Button variant="ghost" onClick={() => setIsOfficialDetailOpen(false)} className="w-full rounded-full h-12 text-[#86868b]">
               Close Details

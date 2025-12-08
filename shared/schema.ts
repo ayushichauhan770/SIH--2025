@@ -44,7 +44,7 @@ export const applications = pgTable("applications", {
   subDepartment: text("sub_department"),
   description: text("description").notNull(),
   status: text("status").notNull(),
-  priority: text("priority").default("Normal").notNull(), // High, Medium, Normal
+  priority: text("priority").default("Low").notNull(), // High, Medium, Low
   remarks: text("remarks"), // Notes/comments on the application
   citizenId: varchar("citizen_id").notNull(),
   officialId: varchar("official_id"),
