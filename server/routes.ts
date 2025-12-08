@@ -167,8 +167,22 @@ class AIMonitoringService {
 const aiService = new AIMonitoringService();
 
 async function autoAssignApplication(applicationId: string, departmentName: string, subDepartmentName: string | null = null, escalationLevel: number = 0) {
+  console.log(`[Auto-Assign] Starting assignment for application ${applicationId}`);
+  console.log(`[Auto-Assign] Department: ${departmentName}, Sub-Department: ${subDepartmentName || 'None'}`);
+
   const officials = await storage.getAllOfficials();
+  console.log(`[Auto-Assign] Total officials in system: ${officials.length}`);
+
+  if (officials.length === 0) {
+    console.error('[Auto-Assign] ❌ No officials found in system! Cannot assign application.');
+    return null;
+  }
+
   const application = await storage.getApplication(applicationId);
+  if (!application) {
+    console.error(`[Auto-Assign] ❌ Application ${applicationId} not found!`);
+    return null;
+  }
 
   // Validate and normalize department name
   if (!departmentName || typeof departmentName !== 'string') {
@@ -193,19 +207,40 @@ async function autoAssignApplication(applicationId: string, departmentName: stri
     if (!u.department || typeof u.department !== 'string') return false;
     const uDept = u.department.split('–')[0].trim();
     const appDept = departmentName.split('–')[0].trim();
-    return uDept === appDept;
+    const matches = uDept === appDept;
+    if (matches) {
+      console.log(`[Auto-Assign] ✅ Found matching official: ${u.fullName} (${u.department})`);
+    }
+    return matches;
   });
 
-  // 2. Filter by Sub-Department if available
+  console.log(`[Auto-Assign] Officials in department "${departmentName}": ${deptOfficials.length}`);
+
+  // 2. Filter by Sub-Department if available (prefer sub-department match, but fallback to department-only)
+  let subDeptOfficials: typeof deptOfficials = [];
   if (normalizedSubDept) {
-    deptOfficials = deptOfficials.filter(u => {
+    subDeptOfficials = deptOfficials.filter(u => {
       if (!u.subDepartment || typeof u.subDepartment !== 'string') return false;
       return u.subDepartment === normalizedSubDept;
     });
+
+    // If we found officials with matching sub-department, use them
+    // Otherwise, fall back to department-only officials
+    if (subDeptOfficials.length > 0) {
+      deptOfficials = subDeptOfficials;
+      console.log(`✅ Found ${subDeptOfficials.length} official(s) matching department: ${departmentName} and sub-department: ${normalizedSubDept}`);
+    } else {
+      console.log(`⚠️ No officials found for sub-department: ${normalizedSubDept}, falling back to department: ${departmentName} only`);
+      // Keep deptOfficials as is (department-only match)
+    }
   }
 
   if (deptOfficials.length === 0) {
-    console.log(`No officials available for department: ${departmentName}${normalizedSubDept ? `, sub-department: ${normalizedSubDept}` : ''}`);
+    console.error(`[Auto-Assign] ❌ No officials available for department: ${departmentName}${normalizedSubDept ? `, sub-department: ${normalizedSubDept}` : ''}`);
+    console.log(`[Auto-Assign] Available officials and their departments:`);
+    officials.forEach(o => {
+      console.log(`  - ${o.fullName}: ${o.department || 'No department'} (Role: ${o.role})`);
+    });
     return null;
   }
 
@@ -245,8 +280,13 @@ async function autoAssignApplication(applicationId: string, departmentName: stri
 
   if (bestOfficial) {
     try {
+      console.log(`[Auto-Assign] ✅ Selected official: ${bestOfficial.fullName} (ID: ${bestOfficial.id})`);
+      console.log(`[Auto-Assign]   Workload - Active: ${bestOfficial.activeWorkload}, Total: ${bestOfficial.totalAssigned}`);
+
       // 4. Assign
-      await storage.assignApplication(applicationId, bestOfficial.id);
+      const assignedApp = await storage.assignApplication(applicationId, bestOfficial.id);
+      console.log(`[Auto-Assign] ✅ Application assigned successfully!`);
+      console.log(`[Auto-Assign]   Application ID: ${assignedApp.id}, Official ID: ${assignedApp.officialId}, Status: ${assignedApp.status}`);
 
       // 5. Update official stats
       await storage.updateUserStats(
@@ -260,6 +300,7 @@ async function autoAssignApplication(applicationId: string, departmentName: stri
       await storage.updateApplicationEscalation(applicationId, escalationLevel, bestOfficial.id);
 
       return {
+        officialId: bestOfficial.id,
         officialName: bestOfficial.fullName,
         department: bestOfficial.department,
         workloadStats: {
@@ -277,6 +318,8 @@ async function autoAssignApplication(applicationId: string, departmentName: stri
 
   return null;
 }
+
+import cron from "node-cron";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Verify email configuration on startup
@@ -523,21 +566,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
         citizenId: req.user!.id,
       });
 
-      // Auto-assignment disabled to keep applications in unassigned pool
-      // Applications will remain visible to all department officials until manually assigned
-      // let assignmentResult = null;
-      // if (application.department) {
-      //   assignmentResult = await autoAssignApplication(application.id, application.department, 0);
-      //   if (assignmentResult) {
-      //     console.log(`✅ Auto-assigned application ${application.id} to ${assignmentResult.officialName}`);
-      //     console.log(`   Stats - Active: ${assignmentResult.workloadStats.active}, Total: ${assignmentResult.workloadStats.total}`);
-      //   } else {
-      //     console.warn(`⚠️ Could not auto-assign application ${application.id} - no matching officials in ${application.department}`);
-      //   }
-      // }
+      // AUTO-ASSIGNMENT: Applications are automatically assigned to officials when submitted
+      // No acceptance step is required - applications go directly to the official's "My Applications"
+      // Assignment is based on: 1) Department match, 2) Sub-department match (if available),
+      // 3) Lowest workload, 4) Total assigned count, 5) Seniority
+      let assignedApplication = application;
 
-      // Return application
-      res.json(application);
+      // Always attempt auto-assignment if department is available
+      console.log(`[Application Submit] 📝 Application created: ${application.trackingId}`);
+      console.log(`[Application Submit] Department: ${application.department || 'None'}, Sub-Department: ${application.subDepartment || 'None'}`);
+
+      if (application.department) {
+        try {
+          console.log(`[Application Submit] 🔄 Attempting auto-assignment...`);
+          const assignmentResult: { officialId: string; officialName: string; department: string | null; workloadStats: { active: number; total: number }; assignedAt: Date } | null = await autoAssignApplication(
+            application.id,
+            application.department,
+            application.subDepartment || null,
+            0
+          );
+
+          if (assignmentResult) {
+            const subDeptInfo = application.subDepartment ? `, sub-department: ${application.subDepartment}` : '';
+            console.log(`[Application Submit] ✅ Auto-assigned application ${application.trackingId} to ${assignmentResult.officialName}`);
+            console.log(`[Application Submit]    Department: ${assignmentResult.department}${subDeptInfo}`);
+            console.log(`[Application Submit]    Stats - Active: ${assignmentResult.workloadStats.active}, Total: ${assignmentResult.workloadStats.total}`);
+
+            // Fetch the updated application with assignment details
+            const updatedApp = await storage.getApplication(application.id);
+            if (updatedApp && updatedApp.officialId) {
+              console.log(`[Application Submit] ✅ Assignment confirmed - Official ID: ${updatedApp.officialId}, Status: ${updatedApp.status}`);
+              assignedApplication = updatedApp;
+
+              // Verify assignment was saved
+              const verifyApp = await storage.getApplication(application.id);
+              if (verifyApp && verifyApp.officialId === assignmentResult.officialId) {
+                console.log(`[Application Submit] ✅ Assignment verified in storage`);
+              } else {
+                console.error(`[Application Submit] ❌ Assignment verification failed! Expected: ${assignmentResult.officialId}, Got: ${verifyApp?.officialId}`);
+              }
+
+              // Send notification to the assigned official
+              await storage.createNotification(
+                assignmentResult.officialId,
+                "assignment",
+                "New Application Assigned",
+                `A new application ${application.trackingId} has been automatically assigned to you.`,
+                application.id
+              );
+
+              // Notify the citizen that their application has been assigned
+              await storage.createNotification(
+                application.citizenId,
+                "assignment",
+                "Application Assigned",
+                `Your application ${application.trackingId} has been automatically assigned to an official and is now being processed.`,
+                application.id
+              );
+            }
+          } else {
+            console.warn(`⚠️ Could not auto-assign application ${application.trackingId} - no matching officials found in department: ${application.department}`);
+          }
+        } catch (error: any) {
+          console.error(`❌ Error during auto-assignment for application ${application.trackingId}:`, error);
+          // Continue even if assignment fails - application will remain unassigned
+        }
+      } else {
+        console.warn(`⚠️ Application ${application.trackingId} has no department - cannot auto-assign. Department: ${application.department}, ApplicationType: ${application.applicationType}`);
+      }
+
+      // Return the application (with assignment details if auto-assigned)
+      res.json(assignedApplication);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
@@ -561,6 +660,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(application);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get application location history by tracking ID (public access)
+  app.get("/api/applications/track/:trackingId/location-history", async (req: Request, res: Response) => {
+    try {
+      const application = await storage.getApplicationByTrackingId(req.params.trackingId);
+      if (!application) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+      const locationHistory = await storage.getApplicationLocationHistory(application.id);
+      res.json(locationHistory);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
     }
   });
 
@@ -591,25 +704,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.user!.role === "admin") {
         applications = await storage.getAllApplications();
       } else {
-        // For officials: return both unassigned applications in their department AND their assigned applications
+        // For officials: return only their assigned applications (auto-assigned when citizen submits)
+        // Applications are automatically assigned to officials in the same department when submitted
         const user = await storage.getUser(req.user!.id);
         if (!user || !user.department) {
           return res.status(400).json({ error: "Official has no department assigned" });
         }
 
-        // Get unassigned applications for the department and sub-department
-        const allUnassignedApps = await storage.getUnassignedApplicationsByDepartment(user.department);
+        console.log(`[API /applications] Official: ${user.fullName} (${req.user!.id}), Department: ${user.department}`);
 
-        // Filter by sub-department if official has one assigned
-        let unassignedApps = allUnassignedApps;
-        if (user.subDepartment) {
-          unassignedApps = allUnassignedApps.filter(app =>
-            app.subDepartment === user.subDepartment || !app.subDepartment
-          );
-        }
-
-        // Get applications assigned to this official
+        // Get applications assigned to this official ONLY (strictly filtered by officialId)
+        // Each application should only be visible to ONE official (the one it's assigned to)
         const assignedApps = await storage.getOfficialApplications(req.user!.id);
+        console.log(`[API /applications] Found ${assignedApps.length} assigned applications for ${user.fullName} (ID: ${req.user!.id})`);
+
+        // Verify all returned applications are actually assigned to this official
+        const misassigned = assignedApps.filter(app => app.officialId !== req.user!.id);
+        if (misassigned.length > 0) {
+          console.error(`[API /applications] ❌ ERROR: Found ${misassigned.length} applications not assigned to ${req.user!.id}!`);
+          misassigned.forEach(app => {
+            console.error(`  - Application ${app.trackingId} assigned to ${app.officialId}, not ${req.user!.id}`);
+          });
+        }
 
         // Fetch ratings for assigned applications
         const assignedAppsWithRatings = await Promise.all(assignedApps.map(async (app) => {
@@ -617,19 +733,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return { ...app, rating: feedback?.rating };
         }));
 
-        // Combine both lists (remove duplicates if any)
-        const appMap = new Map<string, any>();
-        unassignedApps.forEach(app => appMap.set(app.id, app));
-        assignedAppsWithRatings.forEach(app => appMap.set(app.id, app));
-
-        // Sort by priority (High > Medium > Low), then by submission date
-        const priorityOrder = { High: 3, Medium: 2, Low: 1 };
-        applications = Array.from(appMap.values())
+        // Sort by priority (high > medium > low), then by submission date
+        const priorityOrder = { high: 3, medium: 2, low: 1 };
+        applications = assignedAppsWithRatings
           .sort((a, b) => {
-            const priorityDiff = (priorityOrder[b.priority as keyof typeof priorityOrder] || 0) - (priorityOrder[a.priority as keyof typeof priorityOrder] || 0);
+            const priorityDiff = (priorityOrder[(b.priority || "low").toLowerCase() as keyof typeof priorityOrder] || 0) - (priorityOrder[(a.priority || "low").toLowerCase() as keyof typeof priorityOrder] || 0);
             if (priorityDiff !== 0) return priorityDiff;
             return new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();
           });
+
+        console.log(`[API /applications] Returning ${applications.length} applications for ${user.fullName}`);
+        if (applications.length > 0) {
+          console.log(`[API /applications] Latest application: ${applications[0].trackingId} (Official ID: ${applications[0].officialId}, Status: ${applications[0].status})`);
+        }
       }
       res.json(applications);
     } catch (error: any) {
@@ -674,6 +790,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       storage.applications.set(app.id, updated);
 
       res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Add new location update to application
+  app.post("/api/applications/:id/location", authenticateToken, requireRole("official", "admin"), async (req: Request, res: Response) => {
+    try {
+      const { location } = req.body;
+      if (!location || typeof location !== "string" || location.trim().length === 0) {
+        return res.status(400).json({ error: "Location is required" });
+      }
+
+      const app = await storage.getApplication(req.params.id);
+      if (!app) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      const locationEntry = await storage.addApplicationLocation(
+        req.params.id,
+        location.trim(),
+        req.user!.id
+      );
+
+      res.json(locationEntry);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get application location history
+  app.get("/api/applications/:id/location-history", authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const application = await storage.getApplication(req.params.id);
+      if (!application) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      // Ensure citizens can only view their own application's location history
+      if (req.user!.role === "citizen" && application.citizenId !== req.user!.id) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const locationHistory = await storage.getApplicationLocationHistory(req.params.id);
+      res.json(locationHistory);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
@@ -2020,6 +2181,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: error.message });
     }
   });
+
+  // Set up daily cron job for automatic priority updates
+  // Runs every day at 2:00 AM
+  cron.schedule("0 2 * * *", async () => {
+    try {
+      console.log("🔄 Running daily priority update job...");
+      await storage.updateApplicationPriorities();
+      console.log("✅ Daily priority update completed");
+    } catch (error: any) {
+      console.error("❌ Error in daily priority update job:", error);
+    }
+  }, {
+    timezone: "Asia/Kolkata" // Adjust timezone as needed
+  });
+
+  // Also run immediately on startup to update any stale priorities
+  setTimeout(async () => {
+    try {
+      console.log("🔄 Running initial priority update on startup...");
+      await storage.updateApplicationPriorities();
+      console.log("✅ Initial priority update completed");
+    } catch (error: any) {
+      console.error("❌ Error in initial priority update:", error);
+    }
+  }, 5000); // Wait 5 seconds after server starts
 
   const httpServer = createServer(app);
   return httpServer;

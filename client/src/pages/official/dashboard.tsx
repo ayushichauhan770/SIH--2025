@@ -29,7 +29,11 @@ export default function OfficialDashboard() {
 
    const { data: applications, isLoading } = useQuery<Application[]>({
       queryKey: ["/api/applications"],
-      refetchInterval: 2000,
+      refetchInterval: 500, // Refresh every 500ms for immediate visibility
+      refetchOnWindowFocus: true, // Refetch when user switches back to tab
+      refetchOnMount: true, // Always refetch when component mounts
+      staleTime: 0, // Always consider data stale to ensure fresh data
+      cacheTime: 0, // Don't cache to ensure latest data
    });
 
    const { data: notifications = [] } = useQuery<Notification[]>({
@@ -42,21 +46,7 @@ export default function OfficialDashboard() {
       refetchInterval: 5000,
    });
 
-   const [activeTab, setActiveTab] = useState("unassigned");
-
-   const acceptMutation = useMutation({
-      mutationFn: async (id: string) => {
-         return await apiRequest("POST", `/api/applications/${id}/accept`, {});
-      },
-      onSuccess: () => {
-         queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
-         toast({
-            title: "Application Accepted",
-            description: `Assigned to ${user?.fullName}. You can view it in My Applications.`,
-         });
-         setActiveTab("my-apps");
-      },
-   });
+   const [activeTab, setActiveTab] = useState("my-apps");
 
    const handleMarkAsRead = async (id: string) => {
       await apiRequest("POST", `/api/notifications/${id}/read`, {});
@@ -112,20 +102,54 @@ export default function OfficialDashboard() {
       }
    };
 
-   const handleAccept = async (id: string) => {
-      await acceptMutation.mutateAsync(id);
-   };
 
-   // Sort applications by priority (High > Medium > Low), then by submission date
-   const priorityOrder = { High: 3, Medium: 2, Low: 1 };
+   // Sort applications by priority (high > medium > low), then by submission date
+   const priorityOrder = { high: 3, medium: 2, low: 1 };
    const sortedApplications = applications?.sort((a, b) => {
-      const priorityDiff = (priorityOrder[b.priority as keyof typeof priorityOrder] || 0) - (priorityOrder[a.priority as keyof typeof priorityOrder] || 0);
+      const priorityDiff = (priorityOrder[(b.priority || "low").toLowerCase() as keyof typeof priorityOrder] || 0) - (priorityOrder[(a.priority || "low").toLowerCase() as keyof typeof priorityOrder] || 0);
       if (priorityDiff !== 0) return priorityDiff;
       return new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();
    }) || [];
 
-   const unassignedApps = sortedApplications.filter(app => app.status === "Submitted" && app.officialId === null);
-   const myApps = sortedApplications.filter(app => app.officialId === user?.id);
+   // STRICT FILTERING: Only show applications assigned to THIS specific official
+   // Each application should only be visible to ONE official (the one it's assigned to)
+   const myApps = sortedApplications.filter(app => {
+      const matches = app.officialId !== null && app.officialId === user?.id;
+      if (!matches && app.officialId) {
+         console.warn(`[Official Dashboard] Application ${app.trackingId} assigned to ${app.officialId}, not ${user?.id} - filtering out`);
+      }
+      return matches;
+   });
+
+   // Track previous count to detect new applications
+   const [prevAppCount, setPrevAppCount] = useState(0);
+
+   // Debug logging and new application detection
+   useEffect(() => {
+      if (applications && user) {
+         const currentCount = myApps.length;
+         console.log(`[Official Dashboard] Total applications received: ${applications.length}`);
+         console.log(`[Official Dashboard] Applications assigned to ${user.fullName} (${user.id}): ${currentCount}`);
+
+         // Detect new applications
+         if (currentCount > prevAppCount && prevAppCount > 0) {
+            const newApps = myApps.slice(0, currentCount - prevAppCount);
+            newApps.forEach(app => {
+               toast({
+                  title: "New Application Assigned!",
+                  description: `Application ${app.trackingId} has been automatically assigned to you.`,
+               });
+               console.log(`[Official Dashboard] 🎉 New application detected: ${app.trackingId}`);
+            });
+         }
+
+         setPrevAppCount(currentCount);
+
+         if (myApps.length > 0) {
+            console.log(`[Official Dashboard] Latest application: ${myApps[0]?.trackingId} (Status: ${myApps[0]?.status}, Official ID: ${myApps[0]?.officialId})`);
+         }
+      }
+   }, [applications, myApps.length, user?.id, prevAppCount]);
    const pendingApps = myApps.filter(app => app.status === "Assigned" || app.status === "In Progress");
    const completedToday = myApps.filter(app =>
       app.approvedAt && new Date(app.approvedAt).toDateString() === new Date().toDateString()
@@ -142,12 +166,6 @@ export default function OfficialDashboard() {
       return true;
    });
 
-   const filteredUnassignedApps = unassignedApps.filter(app => {
-      if (searchQuery && !app.trackingId.toLowerCase().includes(searchQuery.toLowerCase())) {
-         return false;
-      }
-      return true;
-   });
 
    useEffect(() => {
       if (filterStatus !== "all") {
@@ -378,12 +396,6 @@ export default function OfficialDashboard() {
                   <div className="flex justify-center mb-8">
                      <TabsList className="bg-white dark:bg-slate-900 p-1.5 rounded-full border border-slate-200 dark:border-slate-800 shadow-sm h-auto">
                         <TabsTrigger
-                           value="unassigned"
-                           className="rounded-full px-6 py-2.5 text-sm font-medium data-[state=active]:bg-[#1d1d1f] data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-[#1d1d1f] transition-all"
-                        >
-                           Unassigned ({filteredUnassignedApps.length})
-                        </TabsTrigger>
-                        <TabsTrigger
                            value="my-apps"
                            className="rounded-full px-6 py-2.5 text-sm font-medium data-[state=active]:bg-[#1d1d1f] data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-[#1d1d1f] transition-all"
                         >
@@ -391,51 +403,6 @@ export default function OfficialDashboard() {
                         </TabsTrigger>
                      </TabsList>
                   </div>
-
-                  <TabsContent value="unassigned" className="space-y-6">
-                     {isLoading ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                           {[1, 2].map(i => (
-                              <Card key={i} className="rounded-[32px] border-0 shadow-sm bg-white dark:bg-slate-900 h-64">
-                                 <CardContent className="p-8 flex items-center justify-center">
-                                    <Skeleton className="h-12 w-12 rounded-full" />
-                                 </CardContent>
-                              </Card>
-                           ))}
-                        </div>
-                     ) : filteredUnassignedApps.length === 0 ? (
-                        <div className="text-center py-20 bg-gradient-to-br from-green-50 via-emerald-50/50 to-teal-50 dark:from-green-950/40 dark:via-emerald-950/30 dark:to-teal-950/40 rounded-[32px] border border-green-200/50 dark:border-green-900/30 shadow-sm">
-                           <div className="inline-flex p-4 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/30 mb-4">
-                              <FileText className="h-8 w-8" />
-                           </div>
-                           <h3 className="text-xl font-bold text-[#1d1d1f] dark:text-white mb-2">No Unassigned Applications</h3>
-                           <p className="text-[#86868b] dark:text-slate-400">Great job! All submitted applications have been assigned.</p>
-                        </div>
-                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                           {filteredUnassignedApps.map((app, index) => {
-                              const colorVariants = [
-                                 "from-blue-50 via-cyan-50 to-teal-50 dark:from-blue-950/30 dark:via-cyan-950/30 dark:to-teal-950/30",
-                                 "from-purple-50 via-pink-50 to-rose-50 dark:from-purple-950/30 dark:via-pink-950/30 dark:to-rose-950/30",
-                                 "from-orange-50 via-amber-50 to-yellow-50 dark:from-orange-950/30 dark:via-amber-950/30 dark:to-yellow-950/30",
-                                 "from-green-50 via-emerald-50 to-lime-50 dark:from-green-950/30 dark:via-emerald-950/30 dark:to-lime-950/30",
-                                 "from-indigo-50 via-violet-50 to-purple-50 dark:from-indigo-950/30 dark:via-violet-950/30 dark:to-purple-950/30",
-                              ];
-                              const bgClass = colorVariants[index % colorVariants.length];
-                              return (
-                                 <ApplicationCard
-                                    key={app.id}
-                                    application={app}
-                                    onViewDetails={() => setSelectedApp(app)}
-                                    showActions
-                                    onAccept={() => handleAccept(app.id)}
-                                    className={`hover:shadow-lg hover:scale-[1.01] transition-all duration-300 !bg-gradient-to-br ${bgClass}`}
-                                 />
-                              );
-                           })}
-                        </div>
-                     )}
-                  </TabsContent>
 
                   <TabsContent value="my-apps" className="space-y-6">
                      {filteredMyApps.length === 0 ? (

@@ -45,8 +45,9 @@ export const applications = pgTable("applications", {
   subDepartment: text("sub_department"),
   description: text("description").notNull(),
   status: text("status").notNull(),
-  priority: text("priority").default("Low").notNull(), // High, Medium, Low
+  priority: text("priority").default("low").notNull(), // high, medium, low
   remarks: text("remarks"), // Notes/comments on the application
+  currentLocation: text("current_location"), // Current location/path where application is stuck
   citizenId: varchar("citizen_id").notNull(),
   officialId: varchar("official_id"),
   submittedAt: timestamp("submitted_at").defaultNow().notNull(),
@@ -65,6 +66,14 @@ export const applicationHistory = pgTable("application_history", {
   applicationId: varchar("application_id").notNull(),
   status: text("status").notNull(),
   comment: text("comment"),
+  updatedBy: varchar("updated_by").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const applicationLocationHistory = pgTable("application_location_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  applicationId: varchar("application_id").notNull(),
+  location: text("location").notNull(),
   updatedBy: varchar("updated_by").notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -188,6 +197,7 @@ export type Application = typeof applications.$inferSelect;
 export type UpdateApplicationStatus = z.infer<typeof updateApplicationStatusSchema>;
 
 export type ApplicationHistory = typeof applicationHistory.$inferSelect;
+export type ApplicationLocationHistory = typeof applicationLocationHistory.$inferSelect;
 
 export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
 export type Feedback = typeof feedback.$inferSelect;

@@ -1,10 +1,11 @@
-import { users, applications, applicationHistory, feedback, otpRecords, notifications, departments, warnings, judges, cases, hearings } from "@shared/schema";
+import { users, applications, applicationHistory, applicationLocationHistory, feedback, otpRecords, notifications, departments, warnings, judges, cases, hearings } from "@shared/schema";
 import type {
   User,
   InsertUser,
   Application,
   InsertApplication,
   ApplicationHistory,
+  ApplicationLocationHistory,
   Feedback,
   InsertFeedback,
   OTPRecord,
@@ -49,6 +50,9 @@ export interface IStorage {
 
   addApplicationHistory(applicationId: string, status: string, updatedBy: string, comment?: string): Promise<ApplicationHistory>;
   getApplicationHistory(applicationId: string): Promise<ApplicationHistory[]>;
+  
+  addApplicationLocation(applicationId: string, location: string, updatedBy: string): Promise<ApplicationLocationHistory>;
+  getApplicationLocationHistory(applicationId: string): Promise<ApplicationLocationHistory[]>;
 
   createFeedback(feedback: InsertFeedback): Promise<Feedback>;
   updateFeedback(id: string, rating: number, comment?: string): Promise<Feedback>;
@@ -92,6 +96,7 @@ export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private applications: Map<string, Application>;
   private applicationHistory: Map<string, ApplicationHistory[]>;
+  private applicationLocationHistory: Map<string, ApplicationLocationHistory[]>;
   private feedback: Map<string, Feedback>;
   private otpRecords: Map<string, OTPRecord>;
   private blockchainHashes: Map<string, BlockchainHash>;
@@ -108,6 +113,7 @@ export class MemStorage implements IStorage {
     this.users = new Map();
     this.applications = new Map();
     this.applicationHistory = new Map();
+    this.applicationLocationHistory = new Map();
     this.feedback = new Map();
     this.otpRecords = new Map();
     this.blockchainHashes = new Map();
@@ -183,6 +189,20 @@ export class MemStorage implements IStorage {
           }))
         ]));
         console.log(`✅ Loaded application history from disk`);
+      }
+
+      // Load application location history
+      const locationHistoryFile = path.join(this.dataDir, 'applicationLocationHistory.json');
+      if (fs.existsSync(locationHistoryFile)) {
+        const locationHistoryData = JSON.parse(fs.readFileSync(locationHistoryFile, 'utf-8'));
+        this.applicationLocationHistory = new Map(Object.entries(locationHistoryData).map(([appId, histories]: [string, any]) => [
+          appId,
+          histories.map((h: any) => ({
+            ...h,
+            updatedAt: new Date(h.updatedAt)
+          }))
+        ]));
+        console.log(`✅ Loaded application location history from disk`);
       }
 
       // Load feedback
@@ -323,6 +343,14 @@ export class MemStorage implements IStorage {
       fs.writeFileSync(
         path.join(this.dataDir, 'applicationHistory.json'),
         JSON.stringify(historyData, null, 2),
+        'utf-8'
+      );
+
+      // Save application location history
+      const locationHistoryData = Object.fromEntries(this.applicationLocationHistory);
+      fs.writeFileSync(
+        path.join(this.dataDir, 'applicationLocationHistory.json'),
+        JSON.stringify(locationHistoryData, null, 2),
         'utf-8'
       );
 
@@ -481,6 +509,7 @@ export class MemStorage implements IStorage {
       status: "Submitted",
       priority: insertApplication.priority ?? "Low", // Default to Low for unassigned applications
       remarks: insertApplication.remarks ?? null,
+      currentLocation: insertApplication.currentLocation ?? null,
       submittedAt: now,
       lastUpdatedAt: now,
       assignedAt: null,
@@ -517,15 +546,28 @@ export class MemStorage implements IStorage {
     await this.updateApplicationPriorities();
     
     if (officialId) {
-      return Array.from(this.applications.values())
-        .filter(app => app.officialId === officialId)
+      // STRICT FILTERING: Only return applications where officialId EXACTLY matches
+      // This ensures each application is only visible to ONE official
+      const filtered = Array.from(this.applications.values())
+        .filter(app => {
+          // Must have officialId set AND it must match exactly
+          const matches = app.officialId !== null && app.officialId === officialId;
+          if (!matches && app.officialId) {
+            // Log if we see an application assigned to a different official (for debugging)
+            console.log(`[getOfficialApplications] Application ${app.trackingId} assigned to ${app.officialId}, not ${officialId}`);
+          }
+          return matches;
+        })
         .sort((a, b) => {
-          // Sort by priority first (High > Medium > Low), then by submission date
-          const priorityOrder = { High: 3, Medium: 2, Low: 1 };
-          const priorityDiff = (priorityOrder[b.priority as keyof typeof priorityOrder] || 0) - (priorityOrder[a.priority as keyof typeof priorityOrder] || 0);
+          // Sort by priority first (high > medium > low), then by submission date
+          const priorityOrder = { high: 3, medium: 2, low: 1 };
+          const priorityDiff = (priorityOrder[(b.priority || "low").toLowerCase() as keyof typeof priorityOrder] || 0) - (priorityOrder[(a.priority || "low").toLowerCase() as keyof typeof priorityOrder] || 0);
           if (priorityDiff !== 0) return priorityDiff;
           return new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();
         });
+      
+      console.log(`[getOfficialApplications] Official ${officialId}: Returning ${filtered.length} applications (strictly filtered by officialId)`);
+      return filtered;
     }
     return Array.from(this.applications.values());
   }
@@ -550,9 +592,9 @@ export class MemStorage implements IStorage {
         return appDept === normalizedDept;
       })
       .sort((a, b) => {
-        // Sort by priority first (High > Medium > Low), then by submission date
-        const priorityOrder = { High: 3, Medium: 2, Low: 1 };
-        const priorityDiff = (priorityOrder[b.priority as keyof typeof priorityOrder] || 0) - (priorityOrder[a.priority as keyof typeof priorityOrder] || 0);
+        // Sort by priority first (high > medium > low), then by submission date
+        const priorityOrder = { high: 3, medium: 2, low: 1 };
+        const priorityDiff = (priorityOrder[(b.priority || "low").toLowerCase() as keyof typeof priorityOrder] || 0) - (priorityOrder[(a.priority || "low").toLowerCase() as keyof typeof priorityOrder] || 0);
         if (priorityDiff !== 0) return priorityDiff;
         return new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();
       });
@@ -582,52 +624,99 @@ export class MemStorage implements IStorage {
    * - Medium: 10-19 days
    * - High: 20+ days
    */
-  private calculatePriority(submittedAt: Date): "Low" | "Medium" | "High" {
+  /**
+   * Calculate priority based on:
+   * - Days since submission (if unassigned)
+   * - Days since last update (if assigned but not updated)
+   * Returns: "low" | "medium" | "high"
+   */
+  private calculatePriority(app: Application): "low" | "medium" | "high" {
     const now = new Date();
-    const daysSinceSubmission = Math.floor((now.getTime() - new Date(submittedAt).getTime()) / (1000 * 60 * 60 * 24));
+    const submittedAt = new Date(app.submittedAt);
+    const lastUpdatedAt = new Date(app.lastUpdatedAt);
     
-    if (daysSinceSubmission >= 20) {
-      return "High";
-    } else if (daysSinceSubmission >= 10) {
-      return "Medium";
+    // Calculate days since submission
+    const daysSinceSubmission = Math.floor((now.getTime() - submittedAt.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Calculate days since last update
+    const daysSinceUpdate = Math.floor((now.getTime() - lastUpdatedAt.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Check if application is not assigned to any officer
+    const isUnassigned = app.status === "Submitted" && app.officialId === null;
+    
+    // Priority escalation logic based on user requirements:
+    // - High: Unassigned for 20+ days OR not updated for 20+ days
+    // - Medium: Not assigned OR not updated for 10+ days (but < 20 for high)
+    // - Low: Default for new applications (< 10 days)
+    if (isUnassigned && daysSinceSubmission >= 20) {
+      // Remains unassigned for 20+ days → High
+      return "high";
+    } else if (daysSinceUpdate >= 20) {
+      // Not updated for 20+ days → High
+      return "high";
+    } else if (isUnassigned && daysSinceSubmission >= 10) {
+      // Not assigned for 10+ days → Medium
+      return "medium";
+    } else if (daysSinceUpdate >= 10) {
+      // Not updated for 10+ days → Medium
+      return "medium";
     } else {
-      return "Low";
+      // Default: Low priority for new applications
+      return "low";
     }
   }
 
   /**
-   * Update priorities for all unassigned applications based on days since submission
+   * Update priorities for all applications based on:
+   * - Days since submission (if unassigned)
+   * - Days since last update (if assigned but not updated)
+   * This runs automatically via cron job daily
    */
   async updateApplicationPriorities(): Promise<void> {
     const now = new Date();
     let updated = false;
+    let updatedCount = 0;
 
     for (const [id, app] of this.applications.entries()) {
-      // Only update priority for unassigned applications
-      if (app.status === "Submitted" && app.officialId === null) {
-        const newPriority = this.calculatePriority(app.submittedAt);
+      // Skip completed/rejected applications
+      if (["Approved", "Rejected", "Auto-Approved"].includes(app.status)) {
+        continue;
+      }
+
+      // Calculate new priority based on assignment status and update time
+      const newPriority = this.calculatePriority(app);
+      
+      // Normalize current priority to lowercase for comparison
+      const currentPriority = (app.priority || "low").toLowerCase();
+      
+      // Only update if priority has changed
+      if (currentPriority !== newPriority) {
+        app.priority = newPriority;
+        // Don't update lastUpdatedAt here - we want to track when the application was last updated by an official
+        updated = true;
+        updatedCount++;
         
-        // Only update if priority has changed
-        if (app.priority !== newPriority) {
-          app.priority = newPriority;
-          app.lastUpdatedAt = now;
-          updated = true;
-          
-          // Add history entry for priority change
-          const daysSinceSubmission = Math.floor((now.getTime() - new Date(app.submittedAt).getTime()) / (1000 * 60 * 60 * 24));
-          await this.addApplicationHistory(
-            id,
-            app.status,
-            "system",
-            `Priority automatically updated to ${newPriority} (${daysSinceSubmission} days since submission)`
-          );
-        }
+        // Add history entry for priority change
+        const daysSinceSubmission = Math.floor((now.getTime() - new Date(app.submittedAt).getTime()) / (1000 * 60 * 60 * 24));
+        const daysSinceUpdate = Math.floor((now.getTime() - new Date(app.lastUpdatedAt).getTime()) / (1000 * 60 * 60 * 24));
+        
+        const reason = app.officialId === null 
+          ? `${daysSinceSubmission} days since submission (unassigned)`
+          : `${daysSinceUpdate} days since last update`;
+        
+        await this.addApplicationHistory(
+          id,
+          app.status,
+          "system",
+          `Priority automatically updated to ${newPriority.toUpperCase()} (${reason})`
+        );
       }
     }
 
     // Save to disk if any updates were made
     if (updated) {
       await this.saveToDisk();
+      console.log(`✅ Priority update completed: ${updatedCount} application(s) updated`);
     }
   }
 
@@ -635,11 +724,11 @@ export class MemStorage implements IStorage {
     // Update priorities before returning
     await this.updateApplicationPriorities();
     
-    // Sort by priority (High > Medium > Low), then by submission date
-    const priorityOrder = { High: 3, Medium: 2, Low: 1 };
+    // Sort by priority (high > medium > low), then by submission date
+    const priorityOrder = { high: 3, medium: 2, low: 1 };
     return Array.from(this.applications.values())
       .sort((a, b) => {
-        const priorityDiff = (priorityOrder[b.priority as keyof typeof priorityOrder] || 0) - (priorityOrder[a.priority as keyof typeof priorityOrder] || 0);
+        const priorityDiff = (priorityOrder[(b.priority || "low").toLowerCase() as keyof typeof priorityOrder] || 0) - (priorityOrder[(a.priority || "low").toLowerCase() as keyof typeof priorityOrder] || 0);
         if (priorityDiff !== 0) return priorityDiff;
         return new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();
       });
@@ -710,6 +799,40 @@ export class MemStorage implements IStorage {
 
   async getApplicationHistory(applicationId: string): Promise<ApplicationHistory[]> {
     return this.applicationHistory.get(applicationId) || [];
+  }
+
+  async addApplicationLocation(applicationId: string, location: string, updatedBy: string): Promise<ApplicationLocationHistory> {
+    const id = randomUUID();
+    const locationEntry: ApplicationLocationHistory = {
+      id,
+      applicationId,
+      location,
+      updatedBy,
+      updatedAt: new Date(),
+    };
+
+    const history = this.applicationLocationHistory.get(applicationId) || [];
+    history.push(locationEntry);
+    // Sort by updatedAt descending (newest first)
+    history.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    this.applicationLocationHistory.set(applicationId, history);
+
+    // Update the currentLocation field on the application
+    const app = this.applications.get(applicationId);
+    if (app) {
+      app.currentLocation = location;
+      app.lastUpdatedAt = new Date();
+      this.applications.set(applicationId, app);
+    }
+
+    await this.saveToDisk();
+    return locationEntry;
+  }
+
+  async getApplicationLocationHistory(applicationId: string): Promise<ApplicationLocationHistory[]> {
+    const history = this.applicationLocationHistory.get(applicationId) || [];
+    // Return sorted by updatedAt descending (newest first)
+    return [...history].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   }
 
   async createFeedback(insertFeedback: InsertFeedback): Promise<Feedback> {
@@ -967,6 +1090,7 @@ export class MemStorage implements IStorage {
           'users.json',
           'applications.json',
           'applicationHistory.json',
+          'applicationLocationHistory.json',
           'feedback.json',
           'otpRecords.json',
           'blockchainHashes.json',

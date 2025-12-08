@@ -63,6 +63,7 @@ const ApplicationSchema = new mongoose.Schema<Application>({
   status: { type: String, required: true },
   priority: { type: String, default: "Normal" },
   remarks: String,
+  currentLocation: String,
   citizenId: { type: String, required: true },
   officialId: String,
   submittedAt: { type: Date, default: Date.now },

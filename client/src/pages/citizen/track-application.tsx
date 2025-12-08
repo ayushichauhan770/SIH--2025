@@ -6,12 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Shield, ArrowLeft, Search, Calendar, Clock, FileText, X, CheckCircle, AlertCircle, MessageCircle, BookOpen, ListChecks, HelpCircle } from "lucide-react";
+import { Shield, ArrowLeft, Search, Calendar, Clock, FileText, X, CheckCircle, AlertCircle, MessageCircle, BookOpen, ListChecks, HelpCircle, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/contexts/auth-context";
-import type { Application } from "@shared/schema";
+import { useQuery } from "@tanstack/react-query";
+import type { Application, ApplicationLocationHistory } from "@shared/schema";
 
 export default function TrackApplication() {
   const [, setLocation] = useLocation();
@@ -21,6 +22,14 @@ export default function TrackApplication() {
   const [isSearching, setIsSearching] = useState(false);
   const [foundApplication, setFoundApplication] = useState<Application | null>(null);
   const [showDialog, setShowDialog] = useState(false);
+
+  // Fetch location history for the found application (public access via tracking ID)
+  const { data: locationHistory = [] } = useQuery<ApplicationLocationHistory[]>({
+    queryKey: ["/api/applications/track", foundApplication?.trackingId, "location-history"],
+    enabled: !!foundApplication?.trackingId && showDialog,
+    refetchInterval: 3000,
+    refetchOnWindowFocus: true,
+  });
 
   const statusColors: Record<string, string> = {
     "Submitted": "bg-gradient-to-r from-blue-500 to-cyan-500 text-white dark:from-blue-600 dark:to-cyan-600 shadow-lg shadow-blue-500/30",
@@ -248,6 +257,48 @@ export default function TrackApplication() {
                   </div>
                 </div>
               </div>
+
+              {/* Location History */}
+              {locationHistory && locationHistory.length > 0 && (
+                <div className="group relative p-6 bg-gradient-to-br from-green-50 via-emerald-50/50 to-teal-50/50 dark:from-green-950/40 dark:via-emerald-950/30 dark:to-teal-950/40 rounded-2xl border border-green-200/50 dark:border-green-900/30 shadow-sm hover:shadow-md transition-all duration-300">
+                  <div className="absolute inset-0 bg-gradient-to-br from-green-400/10 via-emerald-400/10 to-teal-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-md">
+                        <MapPin className="h-5 w-5" />
+                      </div>
+                      <Label className="text-sm font-bold text-green-700 dark:text-green-300">Location / Path History</Label>
+                    </div>
+                    <div className="space-y-0 relative pl-4">
+                      <div className="absolute left-[19px] top-2 bottom-4 w-0.5 bg-green-100 dark:bg-green-900/30"></div>
+                      {locationHistory.map((entry, index) => (
+                        <div key={entry.id} className="relative flex gap-4 pb-4 last:pb-0 group">
+                          <div className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 ${
+                            index === 0 ? 'bg-green-500 text-white shadow-md shadow-green-500/30' : 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
+                          }`}>
+                            {index === 0 ? <MapPin size={14} /> : <div className="w-1.5 h-1.5 rounded-full bg-current" />}
+                          </div>
+                          <div className="flex-1 pt-0.5">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
+                              <span className="font-semibold text-sm text-[#1d1d1f] dark:text-white">
+                                {entry.location}
+                              </span>
+                              <span className="text-xs font-medium text-[#86868b] bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded-lg">
+                                {new Date(entry.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            {index === 0 && (
+                              <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 text-xs px-2 py-0.5 rounded-full mt-1 w-fit">
+                                Current Location
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Login Prompt */}
               <div className="group relative p-6 bg-gradient-to-br from-blue-50 via-indigo-50/50 to-purple-50/50 dark:from-blue-950/40 dark:via-indigo-950/30 dark:to-purple-950/40 rounded-2xl border border-blue-200/50 dark:border-blue-900/30 shadow-sm hover:shadow-md transition-all duration-300">
