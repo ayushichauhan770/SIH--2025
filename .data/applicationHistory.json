@@ -1,1 +1,28 @@
-{}
+{
+  "1f888477-99a3-4e6c-b8c3-34addc1be364": [
+    {
+      "id": "90242870-7863-40bb-b916-546a59e8000b",
+      "applicationId": "1f888477-99a3-4e6c-b8c3-34addc1be364",
+      "status": "Submitted",
+      "comment": "Application submitted",
+      "updatedBy": "2ef6ba4b-cef4-4832-a00c-9d69959e9b06",
+      "updatedAt": "2025-12-09T09:41:18.235Z"
+    },
+    {
+      "id": "2fece5e8-1c22-4b51-9990-a1532f1c339c",
+      "applicationId": "1f888477-99a3-4e6c-b8c3-34addc1be364",
+      "status": "Assigned",
+      "comment": "Application assigned to official",
+      "updatedBy": "5c5c817b-011b-4cea-915d-15d77886f216",
+      "updatedAt": "2025-12-09T09:41:18.286Z"
+    },
+    {
+      "id": "8dc47efd-7892-4806-b985-d522e34181e3",
+      "applicationId": "1f888477-99a3-4e6c-b8c3-34addc1be364",
+      "status": "Assigned",
+      "comment": "AI Verification Result: Description is too brief for high-confidence verification.",
+      "updatedBy": "5c5c817b-011b-4cea-915d-15d77886f216",
+      "updatedAt": "2025-12-09T09:50:58.832Z"
+    }
+  ]
+}

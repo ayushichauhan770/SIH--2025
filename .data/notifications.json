@@ -1,1 +1,22 @@
-{}
+{
+  "b143c335-f5f1-4ec7-a0e2-48bc4edd45bb": {
+    "id": "b143c335-f5f1-4ec7-a0e2-48bc4edd45bb",
+    "userId": "5c5c817b-011b-4cea-915d-15d77886f216",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000001 has been automatically assigned to you.",
+    "read": false,
+    "applicationId": "1f888477-99a3-4e6c-b8c3-34addc1be364",
+    "createdAt": "2025-12-09T09:41:18.367Z"
+  },
+  "3dc2d96b-c7f2-4a5f-aa5e-68d03e8dcd6f": {
+    "id": "3dc2d96b-c7f2-4a5f-aa5e-68d03e8dcd6f",
+    "userId": "2ef6ba4b-cef4-4832-a00c-9d69959e9b06",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000001 has been automatically assigned to an official and is now being processed.",
+    "read": false,
+    "applicationId": "1f888477-99a3-4e6c-b8c3-34addc1be364",
+    "createdAt": "2025-12-09T09:41:18.391Z"
+  }
+}

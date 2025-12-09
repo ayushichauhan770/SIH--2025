@@ -525,15 +525,7 @@ export function ApplicationDetailsDialog({ application, open, onClose, canUpdate
                                               <span className="text-xs opacity-80 mt-1 block">{verificationResult.reasoning}</span>
                                            </div>
 
-                                           <Button 
-                                              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl h-12 shadow-lg shadow-blue-500/20"
-                                              onClick={() => {
-                                                  setUpdateStatus(verificationResult.recommendedStatus);
-                                                  setComment(`AI Verification Result: ${verificationResult.reasoning}`);
-                                              }}
-                                           >
-                                              Apply "{verificationResult.recommendedStatus}" Status
-                                           </Button>
+
                                         </div>
                                      )}
                                   </div>

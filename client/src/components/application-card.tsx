@@ -100,16 +100,18 @@ export function ApplicationCard({ application, onViewDetails, showActions, onAcc
       </CardContent>
 
       <CardFooter className="px-5 pb-5 pt-0 flex items-center justify-between gap-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onViewDetails}
-          className="text-[#86868b] hover:text-[#0071e3] hover:bg-transparent pl-0 pr-0 h-auto font-medium transition-all group/btn text-xs p-0"
-          data-testid={`button-view-${application.id}`}
-        >
-          View Details
-          <ArrowRight className="ml-1 h-3 w-3 transition-transform group-hover/btn:translate-x-0.5" />
-        </Button>
+        {application.status !== "In Progress" && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onViewDetails}
+            className="text-[#86868b] hover:text-[#0071e3] hover:bg-transparent pl-0 pr-0 h-auto font-medium transition-all group/btn text-xs p-0"
+            data-testid={`button-view-${application.id}`}
+          >
+            View Details
+            <ArrowRight className="ml-1 h-3 w-3 transition-transform group-hover/btn:translate-x-0.5" />
+          </Button>
+        )}
 
         <div className="flex gap-2">
           {showActions && onAccept && application.status === "Submitted" && (
