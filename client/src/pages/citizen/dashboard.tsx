@@ -23,11 +23,9 @@ export default function CitizenDashboard() {
     refetchInterval: 5000,
   });
 
-/*
   const { data: myCases, isLoading: casesLoading } = useQuery<any[]>({
     queryKey: ["/api/judiciary/my-cases"],
   });
-*/
 
   const { data: notifications = [] } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
@@ -183,7 +181,6 @@ export default function CitizenDashboard() {
             </h2>
             <div className="grid grid-cols-1 gap-4">
               {/* My Cases Summary Card */}
-{/*
               {myCases && myCases.length > 0 && (
                 <Card 
                   className="bg-gradient-to-br from-[#0071e3] to-[#0077ED] border-0 text-white shadow-lg shadow-blue-500/30 rounded-[32px] overflow-hidden relative cursor-pointer group"
@@ -208,7 +205,6 @@ export default function CitizenDashboard() {
                    </CardHeader>
                 </Card>
               )}
-*/}
               <Card 
                 className="group relative border-0 overflow-hidden bg-gradient-to-br from-[#0071e3] via-blue-600 to-indigo-700 dark:from-blue-600 dark:via-indigo-700 dark:to-purple-800 text-white shadow-lg hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 cursor-pointer rounded-[32px] h-40"
                 onClick={() => setLocation("/citizen/submit")} 
@@ -254,7 +250,6 @@ export default function CitizenDashboard() {
                 </CardHeader>
               </Card>
 
-{/*
               <Card 
                 className="group relative border-0 overflow-hidden bg-white dark:bg-slate-900 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 cursor-pointer rounded-[32px] h-40"
                 onClick={() => setLocation("/judiciary/file")} 
@@ -275,9 +270,7 @@ export default function CitizenDashboard() {
                   </div>
                 </CardHeader>
               </Card>
-*/}
 
-{/*
               <Card 
                 className="group relative border-0 overflow-hidden bg-white dark:bg-slate-900 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 cursor-pointer rounded-[32px] h-40"
                 onClick={() => setLocation("/judiciary/portal")} 
@@ -298,7 +291,6 @@ export default function CitizenDashboard() {
                   </div>
                 </CardHeader>
               </Card>
-*/}
             </div>
           </div>
 
@@ -341,7 +333,7 @@ export default function CitizenDashboard() {
                     </div>
                   ))}
                 </div>
-              ) : (filteredApplications.length === 0) ? (
+              ) : (filteredApplications.length === 0 && (!myCases || myCases.length === 0)) ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <div className="p-4 rounded-full bg-[#f5f5f7] dark:bg-slate-800 mb-4">
                     <FileText className="h-8 w-8 text-[#86868b]" />

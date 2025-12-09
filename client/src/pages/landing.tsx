@@ -161,6 +161,9 @@ export default function Landing() {
               <Bell className="h-5 w-5" />
             </Button>
             <ThemeToggle />
+            <Link href="/judiciary">
+              <span className="text-sm font-medium text-[#1d1d1f] dark:text-white cursor-pointer hover:text-[#0071e3] transition-colors">Judiciary</span>
+            </Link>
             <Link href="/register">
               <Button variant="outline" className="rounded-full border-slate-200 dark:border-slate-700 hover:bg-[#F5F5F7] dark:hover:bg-slate-800 text-[#1d1d1f] dark:text-white px-6 ml-2">
                 Get Started
