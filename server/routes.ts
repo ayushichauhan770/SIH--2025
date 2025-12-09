@@ -10,6 +10,7 @@ import { sendSMSOTP } from "./sms-service";
 import { aiRouting } from "./services/ai-routing";
 import { timeline } from "./services/timeline";
 import { escalationManager } from "./services/escalation-job";
+import { investigationEngine } from "./investigation-engine";
 
 const JWT_SECRET = process.env.SESSION_SECRET || "dev-secret-key";
 
@@ -2698,6 +2699,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("❌ Error in initial priority update:", error);
     }
   }, 5000); // Wait 5 seconds after server starts
+
+  // AI Investigation Engine Cron Job (Runs every 6 hours)
+  cron.schedule("0 */6 * * *", async () => {
+    try {
+      console.log("🕵️‍♂️ Running scheduled AI Investigation scan...");
+      await investigationEngine.runFullInvestigation();
+    } catch (error) {
+      console.error("❌ Error in AI Investigation scan:", error);
+    }
+  }, {
+    timezone: "Asia/Kolkata"
+  });
+
+  // Manual Trigger for Investigation (Admin Only)
+  app.post("/api/admin/investigation/run", authenticateToken, requireRole("admin"), async (req: Request, res: Response) => {
+    try {
+      // Run asynchronously to not block
+      investigationEngine.runFullInvestigation().catch(err => console.error(err));
+      res.json({ message: "Investigation initiated. Alerts will be generated if suspicious activity is found." });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

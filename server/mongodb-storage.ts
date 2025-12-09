@@ -154,6 +154,11 @@ export class MongoDBStorage implements IStorage {
     return officials as User[];
   }
 
+  async getAllAdmins(): Promise<User[]> {
+    const admins = await UserModel.find({ role: "admin" }).lean();
+    return admins as User[];
+  }
+
   async getAllApplications(): Promise<Application[]> {
     const apps = await ApplicationModel.find().sort({ submittedAt: -1 }).lean();
     return apps as Application[];

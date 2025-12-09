@@ -47,6 +47,7 @@ export interface IStorage {
   getOfficialApplications(officialId?: string): Promise<Application[]>;
   getUnassignedApplicationsByDepartment(department: string): Promise<Application[]>;
   getAllOfficials(): Promise<User[]>;
+  getAllAdmins(): Promise<User[]>;
   getAllApplications(): Promise<Application[]>;
   updateApplicationStatus(id: string, status: string, updatedBy: string, comment?: string): Promise<Application>;
   assignApplication(id: string, officialId: string): Promise<Application>;
@@ -157,8 +158,9 @@ export class MemStorage implements IStorage {
     // If no judges (fresh install or empty db), seed data
     if (this.judges.size === 0) {
       this.seedJudiciaryData();
-      this.saveToDisk();
     }
+    this.seedInvestigationData();
+    this.saveToDisk();
   }
 
   private loadFromDisk() {
@@ -643,6 +645,10 @@ export class MemStorage implements IStorage {
 
   async getAllOfficials(): Promise<User[]> {
     return Array.from(this.users.values()).filter(u => u.role === "official");
+  }
+
+  async getAllAdmins(): Promise<User[]> {
+    return Array.from(this.users.values()).filter(u => u.role === "admin");
   }
 
   /**
@@ -1500,6 +1506,7 @@ export class MemStorage implements IStorage {
     casesList.forEach(c => this.cases.set(c.id, c));
   }
 
+
   async createAiRoutingLog(insertLog: InsertAiRoutingLog): Promise<AiRoutingLog> {
     const id = randomUUID();
     const log: AiRoutingLog = { 
@@ -1545,6 +1552,36 @@ export class MemStorage implements IStorage {
         app.status !== "CLOSED" &&
         app.slaDueAt && new Date(app.slaDueAt) < now
     );
+  }
+
+  private seedInvestigationData() {
+    // Check if the example notification already exists to avoid duplicates
+    const existing = Array.from(this.notifications.values()).find(n => n.type === "investigation_alert" && n.title.includes("Officer X"));
+    if (!existing) {
+      // Find an admin user
+      const admins = Array.from(this.users.values()).filter(u => u.role === "admin");
+      if (admins.length > 0) {
+        const adminId = admins[0].id;
+        const id = randomUUID();
+        const notification: Notification = {
+          id,
+          userId: adminId, 
+          type: "investigation_alert",
+          title: "🚨 AI Investigation Alert: Officer X",
+          message: `AI Engine detected suspicious behavior:\n\n` +
+            `• CRITICAL: Recent rejection rate is extremely high (70.0%)\n` +
+            `• Significant drop in processing speed. Averaging 8.0 files/day (Norm: 50.0/day)\n` +
+            `• Possible Bias Detected: 85.0% of recent rejections are from 'Tribal Belt' district.\n\n` +
+            `Recommendation: Immediate Inspection & Temporary Suspension Recommended`,
+          read: false,
+          applicationId: null,
+          createdAt: new Date(),
+        };
+        this.notifications.set(id, notification);
+        console.log("✅ Seeded example Investigation Alert notification");
+      }
+    }
+
   }
 }
 
