@@ -24,7 +24,7 @@ import CaseDetails from "@/pages/judiciary/case-details";
 import ScrutinyPortal from "@/pages/official/scrutiny-portal";
 
 import { SessionGuard } from "@/components/session-guard";
-import { ChatbotWidget } from "@/components/chatbot-widget";
+import { CitizenAssistant } from "@/components/citizen-assistant";
 
 function ProtectedRoute({ component: Component, allowedRoles }: { component: React.ComponentType; allowedRoles: string[] }) {
   const { user, isLoading } = useAuth();
@@ -97,7 +97,7 @@ export default function App() {
         <SessionGuard />
         <TooltipProvider>
           <Toaster />
-          <ChatbotWidget />
+          <CitizenAssistant />
           <Router />
         </TooltipProvider>
       </AuthProvider>

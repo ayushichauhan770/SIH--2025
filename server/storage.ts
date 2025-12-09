@@ -20,10 +20,15 @@ import type {
   InsertCase,
   Hearing,
   InsertHearing,
+  AiRoutingLog,
+  InsertAiRoutingLog,
+  FileTimeline,
+  InsertFileTimeline
 } from "@shared/schema";
 import { randomUUID, createHash } from "crypto";
 import fs from "fs";
 import path from "path";
+import { DatabaseStorage } from "./db_storage";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -86,6 +91,12 @@ export interface IStorage {
 
   getJudgePerformance(judgeId: string): Promise<Judge | undefined>;
   getCase(id: string): Promise<Case | undefined>;
+
+  // AI & Timeline
+  createAiRoutingLog(log: InsertAiRoutingLog): Promise<AiRoutingLog>;
+  createFileTimelineEvent(event: InsertFileTimeline): Promise<FileTimeline>;
+  getFileTimeline(applicationId: string): Promise<FileTimeline[]>;
+  getOverdueApplications(): Promise<Application[]>; // For escalation job
 }
 
 export class MemStorage implements IStorage {
@@ -100,7 +111,10 @@ export class MemStorage implements IStorage {
   private warnings: Map<string, Warning>;
   private judges: Map<string, Judge>;
   private cases: Map<string, Case>;
+  private cases: Map<string, Case>;
   private hearings: Map<string, Hearing>;
+  private aiRoutingLogs: Map<string, AiRoutingLog>;
+  private fileTimeline: Map<string, FileTimeline>;
   private dataDir = '.data';
   private dataFile = path.join(process.cwd(), '.data', 'db.json');
 
@@ -117,6 +131,8 @@ export class MemStorage implements IStorage {
     this.judges = new Map();
     this.cases = new Map();
     this.hearings = new Map();
+    this.aiRoutingLogs = new Map();
+    this.fileTimeline = new Map();
 
     // Ensure data directory exists
     if (!fs.existsSync(path.join(process.cwd(), this.dataDir))) {
@@ -1273,7 +1289,38 @@ export class MemStorage implements IStorage {
     ];
     casesList.forEach(c => this.cases.set(c.id, c));
   }
+
+  async createAiRoutingLog(insertLog: InsertAiRoutingLog): Promise<AiRoutingLog> {
+    const id = randomUUID();
+    const log: AiRoutingLog = { ...insertLog, id, createdAt: new Date() };
+    this.aiRoutingLogs.set(id, log);
+    return log;
+  }
+
+  async createFileTimelineEvent(insertEvent: InsertFileTimeline): Promise<FileTimeline> {
+    const id = randomUUID();
+    const event: FileTimeline = { ...insertEvent, id, createdAt: new Date() };
+    this.fileTimeline.set(id, event);
+    return event;
+  }
+
+  async getFileTimeline(applicationId: string): Promise<FileTimeline[]> {
+    return Array.from(this.fileTimeline.values())
+      .filter(e => e.applicationId === applicationId)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }
+
+  async getOverdueApplications(): Promise<Application[]> {
+    const now = new Date();
+    return Array.from(this.applications.values()).filter(app => 
+        app.status !== "RESOLVED" && 
+        app.status !== "REJECTED" && 
+        app.status !== "CLOSED" &&
+        app.slaDueAt && new Date(app.slaDueAt) < now
+    );
+  }
 }
 
+
 // Use file-based persistent storage (data persists across server restarts)
-export const storage = new MemStorage();
+export const storage = process.env.DATABASE_URL ? new DatabaseStorage() : new MemStorage();

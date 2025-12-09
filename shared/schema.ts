@@ -53,11 +53,37 @@ export const applications = pgTable("applications", {
   assignedAt: timestamp("assigned_at"),
   lastUpdatedAt: timestamp("last_updated_at").defaultNow().notNull(),
   approvedAt: timestamp("approved_at"),
-  autoApprovalDate: timestamp("auto_approval_date").notNull(),
+  autoApprovalDate: timestamp("auto_approval_date"),
   data: text("data").notNull(),
   image: text("image"),
   isSolved: boolean("is_solved").default(false),
   escalationLevel: integer("escalation_level").default(0),
+  slaDueAt: timestamp("sla_due_at"),
+  aiConfidence: integer("ai_confidence"), // Stored as 0-100
+  attachments: text("attachments"), // JSON string of file URLs
+});
+
+export const aiRoutingLogs = pgTable("ai_routing_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  applicationId: varchar("application_id").notNull(),
+  inputText: text("input_text"),
+  predictedDept: text("predicted_dept"),
+  predictedPriority: text("predicted_priority"),
+  confidenceScore: integer("confidence_score"), // 0-100
+  reasoning: text("reasoning"),
+  actionTaken: text("action_taken"), // AUTO_ASSIGNED, FLAGGED_FOR_MANUAL
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const fileTimeline = pgTable("file_timeline", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  applicationId: varchar("application_id").notNull(),
+  actorType: text("actor_type").notNull(), // CITIZEN, OFFICER, SYSTEM, AI, ADMIN
+  actorId: varchar("actor_id"), // Nullable for SYSTEM/AI
+  eventType: text("event_type").notNull(), // CREATED, AI_ROUTED, ASSIGNED, STATUS_CHANGED, ESCALATED
+  metadata: text("metadata"), // JSON string of details
+  message: text("message"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const applicationHistory = pgTable("application_history", {
@@ -139,6 +165,19 @@ export const insertApplicationSchema = createInsertSchema(applications).omit({
   officialId: true,
   isSolved: true,
   escalationLevel: true,
+  slaDueAt: true,
+  aiConfidence: true,
+  attachments: true,
+});
+
+export const insertAiRoutingLogSchema = createInsertSchema(aiRoutingLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertFileTimelineSchema = createInsertSchema(fileTimeline).omit({
+  id: true,
+  createdAt: true,
 });
 
 export const updateApplicationStatusSchema = z.object({
@@ -186,6 +225,12 @@ export type LoginData = z.infer<typeof loginSchema>;
 export type InsertApplication = z.infer<typeof insertApplicationSchema>;
 export type Application = typeof applications.$inferSelect;
 export type UpdateApplicationStatus = z.infer<typeof updateApplicationStatusSchema>;
+
+export type AiRoutingLog = typeof aiRoutingLogs.$inferSelect;
+export type InsertAiRoutingLog = z.infer<typeof insertAiRoutingLogSchema>;
+
+export type FileTimeline = typeof fileTimeline.$inferSelect;
+export type InsertFileTimeline = z.infer<typeof insertFileTimelineSchema>;
 
 export type ApplicationHistory = typeof applicationHistory.$inferSelect;
 

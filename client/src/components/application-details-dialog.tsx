@@ -4,13 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Clock, User, FileText, Calendar, AlertCircle, CheckCircle2, MessageSquare, AlertTriangle, Shield, ChevronRight } from "lucide-react";
+import { Clock, User, FileText, Calendar, AlertCircle, CheckCircle2, MessageSquare, AlertTriangle, Shield, ChevronRight, BrainCircuit, Wand2, XCircle } from "lucide-react";
 import type { Application, User as UserType, ApplicationHistory } from "@shared/schema";
 import { formatDistanceToNow, format } from "date-fns";
 import { useState, useEffect } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import type { VerificationResult } from "../../../server/services/ai-routing";
 
 interface ApplicationDetailsDialogProps {
       application: Application | null;
@@ -33,7 +34,25 @@ export function ApplicationDetailsDialog({ application, open, onClose, canUpdate
       const { toast } = useToast();
       const [updateStatus, setUpdateStatus] = useState("");
       const [comment, setComment] = useState("");
+
       const [remarks, setRemarks] = useState("");
+      
+      const [isVerifying, setIsVerifying] = useState(false);
+      const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
+
+      const runAiVerification = async () => {
+         setIsVerifying(true);
+         try {
+            // Fix: Cast the response to unknown first, then to VerificationResult to avoid TS issues if types mismatch slightly
+            const res = await apiRequest("POST", `/api/applications/${application?.id}/verify-ai`, {});
+            setVerificationResult(res as unknown as VerificationResult);
+            toast({ title: "AI Check Complete", description: "Verification checklist generated." });
+         } catch (err) {
+            toast({ title: "AI Error", description: "Failed to run verification", variant: "destructive" });
+         } finally {
+            setIsVerifying(false);
+         }
+      };
 
       const { data: citizen } = useQuery<UserType>({
             queryKey: [`/api/users/${application?.citizenId}`],
@@ -247,6 +266,99 @@ export function ApplicationDetailsDialog({ application, open, onClose, canUpdate
                                                 </div>
                                           </div>
                                     </div>
+
+                              )}
+
+                              {/* AI Verification Section */}
+                              {canUpdateStatus && (
+                                  <div className="bg-slate-50 dark:bg-slate-800/50 rounded-[24px] p-6 border border-slate-200 dark:border-slate-700">
+                                     <div className="flex items-center justify-between mb-4">
+                                        <div className="flex items-center gap-2">
+                                           <BrainCircuit className="text-[#0071e3] h-6 w-6" />
+                                           <h3 className="font-bold text-[#1d1d1f] dark:text-white text-lg">AI Verification Assistant</h3>
+                                        </div>
+                                        <Button 
+                                           onClick={runAiVerification} 
+                                           disabled={isVerifying}
+                                           variant="outline"
+                                           className="bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl"
+                                        >
+                                           {isVerifying ? "Analyzing..." : <><Wand2 className="mr-2 h-4 w-4" /> Run Checklist</>}
+                                        </Button>
+                                     </div>
+
+                                     {verificationResult && (
+                                        <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                                           <div className="grid grid-cols-2 gap-3">
+                                              <div className="flex items-center gap-2 text-sm">
+                                                 {verificationResult.checklist.identityMatch ? <CheckCircle2 className="text-green-500 h-4 w-4" /> : <XCircle className="text-red-500 h-4 w-4" />}
+                                                 <span className="text-[#1d1d1f] dark:text-white">Identity Match</span>
+                                              </div>
+                                              <div className="flex items-center gap-2 text-sm">
+                                                 {verificationResult.checklist.addressMatch ? <CheckCircle2 className="text-green-500 h-4 w-4" /> : <XCircle className="text-red-500 h-4 w-4" />}
+                                                 <span className="text-[#1d1d1f] dark:text-white">Address Verified</span>
+                                              </div>
+                                              <div className="flex items-center gap-2 text-sm">
+                                                 {verificationResult.checklist.documentClear ? <CheckCircle2 className="text-green-500 h-4 w-4" /> : <XCircle className="text-red-500 h-4 w-4" />}
+                                                 <span className="text-[#1d1d1f] dark:text-white">Docs Readable</span>
+                                              </div>
+                                              <div className="flex items-center gap-2 text-sm">
+                                                 {verificationResult.checklist.formComplete ? <CheckCircle2 className="text-green-500 h-4 w-4" /> : <XCircle className="text-red-500 h-4 w-4" />}
+                                                 <span className="text-[#1d1d1f] dark:text-white">Form Complete</span>
+                                              </div>
+                                           </div>
+                                           
+                                           {/* Forensics Section */}
+                                           <div className="border-t border-slate-200 dark:border-slate-700 pt-4 mt-4">
+                                                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Forensic Analysis (OCR + CV)</h4>
+                                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                                    <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                                                        <span className="text-[#86868b]">OCR Name Match</span>
+                                                        {verificationResult.forensics?.ocrNameMatch ? 
+                                                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">MATCH</Badge> : 
+                                                            <Badge variant="destructive">MISMATCH</Badge>
+                                                        }
+                                                    </div>
+                                                    <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                                                        <span className="text-[#86868b]">Tampering</span>
+                                                        {!verificationResult.forensics?.tamperingDetected ? 
+                                                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">CLEAN</Badge> : 
+                                                            <Badge variant="destructive">DETECTED</Badge>
+                                                        }
+                                                    </div>
+                                                    <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800 col-span-2">
+                                                        <span className="text-[#86868b]">Image Quality Score</span>
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="h-2 w-32 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                                                <div 
+                                                                    className={`h-full ${verificationResult.forensics?.imageQualityScore > 70 ? 'bg-green-500' : 'bg-yellow-500'}`} 
+                                                                    style={{ width: `${verificationResult.forensics?.imageQualityScore}%` }}
+                                                                />
+                                                            </div>
+                                                            <span className="font-mono font-bold text-[#1d1d1f] dark:text-white">{verificationResult.forensics?.imageQualityScore}%</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                           </div>
+
+                                           <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-sm text-blue-800 dark:text-blue-200 border border-blue-100 dark:border-blue-900/30">
+                                              <strong>AI Recommendation:</strong> {verificationResult.recommendedStatus} ({verificationResult.confidence}% confidence)
+                                              <br/>
+                                              <span className="text-xs opacity-80 mt-1 block">{verificationResult.reasoning}</span>
+                                           </div>
+
+                                           <Button 
+                                              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl h-12 shadow-lg shadow-blue-500/20"
+                                              onClick={() => {
+                                                  setUpdateStatus(verificationResult.recommendedStatus);
+                                                  setComment(`AI Verification Result: ${verificationResult.reasoning}`);
+                                              }}
+                                           >
+                                              Apply "{verificationResult.recommendedStatus}" Status
+                                           </Button>
+                                        </div>
+                                     )}
+                                  </div>
                               )}
 
                               {/* Timeline */}

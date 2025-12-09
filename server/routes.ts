@@ -7,6 +7,9 @@ import { loginSchema, insertUserSchema, insertApplicationSchema, updateApplicati
 import type { User, Application } from "@shared/schema";
 import { sendEmailOTP, verifyEmailConfig } from "./email-service";
 import { sendSMSOTP } from "./sms-service";
+import { aiRouting } from "./services/ai-routing";
+import { timeline } from "./services/timeline";
+import { escalationManager } from "./services/escalation-job";
 
 const JWT_SECRET = process.env.SESSION_SECRET || "dev-secret-key";
 
@@ -279,6 +282,9 @@ async function autoAssignApplication(applicationId: string, departmentName: stri
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Start Escalation Job (Runs every 60 mins)
+  escalationManager.startJob(60);
+
   // Verify email configuration on startup
   verifyEmailConfig().then((success) => {
     if (!success) {
@@ -290,7 +296,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const isDev = (process.env.NODE_ENV || "development") !== "production";
   app.post("/api/auth/register", async (req: Request, res: Response) => {
     try {
-      const data = insertUserSchema.parse(req.body);
+      // Manually add designation/level to schema parse or allow pass-through by updating insertion
+      // For safety, let's explicitly extract them
+      const data = insertUserSchema.parse({
+         ...req.body,
+         // Ensure extra fields are handled if schema is strict, but insertUserSchema omits ID/dates only
+         // We need to cast hierarchyLevel to number if it came as string
+         hierarchyLevel: req.body.hierarchyLevel ? Number(req.body.hierarchyLevel) : 1,
+      });
 
       // Validate role
       if (data.role && !["citizen", "official", "admin"].includes(data.role)) {
@@ -299,9 +312,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify Secret Key for Official and Admin
       if (data.role === "official") {
-        const { secretKey } = req.body;
-        if (secretKey !== "official@2025") {
-          return res.status(403).json({ error: "Invalid Secret Key for Official registration" });
+        const { secretKey, hierarchyLevel } = req.body;
+        const level = Number(hierarchyLevel) || 1;
+
+        if (level === 2 && secretKey !== "supervisor@2025") {
+             return res.status(403).json({ error: "Invalid Secret Key for Supervisor (Level 2)" });
+        } else if (level === 3 && secretKey !== "director@2025") {
+             return res.status(403).json({ error: "Invalid Secret Key for Director (Level 3)" });
+        } else if (level === 1 && secretKey !== "official@2025") {
+             return res.status(403).json({ error: "Invalid Secret Key for Official (Level 1)" });
         }
       } else if (data.role === "admin") {
         const { secretKey } = req.body;
@@ -341,6 +360,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.createUser({
         ...data,
         password: hashedPassword,
+        hierarchyLevel: req.body.hierarchyLevel ? parseInt(req.body.hierarchyLevel) : 1,
+        designation: req.body.designation || "Official"
       });
 
       console.log(`User registered: username=${user.username}, phone=${user.phone}, email=${user.email}`);
@@ -679,6 +700,170 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // NEW: Automated File Submission Endpoint (AI Integrated)
+  app.post("/api/files", authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const data = insertApplicationSchema.parse(req.body);
+      
+      // 1. AI Analysis
+      const aiResult = await aiRouting.analyzeComplaint(
+        data.title || "User Complaint", 
+        data.description, 
+        data.location || "Unknown"
+      );
+
+      // 2. Calculate SLA & Auto-Approval
+      const slaDueAt = escalationManager.calculateDueDate(aiResult.priority);
+      
+      // Auto-Approval Logic: If confidence > 90%, auto-approve in 36 hours
+      let autoApprovalDate: Date | null = null;
+      if (aiResult.confidence > 90) {
+        autoApprovalDate = new Date(Date.now() + 36 * 60 * 60 * 1000); // 36 hours
+      }
+
+      // 1.5: Run Semantic Verification & Forensic Check (The "AI Official" Layer)
+      const verification = await aiRouting.verifyApplication({
+          ...data,
+          fullName: req.user?.fullName,
+          aadharNumber: req.user?.aadharNumber
+      });
+
+      // "Replace the Official" Logic:
+      // If AI is extremely confident (>90%) AND Forensics are clean -> Instant Approval
+      let status = aiResult.action === "AUTO_ASSIGN" ? "Submitted" : "PENDING_MANUAL_ROUTING";
+      let remarks = "";
+      
+      const isForensicallyClean = !verification.forensics?.tamperingDetected && verification.forensics?.ocrNameMatch;
+      
+      if (verification.confidence > 90 && isForensicallyClean) {
+          status = "Auto-Approved";
+          remarks = `⚡ Instant AI Approval: Document forensics passed with ${verification.confidence}% confidence.`;
+          autoApprovalDate = new Date(); // Approved now
+      }
+
+      // 3. Create Application
+      const application = await storage.createApplication({
+        ...data,
+        citizenId: req.user!.id,
+        department: aiResult.department,
+        status: status,
+        priority: aiResult.priority,
+        slaDueAt: slaDueAt,
+        autoApprovalDate: autoApprovalDate, 
+        aiConfidence: Math.round(verification.confidence), // Use verification confidence
+        remarks: remarks || undefined
+      });
+
+      // 4. Log AI Analysis
+      await storage.createAiRoutingLog({
+        applicationId: application.id,
+        inputText: data.description,
+        predictedDept: aiResult.department,
+        predictedPriority: aiResult.priority,
+        confidenceScore: Math.round(aiResult.confidence),
+        reasoning: aiResult.reasoning,
+        actionTaken: aiResult.action
+      });
+
+      // 5. Timeline Events
+      if (status === "Auto-Approved") {
+          // Log the creation by citizen first
+          await timeline.logEvent(application.id, "CITIZEN", "CREATED", "Application submitted successfully", req.user!.id);
+          // Then log the immediate AI approval
+          await timeline.logEvent(application.id, "AI", "STATUS_CHANGED", "Application Auto-Approved by AI Official (Forensics Validated)", undefined, { reasoning: remarks });
+      } else {
+          await timeline.logEvent(
+            application.id, 
+            "CITIZEN", 
+            "CREATED", 
+            "Application submitted successfully",
+             req.user!.id
+          );
+      }
+      
+      await timeline.logEvent(
+        application.id, 
+        "AI", 
+        "AI_ROUTED", 
+        `AI routed to ${aiResult.department} (${aiResult.priority} Priority). Confidence: ${Math.round(aiResult.confidence)}%`,
+        undefined,
+        { reasoning: aiResult.reasoning }
+      );
+
+      // Attempt Auto-Assignment if AI was confident
+      if (aiResult.action === "AUTO_ASSIGN") {
+         try {
+           const assignment = await autoAssignApplication(application.id, aiResult.department);
+           if (assignment) {
+             await timeline.logEvent(
+                application.id,
+                "SYSTEM",
+                "ASSIGNED",
+                `System auto-assigned to ${assignment.officialName} (${assignment.department})`,
+                undefined,
+                { officialName: assignment.officialName, workload: assignment.workloadStats }
+             );
+           } else {
+             await timeline.logEvent(
+               application.id,
+               "SYSTEM",
+               "STATUS_CHANGED",
+               "Auto-assignment failed: No available officials. Flags for manual routing."
+             );
+           }
+         } catch (err) {
+            console.error("AUTO_ASSIGN_ERROR", err);
+         }
+      }
+
+      res.json(application);
+    } catch (error: any) {
+      console.error("FILE_SUBMISSION_ERROR", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // NEW: Get File Timeline
+  app.get("/api/files/:id/timeline", authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const events = await storage.getFileTimeline(req.params.id);
+      res.json(events);
+    } catch (error: any) {
+       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // NEW: AI Verification Endpoint for Officials
+  app.post("/api/applications/:id/verify-ai", authenticateToken, requireRole("official"), async (req: Request, res: Response) => {
+    try {
+       const application = await storage.getApplication(req.params.id);
+       if (!application) return res.status(404).json({ error: "Application not found" });
+
+       // Get user details for context
+       const citizen = await storage.getUser(application.citizenId);
+       
+       const verificationResult = await aiRouting.verifyApplication({
+         ...application,
+         fullName: citizen?.fullName,
+         aadharNumber: citizen?.aadharNumber
+       });
+
+       // Log the AI check logic
+       await timeline.logEvent(
+         application.id,
+         "AI",
+         "AI_ROUTED", // Reuse or add new event type like AI_VERIFY
+         `AI Verification Checked. Outcome: ${verificationResult.recommendedStatus}`,
+         undefined,
+         { checklist: verificationResult.checklist, reasoning: verificationResult.reasoning }
+       );
+
+       res.json(verificationResult);
+    } catch (error: any) {
+       res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/applications/:id/assign", authenticateToken, requireRole("admin"), async (req: Request, res: Response) => {
     try {
       const { officialId } = req.body;
@@ -712,6 +897,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(application);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
+    }
+  });
+
+  // NEW: Chat with Sahayak Assistant
+  app.post("/api/chat", async (req: Request, res: Response) => {
+    try {
+        const { message } = req.body;
+        if (!message) return res.status(400).json({ error: "Message required" });
+        
+        const response = await aiRouting.chatWithAssistant(message);
+        res.json({ response });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
     }
   });
 

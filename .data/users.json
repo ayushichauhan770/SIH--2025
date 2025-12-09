@@ -187,5 +187,22 @@
     "assignedCount": 0,
     "solvedCount": 0,
     "id": "75250458-60ab-4066-bad7-64acd15fb30b"
+  },
+  "13ece050-f830-46a8-b7e4-f224385151da": {
+    "username": "o2",
+    "password": "$2b$10$WHbFiqko5Zcj/DTsFhKpFuaHyXlMQb9ZinRHSFn0gTs0yeM9L3hkK",
+    "role": "official",
+    "fullName": "Dhruv Tiwari",
+    "email": "dhruv@gmail.com",
+    "phone": "9630130253",
+    "aadharNumber": "741852321741",
+    "department": "Aadhaar – Unique Identification Authority of India (UIDAI)",
+    "subDepartment": "Mobile Number Linking Issue",
+    "district": null,
+    "createdAt": "2025-12-08T17:47:01.651Z",
+    "rating": 2,
+    "assignedCount": 1,
+    "solvedCount": 0,
+    "id": "13ece050-f830-46a8-b7e4-f224385151da"
   }
 }
