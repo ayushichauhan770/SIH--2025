@@ -5,14 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Shield, ArrowLeft, Clock, User, Calendar, MessageSquare, ThumbsUp, ThumbsDown, Star, FileText, CheckCircle, AlertCircle, MapPin } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatusStepper } from "@/components/status-stepper";
 import { BlockchainHashDisplay } from "@/components/blockchain-hash";
 import { RatingComponent } from "@/components/rating-component";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Application, ApplicationHistory, BlockchainHash, Feedback } from "@shared/schema";
+import type { Application, ApplicationLocationHistory, BlockchainHash, Feedback } from "@shared/schema";
 import { useState } from "react";
 
 export default function ApplicationDetails() {
@@ -30,9 +29,11 @@ export default function ApplicationDetails() {
     refetchInterval: 3000,
   });
 
-  const { data: history = [] } = useQuery<ApplicationHistory[]>({
-    queryKey: ["/api/applications", applicationId, "history"],
-    enabled: !!applicationId,
+  const { data: locationHistory = [], isLoading: locationHistoryLoading } = useQuery<ApplicationLocationHistory[]>({
+    queryKey: ["/api/applications", applicationId, "location-history"],
+    enabled: !!applicationId && !!application,
+    refetchInterval: 3000,
+    refetchOnWindowFocus: true,
   });
 
   const { data: blockchainHash } = useQuery<BlockchainHash | null>({
@@ -248,6 +249,49 @@ export default function ApplicationDetails() {
                 </Card>
               )}
 
+              {(locationHistory && locationHistory.length > 0) && (
+                <Card className="group relative border-0 overflow-hidden bg-gradient-to-br from-green-50 via-emerald-50/50 to-teal-50 dark:from-green-950/40 dark:via-emerald-950/30 dark:to-teal-950/40 shadow-sm hover:shadow-lg transition-all duration-300 rounded-[32px] border-l-4 border-l-green-500">
+                  <div className="absolute inset-0 bg-gradient-to-br from-green-400/10 to-emerald-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <CardHeader className="relative z-10 border-b border-slate-100 dark:border-slate-800 p-6">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/30">
+                        <MapPin className="h-5 w-5" />
+                      </div>
+                      <CardTitle className="text-lg font-bold text-[#1d1d1f] dark:text-white">Location / Path History</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="relative z-10 p-6">
+                    <div className="space-y-0 relative pl-4">
+                      <div className="absolute left-[19px] top-2 bottom-4 w-0.5 bg-green-100 dark:bg-green-900/30"></div>
+                      {locationHistory.map((entry, index) => (
+                        <div key={entry.id} className="relative flex gap-6 pb-6 last:pb-0 group">
+                          <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white dark:border-slate-900 ${
+                            index === 0 ? 'bg-green-500 text-white shadow-lg shadow-green-500/30' : 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
+                          }`}>
+                            {index === 0 ? <MapPin size={18} /> : <div className="w-2 h-2 rounded-full bg-current" />}
+                          </div>
+                          <div className="flex-1 pt-1">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
+                              <span className="font-bold text-[#1d1d1f] dark:text-white text-base">
+                                {entry.location}
+                              </span>
+                              <span className="text-xs font-medium text-[#86868b] bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded-lg">
+                                {new Date(entry.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            {index === 0 && (
+                              <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 text-xs px-2 py-0.5 rounded-full mt-2 w-fit">
+                                Current Location
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {showRating && (
                 <Card className="group relative border-0 overflow-hidden bg-gradient-to-br from-white via-yellow-50/30 to-amber-50/30 dark:from-slate-900 dark:via-yellow-950/30 dark:to-amber-950/30 shadow-sm hover:shadow-lg transition-all duration-300 rounded-[32px]">
                   <div className="absolute inset-0 bg-gradient-to-br from-yellow-400/5 to-amber-400/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -344,28 +388,6 @@ export default function ApplicationDetails() {
                   </CardContent>
                 </Card>
               )}
-
-              {/* Timeline Card */}
-              <Card className="group relative border-0 overflow-hidden bg-gradient-to-br from-white via-orange-50/30 to-amber-50/30 dark:from-slate-900 dark:via-orange-950/30 dark:to-amber-950/30 shadow-sm hover:shadow-lg transition-all duration-300 rounded-[32px]">
-                <div className="absolute inset-0 bg-gradient-to-br from-orange-400/5 to-amber-400/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                <CardHeader className="relative z-10 border-b border-slate-100 dark:border-slate-800 p-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-lg shadow-orange-500/30">
-                      <Clock className="h-5 w-5" />
-                    </div>
-                    <CardTitle className="text-lg font-bold text-[#1d1d1f] dark:text-white">Timeline</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-6 relative z-10">
-                  <StatusStepper
-                    currentStatus={application.status}
-                    history={history.map(h => ({
-                      ...h,
-                      comment: h.comment || undefined
-                    }))}
-                  />
-                </CardContent>
-              </Card>
 
               {/* Blockchain Hash */}
               {blockchainHash && (

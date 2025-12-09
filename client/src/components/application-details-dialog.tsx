@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Clock, User, FileText, Calendar, AlertCircle, CheckCircle2, MessageSquare, AlertTriangle, Shield, ChevronRight, BrainCircuit, Wand2, XCircle } from "lucide-react";
-import type { Application, User as UserType, ApplicationHistory } from "@shared/schema";
+import { Clock, User, FileText, Calendar, AlertCircle, CheckCircle2, MessageSquare, AlertTriangle, Shield, ChevronRight, BrainCircuit, Wand2, XCircle, MapPin, Plus } from "lucide-react";
+import type { Application, User as UserType, ApplicationHistory, ApplicationLocationHistory } from "@shared/schema";
 import { formatDistanceToNow, format } from "date-fns";
 import { useState, useEffect } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -54,6 +54,8 @@ export function ApplicationDetailsDialog({ application, open, onClose, canUpdate
          }
       };
 
+      const [newLocation, setNewLocation] = useState("");
+
       const { data: citizen } = useQuery<UserType>({
             queryKey: [`/api/users/${application?.citizenId}`],
             enabled: !!application?.citizenId && open,
@@ -64,10 +66,18 @@ export function ApplicationDetailsDialog({ application, open, onClose, canUpdate
             enabled: !!application?.id && open,
       });
 
+      const { data: locationHistory = [] } = useQuery<ApplicationLocationHistory[]>({
+            queryKey: ["/api/applications", application?.id, "location-history"],
+            enabled: !!application?.id && open,
+            refetchInterval: 3000,
+            refetchOnWindowFocus: true,
+      });
+
       useEffect(() => {
             if (application) {
                   setUpdateStatus(application.status);
                   setRemarks(application.remarks || "");
+                  setNewLocation("");
             }
       }, [application]);
 
@@ -86,12 +96,37 @@ export function ApplicationDetailsDialog({ application, open, onClose, canUpdate
                         });
                   }
 
+                  if (newLocation && newLocation.trim()) {
+                        await apiRequest("POST", `/api/applications/${application.id}/location`, {
+                              location: newLocation.trim(),
+                        });
+                        setNewLocation("");
+                  }
+
                   queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
+                  queryClient.invalidateQueries({ queryKey: ["/api/applications", application.id, "location-history"] });
+                  // Also invalidate the public tracking endpoint
+                  if (application.trackingId) {
+                        queryClient.invalidateQueries({ queryKey: ["/api/applications/track", application.trackingId, "location-history"] });
+                  }
+
+                  // Show success message
+                  const locationMessage = newLocation && newLocation.trim()
+                        ? "Status, remarks, and location history have been updated successfully."
+                        : "The application has been updated successfully.";
+
                   toast({
                         title: "Application Updated",
-                        description: "The application has been updated successfully.",
+                        description: locationMessage,
                   });
-                  onClose();
+
+                  // Clear form fields but keep dialog open so official can see the update
+                  setComment("");
+                  if (newLocation && newLocation.trim()) {
+                        setNewLocation("");
+                  }
+
+                  // Don't close dialog - let official see the updated location history
             } catch (error: any) {
                   toast({
                         title: "Update Failed",
@@ -106,7 +141,7 @@ export function ApplicationDetailsDialog({ application, open, onClose, canUpdate
       return (
             <Dialog open={open} onOpenChange={onClose}>
                   <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-[#F5F5F7] dark:bg-slate-950 rounded-[32px] border-0 shadow-2xl p-0 font-['Outfit',sans-serif]">
-                        
+
                         {/* Header */}
                         <div className="bg-white dark:bg-slate-900 p-6 border-b border-slate-100 dark:border-slate-800 sticky top-0 z-10">
                               <div className="flex items-center justify-between mb-2">
@@ -129,7 +164,7 @@ export function ApplicationDetailsDialog({ application, open, onClose, canUpdate
                                           </Badge>
                                     </div>
                               </div>
-                              
+
                               {(application.escalationLevel || 0) > 0 && (
                                     <div className="mt-4 flex items-center gap-2 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 border border-red-100 dark:border-red-900/30">
                                           <AlertTriangle className="h-4 w-4 animate-pulse" />
@@ -139,10 +174,10 @@ export function ApplicationDetailsDialog({ application, open, onClose, canUpdate
                         </div>
 
                         <div className="p-6 space-y-6">
-                              
+
                               {/* Grid Layout */}
                               <div className="grid md:grid-cols-2 gap-6">
-                                    
+
                                     {/* Citizen Information Card */}
                                     <div className="bg-white dark:bg-slate-900 p-6 rounded-[24px] shadow-sm">
                                           <h3 className="font-bold text-[#1d1d1f] dark:text-white mb-4 flex items-center gap-2">
@@ -208,7 +243,7 @@ export function ApplicationDetailsDialog({ application, open, onClose, canUpdate
                                     <p className="text-sm text-[#86868b] leading-relaxed whitespace-pre-wrap mb-6">
                                           {application.description}
                                     </p>
-                                    
+
                                     {application.image && (
                                           <div className="mt-4">
                                                 <h4 className="text-xs font-bold text-[#1d1d1f] dark:text-white uppercase tracking-wider mb-3">Attachment</h4>
@@ -218,6 +253,102 @@ export function ApplicationDetailsDialog({ application, open, onClose, canUpdate
                                           </div>
                                     )}
                               </div>
+
+                              {/* Mandatory Documents for Aadhaar Update */}
+                              {(() => {
+                                    const isAadhaarUpdate = application.department?.includes("Aadhaar") &&
+                                          application.subDepartment === "Aadhaar Update (Name/DOB/Address mismatch)";
+
+                                    if (!isAadhaarUpdate) return null;
+
+                                    // Parse documents from application data
+                                    let documents: { aadhaarCard?: string; addressProof?: string } = {};
+                                    try {
+                                          const appData = JSON.parse(application.data || "{}");
+                                          documents = appData.documents || {};
+                                    } catch (e) {
+                                          // If parsing fails, documents remain empty
+                                    }
+
+                                    const hasAadhaarCard = documents.aadhaarCard && documents.aadhaarCard.trim().length > 0;
+                                    const hasAddressProof = documents.addressProof && documents.addressProof.trim().length > 0;
+
+                                    if (!hasAadhaarCard && !hasAddressProof) return null;
+
+                                    return (
+                                          <div className="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 p-6 rounded-[24px] shadow-sm">
+                                                <div className="flex items-center gap-2 mb-4">
+                                                      <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                                      <h3 className="font-bold text-[#1d1d1f] dark:text-white">Mandatory Documents for Aadhaar Update</h3>
+                                                </div>
+                                                <p className="text-xs text-blue-800 dark:text-blue-200 mb-6">
+                                                      These documents were verified during submission. Both documents are required for auto-approval.
+                                                </p>
+
+                                                <div className="grid md:grid-cols-2 gap-6">
+                                                      {/* Aadhaar Card */}
+                                                      <div className="space-y-3">
+                                                            <div className="flex items-center gap-2">
+                                                                  <CheckCircle2 className={`h-4 w-4 ${hasAadhaarCard ? 'text-green-600' : 'text-red-600'}`} />
+                                                                  <Label className="text-sm font-semibold text-[#1d1d1f] dark:text-white">
+                                                                        Aadhaar Card Photo {hasAadhaarCard ? '(Verified)' : '(Missing)'}
+                                                                  </Label>
+                                                            </div>
+                                                            {hasAadhaarCard ? (
+                                                                  <div className="rounded-xl overflow-hidden border-2 border-green-200 dark:border-green-800 bg-white dark:bg-slate-900">
+                                                                        <img
+                                                                              src={documents.aadhaarCard}
+                                                                              alt="Aadhaar Card"
+                                                                              className="w-full max-h-64 object-contain bg-slate-50 dark:bg-slate-950"
+                                                                        />
+                                                                  </div>
+                                                            ) : (
+                                                                  <div className="rounded-xl border-2 border-dashed border-red-200 dark:border-red-800 p-8 text-center bg-red-50 dark:bg-red-900/10">
+                                                                        <AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-2" />
+                                                                        <p className="text-sm text-red-600 dark:text-red-400">Document not uploaded</p>
+                                                                  </div>
+                                                            )}
+                                                      </div>
+
+                                                      {/* Address Proof */}
+                                                      <div className="space-y-3">
+                                                            <div className="flex items-center gap-2">
+                                                                  <CheckCircle2 className={`h-4 w-4 ${hasAddressProof ? 'text-green-600' : 'text-red-600'}`} />
+                                                                  <Label className="text-sm font-semibold text-[#1d1d1f] dark:text-white">
+                                                                        Address Proof {hasAddressProof ? '(Verified)' : '(Missing)'}
+                                                                  </Label>
+                                                            </div>
+                                                            {hasAddressProof ? (
+                                                                  <div className="rounded-xl overflow-hidden border-2 border-green-200 dark:border-green-800 bg-white dark:bg-slate-900">
+                                                                        <img
+                                                                              src={documents.addressProof}
+                                                                              alt="Address Proof"
+                                                                              className="w-full max-h-64 object-contain bg-slate-50 dark:bg-slate-950"
+                                                                        />
+                                                                  </div>
+                                                            ) : (
+                                                                  <div className="rounded-xl border-2 border-dashed border-red-200 dark:border-red-800 p-8 text-center bg-red-50 dark:bg-red-900/10">
+                                                                        <AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-2" />
+                                                                        <p className="text-sm text-red-600 dark:text-red-400">Document not uploaded</p>
+                                                                  </div>
+                                                            )}
+                                                      </div>
+                                                </div>
+
+                                                {/* Auto-approval status */}
+                                                {hasAadhaarCard && hasAddressProof && (
+                                                      <div className="mt-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+                                                            <div className="flex items-center gap-2">
+                                                                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                                                                  <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                                                                        Both mandatory documents verified. This application is eligible for auto-approval.
+                                                                  </p>
+                                                            </div>
+                                                      </div>
+                                                )}
+                                          </div>
+                                    );
+                              })()}
 
                               {/* Action Section (Official Only) */}
                               {canUpdateStatus && (
@@ -265,13 +396,60 @@ export function ApplicationDetailsDialog({ application, open, onClose, canUpdate
                                                       />
                                                 </div>
                                           </div>
-                                    </div>
+                                          {/* Location History Section */}
+                                          <div className="bg-white dark:bg-slate-900 p-6 rounded-[24px] shadow-sm border-2 border-green-50 dark:border-green-900/20 mt-6">
+                                                <h3 className="font-bold text-[#1d1d1f] dark:text-white mb-4 flex items-center gap-2">
+                                                      <MapPin className="h-5 w-5 text-green-600" />
+                                                      Location / Path History
+                                                </h3>
 
+                                                {/* Existing Location History */}
+                                                {locationHistory.length > 0 && (
+                                                      <div className="mb-6 space-y-3">
+                                                            <Label className="text-xs font-bold text-[#86868b] uppercase">Previous Locations</Label>
+                                                            <div className="space-y-2 max-h-48 overflow-y-auto">
+                                                                  {locationHistory.map((entry, index) => (
+                                                                        <div key={entry.id} className="p-3 rounded-xl bg-[#F5F5F7] dark:bg-slate-800 border-l-4 border-l-green-500">
+                                                                              <div className="flex items-start justify-between gap-2">
+                                                                                    <div className="flex-1">
+                                                                                          <p className="text-sm font-medium text-[#1d1d1f] dark:text-white">{entry.location}</p>
+                                                                                          <p className="text-xs text-[#86868b] mt-1">
+                                                                                                {format(new Date(entry.updatedAt), "MMM d, yyyy 'at' h:mm a")}
+                                                                                          </p>
+                                                                                    </div>
+                                                                                    {index === 0 && (
+                                                                                          <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 text-xs px-2 py-0.5 rounded-full">
+                                                                                                Current
+                                                                                          </Badge>
+                                                                                    )}
+                                                                              </div>
+                                                                        </div>
+                                                                  ))}
+                                                            </div>
+                                                      </div>
+                                                )}
+
+                                                {/* Add New Location */}
+                                                <div className="space-y-2">
+                                                      <Label className="text-xs font-bold text-[#86868b] uppercase flex items-center gap-2">
+                                                            <Plus className="h-3 w-3" />
+                                                            Add New Location / Path
+                                                      </Label>
+                                                      <Textarea
+                                                            placeholder="Enter where the application is currently stuck or its current path (e.g., 'Under review at Department X', 'Pending verification at Office Y')..."
+                                                            value={newLocation}
+                                                            onChange={(e) => setNewLocation(e.target.value)}
+                                                            className="min-h-[80px] rounded-xl bg-[#F5F5F7] dark:bg-slate-800 border-0 resize-none"
+                                                      />
+                                                      <p className="text-xs text-[#86868b]">This will be added as a new entry in the location history and will be visible to the citizen</p>
+                                                </div>
+                                          </div>
+                                    </div>
                               )}
 
                               {/* AI Verification Section */}
                               {canUpdateStatus && (
-                                  <div className="bg-slate-50 dark:bg-slate-800/50 rounded-[24px] p-6 border border-slate-200 dark:border-slate-700">
+                                  <div className="bg-slate-50 dark:bg-slate-800/50 rounded-[24px] p-6 border border-slate-200 dark:border-slate-700 mt-6">
                                      <div className="flex items-center justify-between mb-4">
                                         <div className="flex items-center gap-2">
                                            <BrainCircuit className="text-[#0071e3] h-6 w-6" />
@@ -360,43 +538,6 @@ export function ApplicationDetailsDialog({ application, open, onClose, canUpdate
                                      )}
                                   </div>
                               )}
-
-                              {/* Timeline */}
-                              {history.length > 0 && (
-                                    <div className="bg-white dark:bg-slate-900 p-6 rounded-[24px] shadow-sm">
-                                          <h3 className="font-bold text-[#1d1d1f] dark:text-white mb-6 flex items-center gap-2">
-                                                <Clock className="h-5 w-5 text-[#0071e3]" />
-                                                Timeline
-                                          </h3>
-                                          <div className="space-y-0 relative pl-4">
-                                                <div className="absolute left-[19px] top-2 bottom-4 w-0.5 bg-slate-100 dark:bg-slate-800"></div>
-                                                {history.map((item, index) => (
-                                                      <div key={item.id} className="relative flex gap-6 pb-8 last:pb-0 group">
-                                                            <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white dark:border-slate-900 ${
-                                                                  index === 0 ? 'bg-[#0071e3] text-white shadow-lg shadow-blue-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
-                                                            }`}>
-                                                                  {index === 0 ? <CheckCircle2 size={18} /> : <div className="w-2 h-2 rounded-full bg-current" />}
-                                                            </div>
-                                                            <div className="flex-1 pt-1">
-                                                                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
-                                                                        <span className="font-bold text-[#1d1d1f] dark:text-white text-lg">
-                                                                              {item.status}
-                                                                        </span>
-                                                                        <span className="text-xs font-medium text-[#86868b] bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded-lg">
-                                                                              {format(new Date(item.updatedAt), "MMM d, h:mm a")}
-                                                                        </span>
-                                                                  </div>
-                                                                  {item.comment && (
-                                                                        <div className="bg-[#F5F5F7] dark:bg-slate-800 p-3 rounded-xl text-sm text-[#86868b]">
-                                                                              {item.comment}
-                                                                        </div>
-                                                                  )}
-                                                            </div>
-                                                      </div>
-                                                ))}
-                                          </div>
-                                    </div>
-                              )}
                         </div>
 
                         <div className="p-6 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 sticky bottom-0 z-10">
@@ -404,8 +545,8 @@ export function ApplicationDetailsDialog({ application, open, onClose, canUpdate
                                     Close
                               </Button>
                               {canUpdateStatus && (
-                                    <Button 
-                                          onClick={handleUpdate} 
+                                    <Button
+                                          onClick={handleUpdate}
                                           disabled={!updateStatus}
                                           className="rounded-full h-12 px-8 bg-[#0071e3] hover:bg-[#0077ED] text-white shadow-lg shadow-blue-500/20 font-medium"
                                     >

@@ -50,6 +50,8 @@ const UserSchema = new mongoose.Schema<User>({
   rating: { type: Number, default: 0 },
   assignedCount: { type: Number, default: 0 },
   solvedCount: { type: Number, default: 0 },
+  suspendedUntil: Date,
+  suspensionReason: String,
   createdAt: { type: Date, default: Date.now },
 }, { _id: false });
 
@@ -63,6 +65,7 @@ const ApplicationSchema = new mongoose.Schema<Application>({
   status: { type: String, required: true },
   priority: { type: String, default: "Normal" },
   remarks: String,
+  currentLocation: String,
   citizenId: { type: String, required: true },
   officialId: String,
   submittedAt: { type: Date, default: Date.now },

@@ -9,7 +9,7 @@ import type {
   Feedback, InsertFeedback, OTPRecord, BlockchainHash, Notification,
   Department, InsertDepartment, Warning, InsertWarning,
   Judge, InsertJudge, Case, InsertCase, Hearing, InsertHearing,
-  AiRoutingLog, InsertAiRoutingLog, FileTimeline, InsertFileTimeline
+  AiRoutingLog, InsertAiRoutingLog, FileTimeline, InsertFileTimeline, ApplicationLocationHistory
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, ilike, or, desc, and, lt, notInArray } from "drizzle-orm";
@@ -362,6 +362,78 @@ export class DatabaseStorage implements IStorage {
   async getCase(id: string): Promise<Case | undefined> {
       const [caseItem] = await db.select().from(cases).where(eq(cases.id, id));
       return caseItem;
+  }
+
+  // Missing Interface Methods - Stubbed for Build Compilation
+
+  async createAiRoutingLog(log: InsertAiRoutingLog): Promise<AiRoutingLog> {
+    throw new Error("Method not implemented.");
+  }
+  async createFileTimelineEvent(event: InsertFileTimeline): Promise<FileTimeline> {
+    throw new Error("Method not implemented.");
+  }
+  async getFileTimeline(applicationId: string): Promise<FileTimeline[]> {
+    return [];
+  }
+  async getOverdueApplications(): Promise<Application[]> {
+    return [];
+  }
+  async checkOverComplaining(citizenId: string, department: string): Promise<boolean> {
+    return false;
+  }
+  async suspendUser(userId: string, reason: string, hours: number): Promise<User> {
+    throw new Error("Method not implemented.");
+  }
+  async isUserSuspended(userId: string): Promise<boolean> {
+    return false;
+  }
+  async updateUser(userId: string, updates: Partial<User>): Promise<User> {
+    throw new Error("Method not implemented.");
+  }
+  async addApplicationLocation(applicationId: string, location: string, updatedBy: string): Promise<ApplicationLocationHistory> {
+     throw new Error("Method not implemented.");
+  }
+  async getApplicationLocationHistory(applicationId: string): Promise<ApplicationLocationHistory[]> {
+     return [];
+  }
+  async getAllJudges(): Promise<Judge[]> {
+     return [];
+  }
+  async getAllCases(): Promise<Case[]> {
+     return [];
+  }
+  async getCasesByCitizenId(citizenId: string): Promise<Case[]> {
+     return [];
+  }
+  async getPendingCases(): Promise<Case[]> {
+     return [];
+  }
+  async getAvailableJudges(): Promise<Judge[]> {
+     return [];
+  }
+  async assignCaseToJudge(caseId: string, judgeId: string): Promise<void> {
+     // no-op
+  }
+  async findScrutinyOfficial(excludeDistrict: string): Promise<User | null> {
+     return null;
+  }
+  async getScrutinyCasesForOfficial(officialId: string): Promise<Case[]> {
+     return [];
+  }
+  async createCase(insertCase: InsertCase, citizenId?: string, scrutinyOptions?: any): Promise<Case> {
+     throw new Error("Method not implemented.");
+  }
+  async updateCaseStatus(caseId: string, status: string, rejectionReason?: string | null): Promise<Case> {
+     throw new Error("Method not implemented.");
+  }
+  async assignNextDate(caseId: string): Promise<Hearing> {
+     throw new Error("Method not implemented.");
+  }
+  async getHearingsByCaseId(caseId: string): Promise<Hearing[]> {
+     return [];
+  }
+  async createHearing(insertHearing: InsertHearing): Promise<Hearing> {
+    throw new Error("Method not implemented.");
   }
 
   // Helper for priority updates

@@ -9,7 +9,7 @@ import { ApplicationCard } from "@/components/application-card";
 import { CaseCard } from "@/components/case-card";
 import { NotificationBell } from "@/components/notification-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { FileText, Plus, Search, LogOut, Shield, Clock, CheckCircle, XCircle, LayoutDashboard, ArrowRight, Gavel } from "lucide-react";
+import { FileText, Plus, Search, LogOut, Shield, Clock, CheckCircle, XCircle, LayoutDashboard, ArrowRight, Gavel, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Application, Notification } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -31,6 +31,15 @@ export default function CitizenDashboard() {
     queryKey: ["/api/notifications"],
     refetchInterval: 30000,
   });
+
+  // Check suspension status
+  const { data: userData } = useQuery<{ suspended?: boolean; suspendedUntil?: string; hoursRemaining?: number; suspensionReason?: string }>({
+    queryKey: ["/api/auth/me"],
+    refetchInterval: 60000, // Check every minute
+  });
+
+  const isSuspended = userData?.suspended || false;
+  const hoursRemaining = userData?.hoursRemaining || 0;
 
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "approved" | "rejected">("all");
 
@@ -89,10 +98,10 @@ export default function CitizenDashboard() {
             <NotificationBell notifications={notifications} onMarkAsRead={handleMarkAsRead} />
             <div className="h-4 w-px bg-slate-200 dark:bg-slate-800" />
             <ThemeToggle />
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={handleLogout} 
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleLogout}
               className="h-8 w-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               data-testid="button-logout"
             >
@@ -112,6 +121,30 @@ export default function CitizenDashboard() {
             Manage your applications and requests
           </p>
         </div>
+
+        {/* Suspension Banner */}
+        {isSuspended && (
+          <Card className="border-2 border-red-500 bg-gradient-to-br from-red-50 via-red-100/50 to-orange-50 dark:from-red-950/40 dark:via-red-900/30 dark:to-orange-950/40 shadow-lg">
+            <CardContent className="p-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 rounded-full bg-red-500 text-white shadow-lg">
+                  <AlertCircle className="h-6 w-6" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-red-900 dark:text-red-100 mb-1">
+                    Account Suspended
+                  </h3>
+                  <p className="text-sm text-red-800 dark:text-red-200">
+                    You have reached the maximum submission limit for this department. Your account is temporarily suspended for 24 hours.
+                    {hoursRemaining > 0 && (
+                      <span className="font-semibold"> {hoursRemaining} hour{hoursRemaining !== 1 ? 's' : ''} remaining.</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Horizontal Stats Row - Compact */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -181,6 +214,7 @@ export default function CitizenDashboard() {
             </h2>
             <div className="grid grid-cols-1 gap-4">
               {/* My Cases Summary Card */}
+
               {myCases && myCases.length > 0 && (
                 <Card 
                   className="bg-gradient-to-br from-[#0071e3] to-[#0077ED] border-0 text-white shadow-lg shadow-blue-500/30 rounded-[32px] overflow-hidden relative cursor-pointer group"
@@ -207,7 +241,7 @@ export default function CitizenDashboard() {
               )}
               <Card 
                 className="group relative border-0 overflow-hidden bg-gradient-to-br from-[#0071e3] via-blue-600 to-indigo-700 dark:from-blue-600 dark:via-indigo-700 dark:to-purple-800 text-white shadow-lg hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 cursor-pointer rounded-[32px] h-40"
-                onClick={() => setLocation("/citizen/submit")} 
+                onClick={() => setLocation("/citizen/submit")}
                 data-testid="card-new-application"
               >
                 <div className="absolute top-0 right-0 w-40 h-40 bg-white/20 rounded-full blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500" />
@@ -228,9 +262,9 @@ export default function CitizenDashboard() {
                 </CardHeader>
               </Card>
 
-              <Card 
+              <Card
                 className="group relative border-0 overflow-hidden bg-gradient-to-br from-purple-50 via-violet-100/50 to-fuchsia-50 dark:from-purple-950/40 dark:via-violet-900/30 dark:to-fuchsia-950/40 shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all duration-300 cursor-pointer rounded-[32px] h-40"
-                onClick={() => setLocation("/citizen/track")} 
+                onClick={() => setLocation("/citizen/track")}
                 data-testid="card-track-application"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-400/10 to-fuchsia-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -249,6 +283,7 @@ export default function CitizenDashboard() {
                   </div>
                 </CardHeader>
               </Card>
+
 
               <Card 
                 className="group relative border-0 overflow-hidden bg-white dark:bg-slate-900 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 cursor-pointer rounded-[32px] h-40"
@@ -270,6 +305,7 @@ export default function CitizenDashboard() {
                   </div>
                 </CardHeader>
               </Card>
+
 
               <Card 
                 className="group relative border-0 overflow-hidden bg-white dark:bg-slate-900 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 cursor-pointer rounded-[32px] h-40"
@@ -309,8 +345,8 @@ export default function CitizenDashboard() {
                       onClick={() => setFilterStatus(status)}
                       className={`
                         px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide transition-all duration-300
-                        ${filterStatus === status 
-                          ? "bg-white dark:bg-slate-700 text-[#1d1d1f] dark:text-white shadow-sm" 
+                        ${filterStatus === status
+                          ? "bg-white dark:bg-slate-700 text-[#1d1d1f] dark:text-white shadow-sm"
                           : "text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white"
                         }
                       `}
@@ -340,14 +376,17 @@ export default function CitizenDashboard() {
                   </div>
                   <h3 className="text-lg font-semibold text-[#1d1d1f] dark:text-white mb-1">No activity found</h3>
                   <p className="text-[#86868b] max-w-sm">
-                    {filterStatus === 'all' 
-                      ? "You haven't submitted any applications or cases yet." 
+                    {filterStatus === 'all'
+                      ? "You haven't submitted any applications or cases yet."
                       : `No activity found with status "${filterStatus}".`
                     }
                   </p>
                 </div>
               ) : (
                 <div className="space-y-4">
+                  {myCases?.map((caseItem: any) => (
+                     <CaseCard key={caseItem.id} caseItem={caseItem} />
+                  ))}
                   {filteredApplications.map((app, index) => {
                     const colorVariants = [
                       "from-blue-50 via-cyan-50 to-teal-50 dark:from-blue-950/30 dark:via-cyan-950/30 dark:to-teal-950/30",

@@ -170,8 +170,22 @@ class AIMonitoringService {
 const aiService = new AIMonitoringService();
 
 async function autoAssignApplication(applicationId: string, departmentName: string, subDepartmentName: string | null = null, escalationLevel: number = 0) {
+  console.log(`[Auto-Assign] Starting assignment for application ${applicationId}`);
+  console.log(`[Auto-Assign] Department: ${departmentName}, Sub-Department: ${subDepartmentName || 'None'}`);
+
   const officials = await storage.getAllOfficials();
+  console.log(`[Auto-Assign] Total officials in system: ${officials.length}`);
+
+  if (officials.length === 0) {
+    console.error('[Auto-Assign] ❌ No officials found in system! Cannot assign application.');
+    return null;
+  }
+
   const application = await storage.getApplication(applicationId);
+  if (!application) {
+    console.error(`[Auto-Assign] ❌ Application ${applicationId} not found!`);
+    return null;
+  }
 
   // Validate and normalize department name
   if (!departmentName || typeof departmentName !== 'string') {
@@ -196,19 +210,40 @@ async function autoAssignApplication(applicationId: string, departmentName: stri
     if (!u.department || typeof u.department !== 'string') return false;
     const uDept = u.department.split('–')[0].trim();
     const appDept = departmentName.split('–')[0].trim();
-    return uDept === appDept;
+    const matches = uDept === appDept;
+    if (matches) {
+      console.log(`[Auto-Assign] ✅ Found matching official: ${u.fullName} (${u.department})`);
+    }
+    return matches;
   });
 
-  // 2. Filter by Sub-Department if available
+  console.log(`[Auto-Assign] Officials in department "${departmentName}": ${deptOfficials.length}`);
+
+  // 2. Filter by Sub-Department if available (prefer sub-department match, but fallback to department-only)
+  let subDeptOfficials: typeof deptOfficials = [];
   if (normalizedSubDept) {
-    deptOfficials = deptOfficials.filter(u => {
+    subDeptOfficials = deptOfficials.filter(u => {
       if (!u.subDepartment || typeof u.subDepartment !== 'string') return false;
       return u.subDepartment === normalizedSubDept;
     });
+
+    // If we found officials with matching sub-department, use them
+    // Otherwise, fall back to department-only officials
+    if (subDeptOfficials.length > 0) {
+      deptOfficials = subDeptOfficials;
+      console.log(`✅ Found ${subDeptOfficials.length} official(s) matching department: ${departmentName} and sub-department: ${normalizedSubDept}`);
+    } else {
+      console.log(`⚠️ No officials found for sub-department: ${normalizedSubDept}, falling back to department: ${departmentName} only`);
+      // Keep deptOfficials as is (department-only match)
+    }
   }
 
   if (deptOfficials.length === 0) {
-    console.log(`No officials available for department: ${departmentName}${normalizedSubDept ? `, sub-department: ${normalizedSubDept}` : ''}`);
+    console.error(`[Auto-Assign] ❌ No officials available for department: ${departmentName}${normalizedSubDept ? `, sub-department: ${normalizedSubDept}` : ''}`);
+    console.log(`[Auto-Assign] Available officials and their departments:`);
+    officials.forEach(o => {
+      console.log(`  - ${o.fullName}: ${o.department || 'No department'} (Role: ${o.role})`);
+    });
     return null;
   }
 
@@ -248,8 +283,13 @@ async function autoAssignApplication(applicationId: string, departmentName: stri
 
   if (bestOfficial) {
     try {
+      console.log(`[Auto-Assign] ✅ Selected official: ${bestOfficial.fullName} (ID: ${bestOfficial.id})`);
+      console.log(`[Auto-Assign]   Workload - Active: ${bestOfficial.activeWorkload}, Total: ${bestOfficial.totalAssigned}`);
+
       // 4. Assign
-      await storage.assignApplication(applicationId, bestOfficial.id);
+      const assignedApp = await storage.assignApplication(applicationId, bestOfficial.id);
+      console.log(`[Auto-Assign] ✅ Application assigned successfully!`);
+      console.log(`[Auto-Assign]   Application ID: ${assignedApp.id}, Official ID: ${assignedApp.officialId}, Status: ${assignedApp.status}`);
 
       // 5. Update official stats
       await storage.updateUserStats(
@@ -263,6 +303,7 @@ async function autoAssignApplication(applicationId: string, departmentName: stri
       await storage.updateApplicationEscalation(applicationId, escalationLevel, bestOfficial.id);
 
       return {
+        officialId: bestOfficial.id,
         officialName: bestOfficial.fullName,
         department: bestOfficial.department,
         workloadStats: {
@@ -280,6 +321,8 @@ async function autoAssignApplication(applicationId: string, departmentName: stri
 
   return null;
 }
+
+import cron from "node-cron";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Start Escalation Job (Runs every 60 mins)
@@ -459,11 +502,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         console.log(`Generated login OTP for phone ${user.phone}: ${otp}`);
 
+        // Check if user is suspended
+        const isSuspended = await storage.isUserSuspended(user.id);
+        const suspendedUntil = user.suspendedUntil ? new Date(user.suspendedUntil) : null;
+        const hoursRemaining = suspendedUntil && isSuspended
+          ? Math.ceil((suspendedUntil.getTime() - Date.now()) / (1000 * 60 * 60))
+          : 0;
+
         const { password, ...userWithoutPassword } = user;
         return res.json({
           user: userWithoutPassword,
           phone: user.phone,
           otpMethod: "phone",
+          suspended: isSuspended,
+          suspendedUntil: user.suspendedUntil,
+          hoursRemaining: hoursRemaining > 0 ? hoursRemaining : 0,
+          suspensionReason: user.suspensionReason,
           ...(isDev ? { otp } : {})
         });
       }
@@ -507,11 +561,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         console.log(`Generated login OTP for email ${user.email}: ${otp}`);
 
+        // Check if user is suspended
+        const isSuspended = await storage.isUserSuspended(user.id);
+        const suspendedUntil = user.suspendedUntil ? new Date(user.suspendedUntil) : null;
+        const hoursRemaining = suspendedUntil && isSuspended
+          ? Math.ceil((suspendedUntil.getTime() - Date.now()) / (1000 * 60 * 60))
+          : 0;
+
         const { password, ...userWithoutPassword } = user;
         return res.json({
           user: userWithoutPassword,
           email: user.email,
           otpMethod: "email",
+          suspended: isSuspended,
+          suspendedUntil: user.suspendedUntil,
+          hoursRemaining: hoursRemaining > 0 ? hoursRemaining : 0,
+          suspensionReason: user.suspensionReason,
           ...(isDev ? { otp } : {})
         });
       }
@@ -529,8 +594,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
+
+      // Check if user is suspended
+      const isSuspended = await storage.isUserSuspended(user.id);
+      const suspendedUntil = user.suspendedUntil ? new Date(user.suspendedUntil) : null;
+      const hoursRemaining = suspendedUntil && isSuspended
+        ? Math.ceil((suspendedUntil.getTime() - Date.now()) / (1000 * 60 * 60))
+        : 0;
+
       const { password, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      res.json({
+        ...userWithoutPassword,
+        suspended: isSuspended,
+        suspendedUntil: user.suspendedUntil,
+        hoursRemaining: hoursRemaining > 0 ? hoursRemaining : 0,
+        suspensionReason: user.suspensionReason
+      });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -538,27 +617,203 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/applications", authenticateToken, async (req: Request, res: Response) => {
     try {
+      // Check if user is suspended
+      const isSuspended = await storage.isUserSuspended(req.user!.id);
+      if (isSuspended) {
+        const user = await storage.getUser(req.user!.id);
+        const suspendedUntil = user?.suspendedUntil ? new Date(user.suspendedUntil) : null;
+        const hoursRemaining = suspendedUntil
+          ? Math.ceil((suspendedUntil.getTime() - Date.now()) / (1000 * 60 * 60))
+          : 0;
+        return res.status(403).json({
+          error: "You have reached the maximum submission limit for this department. Your account is temporarily suspended for 24 hours.",
+          suspended: true,
+          suspendedUntil: user?.suspendedUntil,
+          hoursRemaining: hoursRemaining > 0 ? hoursRemaining : 0
+        });
+      }
+
       const data = insertApplicationSchema.parse(req.body);
+
+      // Extract department from applicationType if not provided directly (same logic as createApplication)
+      let department: string | null = data.department || null;
+      if (!department && data.applicationType) {
+        const match = data.applicationType.match(/^([^–]+)/);
+        if (match) {
+          department = match[1].trim();
+        }
+      }
+
+      // Check for over-complaining before creating application (same department)
+      // This check works for ALL departments, whether provided directly or extracted from applicationType
+      if (department) {
+        const isOverComplaining = await storage.checkOverComplaining(
+          req.user!.id,
+          department
+        );
+
+        if (isOverComplaining) {
+          // Suspend user for 24 hours
+          await storage.suspendUser(
+            req.user!.id,
+            "Reached maximum submission limit for department within 24 hours",
+            24
+          );
+
+          // Send notification to user
+          await storage.createNotification(
+            req.user!.id,
+            "suspension",
+            "Account Suspended",
+            "You have reached the maximum submission limit for this department. Your account is temporarily suspended for 24 hours.",
+            undefined
+          );
+
+          return res.status(403).json({
+            error: "You have reached the maximum submission limit for this department. Your account is temporarily suspended for 24 hours.",
+            suspended: true,
+            suspendedUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+            hoursRemaining: 24
+          });
+        }
+      }
+
       const application = await storage.createApplication({
         ...data,
         citizenId: req.user!.id,
       });
 
-      // Auto-assignment disabled to keep applications in unassigned pool
-      // Applications will remain visible to all department officials until manually assigned
-      // let assignmentResult = null;
-      // if (application.department) {
-      //   assignmentResult = await autoAssignApplication(application.id, application.department, 0);
-      //   if (assignmentResult) {
-      //     console.log(`✅ Auto-assigned application ${application.id} to ${assignmentResult.officialName}`);
-      //     console.log(`   Stats - Active: ${assignmentResult.workloadStats.active}, Total: ${assignmentResult.workloadStats.total}`);
-      //   } else {
-      //     console.warn(`⚠️ Could not auto-assign application ${application.id} - no matching officials in ${application.department}`);
-      //   }
-      // }
+      // AUTO-APPROVAL: Check for Aadhaar Department + Aadhaar Update with mandatory documents
+      const isAadhaarDepartment = application.department === "Aadhaar – Unique Identification Authority of India (UIDAI)" ||
+        application.department?.includes("Aadhaar");
+      const isAadhaarUpdate = application.subDepartment === "Aadhaar Update (Name/DOB/Address mismatch)";
 
-      // Return application
-      res.json(application);
+      let shouldAutoApprove = false;
+      if (isAadhaarDepartment && isAadhaarUpdate) {
+        // Parse the data field to check for documents
+        try {
+          const appData = JSON.parse(application.data || "{}");
+          const documents = appData.documents || {};
+
+          // Check if both required documents are uploaded
+          const hasAadhaarCard = documents.aadhaarCard && documents.aadhaarCard.trim().length > 0;
+          const hasAddressProof = documents.addressProof && documents.addressProof.trim().length > 0;
+
+          if (hasAadhaarCard && hasAddressProof) {
+            shouldAutoApprove = true;
+            console.log(`[Auto-Approval] ✅ Application ${application.trackingId} eligible for auto-approval - both documents verified`);
+
+            // Auto-approve the application
+            await storage.updateApplicationStatus(
+              application.id,
+              "Auto-Approved (Documents Verified by System)",
+              "system",
+              "Application auto-approved: All mandatory documents (Aadhaar card and Address proof) verified by system."
+            );
+
+            // Update approvedAt timestamp
+            const updatedApp = await storage.getApplication(application.id);
+            if (updatedApp) {
+              // Send notification to citizen
+              await storage.createNotification(
+                application.citizenId,
+                "approval",
+                "Application Auto-Approved",
+                `Your application ${application.trackingId} has been automatically approved. All required documents have been verified by the system.`,
+                application.id
+              );
+
+              console.log(`[Auto-Approval] ✅ Application ${application.trackingId} auto-approved successfully`);
+            }
+          } else {
+            console.log(`[Auto-Approval] ⚠️ Application ${application.trackingId} missing required documents - Aadhaar Card: ${hasAadhaarCard}, Address Proof: ${hasAddressProof}`);
+          }
+        } catch (error) {
+          console.error(`[Auto-Approval] ❌ Error parsing application data for ${application.trackingId}:`, error);
+        }
+      }
+
+      // AUTO-ASSIGNMENT: Applications are automatically assigned to officials when submitted
+      // Skip auto-assignment if application was auto-approved
+      // No acceptance step is required - applications go directly to the official's "My Applications"
+      // Assignment is based on: 1) Department match, 2) Sub-department match (if available),
+      // 3) Lowest workload, 4) Total assigned count, 5) Seniority
+      let assignedApplication = application;
+
+      // Fetch updated application if it was auto-approved
+      if (shouldAutoApprove) {
+        const updatedApp = await storage.getApplication(application.id);
+        if (updatedApp) {
+          assignedApplication = updatedApp;
+        }
+      }
+
+      // Always attempt auto-assignment if department is available and not auto-approved
+      console.log(`[Application Submit] 📝 Application created: ${application.trackingId}`);
+      console.log(`[Application Submit] Department: ${application.department || 'None'}, Sub-Department: ${application.subDepartment || 'None'}`);
+      console.log(`[Application Submit] Auto-Approved: ${shouldAutoApprove ? 'Yes' : 'No'}`);
+
+      if (application.department && !shouldAutoApprove) {
+        try {
+          console.log(`[Application Submit] 🔄 Attempting auto-assignment...`);
+          const assignmentResult: { officialId: string; officialName: string; department: string | null; workloadStats: { active: number; total: number }; assignedAt: Date } | null = await autoAssignApplication(
+            application.id,
+            application.department,
+            application.subDepartment || null,
+            0
+          );
+
+          if (assignmentResult) {
+            const subDeptInfo = application.subDepartment ? `, sub-department: ${application.subDepartment}` : '';
+            console.log(`[Application Submit] ✅ Auto-assigned application ${application.trackingId} to ${assignmentResult.officialName}`);
+            console.log(`[Application Submit]    Department: ${assignmentResult.department}${subDeptInfo}`);
+            console.log(`[Application Submit]    Stats - Active: ${assignmentResult.workloadStats.active}, Total: ${assignmentResult.workloadStats.total}`);
+
+            // Fetch the updated application with assignment details
+            const updatedApp = await storage.getApplication(application.id);
+            if (updatedApp && updatedApp.officialId) {
+              console.log(`[Application Submit] ✅ Assignment confirmed - Official ID: ${updatedApp.officialId}, Status: ${updatedApp.status}`);
+              assignedApplication = updatedApp;
+
+              // Verify assignment was saved
+              const verifyApp = await storage.getApplication(application.id);
+              if (verifyApp && verifyApp.officialId === assignmentResult.officialId) {
+                console.log(`[Application Submit] ✅ Assignment verified in storage`);
+              } else {
+                console.error(`[Application Submit] ❌ Assignment verification failed! Expected: ${assignmentResult.officialId}, Got: ${verifyApp?.officialId}`);
+              }
+
+              // Send notification to the assigned official
+              await storage.createNotification(
+                assignmentResult.officialId,
+                "assignment",
+                "New Application Assigned",
+                `A new application ${application.trackingId} has been automatically assigned to you.`,
+                application.id
+              );
+
+              // Notify the citizen that their application has been assigned
+              await storage.createNotification(
+                application.citizenId,
+                "assignment",
+                "Application Assigned",
+                `Your application ${application.trackingId} has been automatically assigned to an official and is now being processed.`,
+                application.id
+              );
+            }
+          } else {
+            console.warn(`⚠️ Could not auto-assign application ${application.trackingId} - no matching officials found in department: ${application.department}`);
+          }
+        } catch (error: any) {
+          console.error(`❌ Error during auto-assignment for application ${application.trackingId}:`, error);
+          // Continue even if assignment fails - application will remain unassigned
+        }
+      } else {
+        console.warn(`⚠️ Application ${application.trackingId} has no department - cannot auto-assign. Department: ${application.department}, ApplicationType: ${application.applicationType}`);
+      }
+
+      // Return the application (with assignment details if auto-assigned)
+      res.json(assignedApplication);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
@@ -582,6 +837,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(application);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get application location history by tracking ID (public access)
+  app.get("/api/applications/track/:trackingId/location-history", async (req: Request, res: Response) => {
+    try {
+      const application = await storage.getApplicationByTrackingId(req.params.trackingId);
+      if (!application) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+      const locationHistory = await storage.getApplicationLocationHistory(application.id);
+      res.json(locationHistory);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
     }
   });
 
@@ -612,25 +881,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.user!.role === "admin") {
         applications = await storage.getAllApplications();
       } else {
-        // For officials: return both unassigned applications in their department AND their assigned applications
+        // For officials: return only their assigned applications (auto-assigned when citizen submits)
+        // Applications are automatically assigned to officials in the same department when submitted
         const user = await storage.getUser(req.user!.id);
         if (!user || !user.department) {
           return res.status(400).json({ error: "Official has no department assigned" });
         }
 
-        // Get unassigned applications for the department and sub-department
-        const allUnassignedApps = await storage.getUnassignedApplicationsByDepartment(user.department);
+        console.log(`[API /applications] Official: ${user.fullName} (${req.user!.id}), Department: ${user.department}`);
 
-        // Filter by sub-department if official has one assigned
-        let unassignedApps = allUnassignedApps;
-        if (user.subDepartment) {
-          unassignedApps = allUnassignedApps.filter(app =>
-            app.subDepartment === user.subDepartment || !app.subDepartment
-          );
-        }
-
-        // Get applications assigned to this official
+        // Get applications assigned to this official ONLY (strictly filtered by officialId)
+        // Each application should only be visible to ONE official (the one it's assigned to)
         const assignedApps = await storage.getOfficialApplications(req.user!.id);
+        console.log(`[API /applications] Found ${assignedApps.length} assigned applications for ${user.fullName} (ID: ${req.user!.id})`);
+
+        // Verify all returned applications are actually assigned to this official
+        const misassigned = assignedApps.filter(app => app.officialId !== req.user!.id);
+        if (misassigned.length > 0) {
+          console.error(`[API /applications] ❌ ERROR: Found ${misassigned.length} applications not assigned to ${req.user!.id}!`);
+          misassigned.forEach(app => {
+            console.error(`  - Application ${app.trackingId} assigned to ${app.officialId}, not ${req.user!.id}`);
+          });
+        }
 
         // Fetch ratings for assigned applications
         const assignedAppsWithRatings = await Promise.all(assignedApps.map(async (app) => {
@@ -638,19 +910,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return { ...app, rating: feedback?.rating };
         }));
 
-        // Combine both lists (remove duplicates if any)
-        const appMap = new Map<string, any>();
-        unassignedApps.forEach(app => appMap.set(app.id, app));
-        assignedAppsWithRatings.forEach(app => appMap.set(app.id, app));
-
-        // Sort by priority (High > Medium > Low), then by submission date
-        const priorityOrder = { High: 3, Medium: 2, Low: 1 };
-        applications = Array.from(appMap.values())
+        // Sort by priority (high > medium > low), then by submission date
+        const priorityOrder = { high: 3, medium: 2, low: 1 };
+        applications = assignedAppsWithRatings
           .sort((a, b) => {
-            const priorityDiff = (priorityOrder[b.priority as keyof typeof priorityOrder] || 0) - (priorityOrder[a.priority as keyof typeof priorityOrder] || 0);
+            const priorityDiff = (priorityOrder[(b.priority || "low").toLowerCase() as keyof typeof priorityOrder] || 0) - (priorityOrder[(a.priority || "low").toLowerCase() as keyof typeof priorityOrder] || 0);
             if (priorityDiff !== 0) return priorityDiff;
             return new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();
           });
+
+        console.log(`[API /applications] Returning ${applications.length} applications for ${user.fullName}`);
+        if (applications.length > 0) {
+          console.log(`[API /applications] Latest application: ${applications[0].trackingId} (Official ID: ${applications[0].officialId}, Status: ${applications[0].status})`);
+        }
       }
       res.json(applications);
     } catch (error: any) {
@@ -667,6 +939,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.user!.id,
         data.comment
       );
+
+      // Auto-warning system: If official rejects 3+ applications, send automatic warning
+      if (data.status === "Rejected" && req.user!.role === "official") {
+        try {
+          // Get all applications rejected by this official
+          const allApplications = await storage.getAllApplications();
+          const rejectedByOfficial = allApplications.filter(app =>
+            app.officialId === req.user!.id && app.status === "Rejected"
+          );
+
+          // If official has rejected 3 or more applications, send automatic warning
+          if (rejectedByOfficial.length >= 3) {
+            // Check if we already sent a warning for this threshold recently (to avoid duplicate warnings)
+            const existingWarnings = await storage.getWarnings(req.user!.id);
+            const recentWarning = existingWarnings.find(w =>
+              (w.message.includes("rejected") || w.message.includes("rejection")) &&
+              w.message.includes("High rejection rates") &&
+              new Date(w.sentAt).getTime() > (Date.now() - 24 * 60 * 60 * 1000) // Within last 24 hours
+            );
+
+            if (!recentWarning) {
+              // Create automatic warning
+              const warning = await storage.createWarning({
+                officialId: req.user!.id,
+                message: `You have rejected ${rejectedByOfficial.length} application(s). Please review your rejection decisions carefully. High rejection rates may indicate issues with application processing. Consider providing detailed feedback to citizens.`,
+              });
+
+              console.log(`⚠️ Auto-warning sent to official ${req.user!.id} (${req.user!.username}) for ${rejectedByOfficial.length} rejections`);
+
+              // Send notification to the official
+              await storage.createNotification(
+                req.user!.id,
+                "warning",
+                "Automatic Warning: High Rejection Rate",
+                `You have rejected ${rejectedByOfficial.length} application(s). Please review your decisions and ensure rejections are justified.`,
+                application.id
+              );
+            } else {
+              console.log(`ℹ️ Warning already sent to official ${req.user!.id} within last 24 hours, skipping duplicate warning`);
+            }
+          }
+        } catch (warningError: any) {
+          console.error(`❌ Error sending auto-warning for rejection:`, warningError);
+          // Don't fail the status update if warning fails
+        }
+      }
+
       res.json(application);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -699,6 +1018,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(400).json({ error: error.message });
     }
   });
+
 
   // NEW: Automated File Submission Endpoint (AI Integrated)
   app.post("/api/files", authenticateToken, async (req: Request, res: Response) => {
@@ -819,6 +1139,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(application);
     } catch (error: any) {
       console.error("FILE_SUBMISSION_ERROR", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Add new location update to application
+  app.post("/api/applications/:id/location", authenticateToken, requireRole("official", "admin"), async (req: Request, res: Response) => {
+    try {
+      const { location } = req.body;
+      if (!location || typeof location !== "string" || location.trim().length === 0) {
+        return res.status(400).json({ error: "Location is required" });
+      }
+
+      const app = await storage.getApplication(req.params.id);
+      if (!app) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      const locationEntry = await storage.addApplicationLocation(
+        req.params.id,
+        location.trim(),
+        req.user!.id
+      );
+
+      res.json(locationEntry);
+    } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
   });
@@ -861,6 +1206,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
        res.json(verificationResult);
     } catch (error: any) {
        res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get application location history
+  app.get("/api/applications/:id/location-history", authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const application = await storage.getApplication(req.params.id);
+      if (!application) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      // Ensure citizens can only view their own application's location history
+      if (req.user!.role === "citizen" && application.citizenId !== req.user!.id) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const locationHistory = await storage.getApplicationLocationHistory(req.params.id);
+      res.json(locationHistory);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
     }
   });
 
@@ -1298,8 +1663,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { expiresIn: "7d" }
       );
 
+      // Check if user is suspended
+      const isSuspended = await storage.isUserSuspended(user.id);
+      const suspendedUntil = user.suspendedUntil ? new Date(user.suspendedUntil) : null;
+      const hoursRemaining = suspendedUntil && isSuspended
+        ? Math.ceil((suspendedUntil.getTime() - Date.now()) / (1000 * 60 * 60))
+        : 0;
+
       const { password, ...userWithoutPassword } = user;
-      res.json({ user: userWithoutPassword, token });
+      res.json({
+        user: userWithoutPassword,
+        token,
+        suspended: isSuspended,
+        suspendedUntil: user.suspendedUntil,
+        hoursRemaining: hoursRemaining > 0 ? hoursRemaining : 0,
+        suspensionReason: user.suspensionReason
+      });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
@@ -1888,6 +2267,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get department details (officials, applications, stats) - for admin dashboard
+  app.get("/api/admin/department/:departmentName", authenticateToken, requireRole("admin"), async (req: Request, res: Response) => {
+    try {
+      const departmentName = decodeURIComponent(req.params.departmentName);
+      const normalizedDept = departmentName.split('–')[0].trim();
+
+      // Get all applications for this department
+      const allApps = await storage.getAllApplications();
+      const deptApps = allApps.filter(app => {
+        if (!app.department) return false;
+        const appDept = app.department.split('–')[0].trim();
+        return appDept === normalizedDept;
+      });
+
+      // Get all officials in this department
+      const allOfficials = await storage.getAllOfficials();
+      const deptOfficials = allOfficials.filter(o => {
+        if (!o.department) return false;
+        const oDept = o.department.split('–')[0].trim();
+        return oDept === normalizedDept;
+      });
+
+      // Calculate stats
+      const firstTimeApps = deptApps.filter(app => app.escalationLevel === 0);
+      const solvedApps = deptApps.filter(app =>
+        (app.status === "Approved" || app.status === "Auto-Approved") && app.isSolved === true
+      );
+      const pendingApps = deptApps.filter(app =>
+        ["Submitted", "Assigned", "In Progress"].includes(app.status)
+      );
+      const approvedApps = deptApps.filter(app =>
+        app.status === "Approved" || app.status === "Auto-Approved"
+      );
+      const rejectedApps = deptApps.filter(app => app.status === "Rejected");
+
+      // Get officials with their stats
+      const officialsWithStats = await Promise.all(
+        deptOfficials.map(async (official) => {
+          const officialApps = deptApps.filter(app => app.officialId === official.id);
+          const solved = officialApps.filter(app =>
+            (app.status === "Approved" || app.status === "Auto-Approved") && app.isSolved === true
+          ).length;
+          const pending = officialApps.filter(app =>
+            ["Submitted", "Assigned", "In Progress"].includes(app.status)
+          ).length;
+          const total = officialApps.length;
+
+          return {
+            ...official,
+            solvedCount: solved,
+            pendingCount: pending,
+            totalCount: total,
+          };
+        })
+      );
+
+      res.json({
+        department: departmentName,
+        officials: officialsWithStats,
+        stats: {
+          totalApplications: firstTimeApps.length,
+          solved: solvedApps.length,
+          pending: pendingApps.length,
+          approved: approvedApps.length,
+          rejected: rejectedApps.length,
+        },
+        applications: {
+          solved: solvedApps,
+          pending: pendingApps,
+        },
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get department ratings and overall website rating based on citizen feedback (public endpoint)
   app.get("/api/public/ratings", async (req: Request, res: Response) => {
     try {
@@ -2218,6 +2673,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: error.message });
     }
   });
+
+  // Set up daily cron job for automatic priority updates
+  // Runs every day at 2:00 AM
+  cron.schedule("0 2 * * *", async () => {
+    try {
+      console.log("🔄 Running daily priority update job...");
+      await storage.updateApplicationPriorities();
+      console.log("✅ Daily priority update completed");
+    } catch (error: any) {
+      console.error("❌ Error in daily priority update job:", error);
+    }
+  }, {
+    timezone: "Asia/Kolkata" // Adjust timezone as needed
+  });
+
+  // Also run immediately on startup to update any stale priorities
+  setTimeout(async () => {
+    try {
+      console.log("🔄 Running initial priority update on startup...");
+      await storage.updateApplicationPriorities();
+      console.log("✅ Initial priority update completed");
+    } catch (error: any) {
+      console.error("❌ Error in initial priority update:", error);
+    }
+  }, 5000); // Wait 5 seconds after server starts
 
   const httpServer = createServer(app);
   return httpServer;

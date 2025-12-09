@@ -30,7 +30,13 @@ export default function SubmitApplication() {
     description: "",
     additionalInfo: "",
     image: "",
+    aadhaarCard: "", // For Aadhaar Department applications
+    addressProof: "", // For Aadhaar Department applications
   });
+  const [aadhaarScanResult, setAadhaarScanResult] = useState<{ valid: boolean; message: string } | null>(null);
+  const [addressScanResult, setAddressScanResult] = useState<{ valid: boolean; message: string } | null>(null);
+  const [isScanningAadhaar, setIsScanningAadhaar] = useState(false);
+  const [isScanningAddress, setIsScanningAddress] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<{ valid: boolean; message: string } | null>(null);
 
@@ -38,6 +44,15 @@ export default function SubmitApplication() {
     queryKey: ["/api/notifications"],
     refetchInterval: 30000,
   });
+
+  // Check suspension status
+  const { data: userData } = useQuery<{ suspended?: boolean; suspendedUntil?: string; hoursRemaining?: number; suspensionReason?: string }>({
+    queryKey: ["/api/auth/me"],
+    refetchInterval: 60000, // Check every minute
+  });
+
+  const isSuspended = userData?.suspended || false;
+  const hoursRemaining = userData?.hoursRemaining || 0;
 
   const handleMarkAsRead = async (id: string) => {
     await apiRequest("POST", `/api/notifications/${id}/read`, {});
@@ -91,6 +106,88 @@ export default function SubmitApplication() {
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
+  };
+
+  // Check if this is an Aadhaar Department + Aadhaar Update application
+  const isAadhaarUpdate = formData.department?.includes("Aadhaar") &&
+    formData.subDepartment === "Aadhaar Update (Name/DOB/Address mismatch)";
+
+  const handleAadhaarCardUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 50 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Please upload an image smaller than 50MB",
+          variant: "destructive",
+        });
+        e.target.value = "";
+        return;
+      }
+
+      try {
+        const compressedImage = await compressImage(file);
+        setIsScanningAadhaar(true);
+        setAadhaarScanResult(null);
+
+        const validationResult = await validateImageAsDocument(compressedImage);
+
+        if (validationResult.valid) {
+          setFormData({ ...formData, aadhaarCard: compressedImage });
+          setAadhaarScanResult({ valid: true, message: validationResult.message });
+          toast({ title: "✓ Aadhaar Card Verified", description: "Document detected successfully." });
+        } else {
+          setAadhaarScanResult({ valid: false, message: "This image is not a document." });
+          toast({ title: "Invalid Image", description: "This image is not a document", variant: "destructive" });
+          e.target.value = "";
+        }
+      } catch (error) {
+        toast({ title: "Upload failed", description: "Failed to process image", variant: "destructive" });
+        setAadhaarScanResult({ valid: false, message: "Error scanning image. Please try again." });
+        e.target.value = "";
+      } finally {
+        setIsScanningAadhaar(false);
+      }
+    }
+  };
+
+  const handleAddressProofUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 50 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Please upload an image smaller than 50MB",
+          variant: "destructive",
+        });
+        e.target.value = "";
+        return;
+      }
+
+      try {
+        const compressedImage = await compressImage(file);
+        setIsScanningAddress(true);
+        setAddressScanResult(null);
+
+        const validationResult = await validateImageAsDocument(compressedImage);
+
+        if (validationResult.valid) {
+          setFormData({ ...formData, addressProof: compressedImage });
+          setAddressScanResult({ valid: true, message: validationResult.message });
+          toast({ title: "✓ Address Proof Verified", description: "Document detected successfully." });
+        } else {
+          setAddressScanResult({ valid: false, message: "This image is not a document." });
+          toast({ title: "Invalid Image", description: "This image is not a document", variant: "destructive" });
+          e.target.value = "";
+        }
+      } catch (error) {
+        toast({ title: "Upload failed", description: "Failed to process image", variant: "destructive" });
+        setAddressScanResult({ valid: false, message: "Error scanning image. Please try again." });
+        e.target.value = "";
+      } finally {
+        setIsScanningAddress(false);
+      }
+    }
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,16 +260,40 @@ export default function SubmitApplication() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Prevent submission if suspended
+    if (isSuspended) {
+      toast({
+        title: "Account Suspended",
+        description: `You have reached the maximum submission limit for this department. Your account is temporarily suspended for 24 hours. ${hoursRemaining > 0 ? `${hoursRemaining} hours remaining.` : ''}`,
+        variant: "destructive",
+        duration: 10000, // Show for 10 seconds
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
+      // Prepare documents for Aadhaar Department applications
+      const documents: { aadhaarCard?: string; addressProof?: string } = {};
+      if (formData.aadhaarCard) {
+        documents.aadhaarCard = formData.aadhaarCard;
+      }
+      if (formData.addressProof) {
+        documents.addressProof = formData.addressProof;
+      }
+
       const data = {
         applicationType: formData.subDepartment || formData.department || formData.applicationType,
         department: formData.department,
         subDepartment: formData.subDepartment,
         description: formData.description,
         citizenId: user!.id,
-        data: JSON.stringify({ additionalInfo: formData.additionalInfo }),
+        data: JSON.stringify({
+          additionalInfo: formData.additionalInfo,
+          documents: documents
+        }),
         image: formData.image || undefined,
       };
 
@@ -187,11 +308,24 @@ export default function SubmitApplication() {
 
       setLocation("/citizen/dashboard");
     } catch (error: any) {
-      toast({
-        title: "Submission Failed",
-        description: error.message || "Unable to submit application",
-        variant: "destructive",
-      });
+      // Check if error is due to suspension
+      if (error.suspended || error.message?.includes("suspended") || error.message?.includes("maximum submission limit")) {
+        // Refresh user data to get updated suspension status
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+        // Show popup/dialog for suspension
+        toast({
+          title: "Account Suspended",
+          description: error.message || "You have reached the maximum submission limit for this department. Your account is temporarily suspended for 24 hours.",
+          variant: "destructive",
+          duration: 10000, // Show for 10 seconds
+        });
+      } else {
+        toast({
+          title: "Submission Failed",
+          description: error.message || "Unable to submit application",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -236,6 +370,33 @@ export default function SubmitApplication() {
               Please provide accurate details to help us process your application faster.
             </p>
           </div>
+
+          {/* Suspension Banner */}
+          {isSuspended && (
+            <Card className="border-2 border-red-500 bg-gradient-to-br from-red-50 via-red-100/50 to-orange-50 dark:from-red-950/40 dark:via-red-900/30 dark:to-orange-950/40 shadow-lg">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 rounded-full bg-red-500 text-white shadow-lg">
+                    <AlertCircle className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-red-900 dark:text-red-100 mb-1">
+                      Account Suspended
+                    </h3>
+                    <p className="text-sm text-red-800 dark:text-red-200">
+                      You have reached the maximum submission limit for this department. Your account is temporarily suspended for 24 hours.
+                      {hoursRemaining > 0 && (
+                        <span className="font-semibold"> {hoursRemaining} hour{hoursRemaining !== 1 ? 's' : ''} remaining.</span>
+                      )}
+                    </p>
+                    <p className="text-xs text-red-700 dark:text-red-300 mt-2">
+                      You cannot submit new applications until the suspension period ends.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="border-0 shadow-sm bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden">
             <CardHeader className="border-b border-slate-100 dark:border-slate-800 p-8 bg-slate-50/50 dark:bg-slate-900/50">
@@ -422,6 +583,123 @@ export default function SubmitApplication() {
                   )}
                 </div>
 
+                {/* Aadhaar Department - Mandatory Documents Section */}
+                {isAadhaarUpdate && (
+                  <div className="space-y-4 p-6 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                        Mandatory Documents for Aadhaar Update
+                      </h3>
+                    </div>
+                    <p className="text-xs text-blue-800 dark:text-blue-200 mb-4">
+                      Both documents are required for auto-approval. If both documents are uploaded and verified, your application will be automatically approved.
+                    </p>
+
+                    {/* Aadhaar Card Upload */}
+                    <div className="space-y-3">
+                      <Label htmlFor="aadhaarCard" className="text-sm font-semibold text-[#1d1d1f] dark:text-white">
+                        Aadhaar Card Photo *
+                      </Label>
+                      <div className={`border-2 border-dashed rounded-xl p-4 text-center transition-all cursor-pointer relative group ${isScanningAadhaar ? 'border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/10' :
+                          aadhaarScanResult?.valid ? 'border-green-300 dark:border-green-700 bg-green-50/50 dark:bg-green-900/10' :
+                            aadhaarScanResult?.valid === false ? 'border-red-300 dark:border-red-700 bg-red-50/50 dark:bg-red-900/10' :
+                              'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                        }`}>
+                        <Input
+                          id="aadhaarCard"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleAadhaarCardUpload}
+                          disabled={isScanningAadhaar}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                        />
+                        <div className="flex items-center gap-3">
+                          {isScanningAadhaar ? (
+                            <Loader className="h-5 w-5 animate-spin text-blue-600" />
+                          ) : formData.aadhaarCard ? (
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                          ) : (
+                            <Upload className="h-5 w-5 text-slate-400" />
+                          )}
+                          <span className="text-sm text-[#1d1d1f] dark:text-white">
+                            {formData.aadhaarCard ? "Aadhaar Card Verified" : "Upload Aadhaar Card"}
+                          </span>
+                        </div>
+                      </div>
+                      {formData.aadhaarCard && (
+                        <div className="relative group inline-block">
+                          <img src={formData.aadhaarCard} alt="Aadhaar Card" className="h-24 w-24 object-cover rounded-lg border border-green-200 dark:border-green-800" />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute -top-2 -right-2 h-5 w-5 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => {
+                              setFormData({ ...formData, aadhaarCard: "" });
+                              setAadhaarScanResult(null);
+                            }}
+                          >
+                            <span className="sr-only">Remove</span>
+                            <div className="h-2.5 w-2.5 bg-white rounded-sm rotate-45" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Address Proof Upload */}
+                    <div className="space-y-3">
+                      <Label htmlFor="addressProof" className="text-sm font-semibold text-[#1d1d1f] dark:text-white">
+                        Address Proof *
+                      </Label>
+                      <div className={`border-2 border-dashed rounded-xl p-4 text-center transition-all cursor-pointer relative group ${isScanningAddress ? 'border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/10' :
+                          addressScanResult?.valid ? 'border-green-300 dark:border-green-700 bg-green-50/50 dark:bg-green-900/10' :
+                            addressScanResult?.valid === false ? 'border-red-300 dark:border-red-700 bg-red-50/50 dark:bg-red-900/10' :
+                              'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                        }`}>
+                        <Input
+                          id="addressProof"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleAddressProofUpload}
+                          disabled={isScanningAddress}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                        />
+                        <div className="flex items-center gap-3">
+                          {isScanningAddress ? (
+                            <Loader className="h-5 w-5 animate-spin text-blue-600" />
+                          ) : formData.addressProof ? (
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                          ) : (
+                            <Upload className="h-5 w-5 text-slate-400" />
+                          )}
+                          <span className="text-sm text-[#1d1d1f] dark:text-white">
+                            {formData.addressProof ? "Address Proof Verified" : "Upload Address Proof"}
+                          </span>
+                        </div>
+                      </div>
+                      {formData.addressProof && (
+                        <div className="relative group inline-block">
+                          <img src={formData.addressProof} alt="Address Proof" className="h-24 w-24 object-cover rounded-lg border border-green-200 dark:border-green-800" />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute -top-2 -right-2 h-5 w-5 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => {
+                              setFormData({ ...formData, addressProof: "" });
+                              setAddressScanResult(null);
+                            }}
+                          >
+                            <span className="sr-only">Remove</span>
+                            <div className="h-2.5 w-2.5 bg-white rounded-sm rotate-45" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="bg-[#f5f5f7] dark:bg-slate-800/50 rounded-2xl p-6 flex gap-4 items-start">
                   <Info className="h-5 w-5 text-[#0071e3] mt-0.5 flex-shrink-0" />
                   <div className="space-y-2">
@@ -451,8 +729,8 @@ export default function SubmitApplication() {
                   </Link>
                   <Button
                     type="submit"
-                    disabled={isSubmitting}
-                    className="flex-1 h-12 rounded-full bg-[#0071e3] hover:bg-[#0077ED] text-white font-medium shadow-lg shadow-blue-500/20"
+                    disabled={isSubmitting || isSuspended}
+                    className="flex-1 h-12 rounded-full bg-[#0071e3] hover:bg-[#0077ED] text-white font-medium shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
                     data-testid="button-submit-application"
                   >
                     {isSubmitting ? "Submitting..." : "Submit Application"}
