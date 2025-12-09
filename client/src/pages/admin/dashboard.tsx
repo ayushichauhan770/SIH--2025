@@ -264,7 +264,47 @@ export default function AdminDashboard() {
       {/* Main Content */}
       <main className="flex-1 overflow-auto pt-28 pb-10 px-6">
         <div className="max-w-7xl mx-auto space-y-8">
+          {/* AI Investigation Alerts Section */}
+          {notifications.filter(n => n.type === 'investigation_alert' && !n.read).length > 0 && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold text-[#1d1d1f] dark:text-white flex items-center gap-2">
+                <Shield className="h-6 w-6 text-red-600 animate-pulse" />
+                AI Investigation Alerts
+              </h2>
+              <div className="grid grid-cols-1 gap-4">
+                {notifications.filter(n => n.type === 'investigation_alert' && !n.read).map((alert) => (
+                  <Card key={alert.id} className="bg-red-50/50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30 overflow-hidden relative">
+                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-red-600" />
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
+                          <AlertTriangle className="h-5 w-5 text-red-600" />
+                        </div>
+                        <div className="space-y-2 flex-1">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-bold text-red-700 dark:text-red-400 text-lg">{alert.title}</h3>
+                            <Button variant="ghost" size="sm" onClick={() => handleMarkAsRead(alert.id)} className="h-8 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20">
+                              Dismiss
+                            </Button>
+                          </div>
+                          <p className="text-[#1d1d1f] dark:text-gray-200 whitespace-pre-wrap leading-relaxed font-medium">
+                            {alert.message}
+                          </p>
+                          <div className="pt-2 flex items-center gap-2 text-xs font-semibold text-red-600/80 dark:text-red-400/80 uppercase tracking-wide">
+                            <Shield className="h-3.5 w-3.5" />
+                            Autonomous AI Report
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
           {!selectedDepartment ? (
+
             /* Department List View */
             <>
               <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">

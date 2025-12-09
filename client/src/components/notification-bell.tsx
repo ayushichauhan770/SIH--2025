@@ -20,6 +20,8 @@ const notificationIcons: Record<string, string> = {
   delay: "⚠",
   assignment: "→",
   feedback: "★",
+  investigation_alert: "🚨",
+  suspension: "⛔",
 };
 
 export function NotificationBell({ notifications, onMarkAsRead }: NotificationBellProps) {
@@ -70,7 +72,7 @@ export function NotificationBell({ notifications, onMarkAsRead }: NotificationBe
                       <p className={`text-sm font-medium ${!notification.read ? "text-foreground" : "text-muted-foreground"}`}>
                         {notification.title}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground whitespace-pre-wrap">
                         {notification.message}
                       </p>
                       <p className="text-xs text-muted-foreground">

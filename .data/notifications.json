@@ -1,22 +1,649 @@
+<<<<<<< HEAD
 {
   "b143c335-f5f1-4ec7-a0e2-48bc4edd45bb": {
     "id": "b143c335-f5f1-4ec7-a0e2-48bc4edd45bb",
     "userId": "5c5c817b-011b-4cea-915d-15d77886f216",
+=======
+<<<<<<< HEAD
+{}
+=======
+{
+  "ea3606d6-0e8a-4ddb-9149-240024fc31d7": {
+    "id": "ea3606d6-0e8a-4ddb-9149-240024fc31d7",
+    "userId": "e2819510-8e48-4438-b3b9-abfa510494d2",
+>>>>>>> 164f7752703f9b4c5eac58be119a02ede8f93472
     "type": "assignment",
     "title": "New Application Assigned",
     "message": "A new application APP-2025-000001 has been automatically assigned to you.",
     "read": false,
+<<<<<<< HEAD
     "applicationId": "1f888477-99a3-4e6c-b8c3-34addc1be364",
     "createdAt": "2025-12-09T09:41:18.367Z"
   },
   "3dc2d96b-c7f2-4a5f-aa5e-68d03e8dcd6f": {
     "id": "3dc2d96b-c7f2-4a5f-aa5e-68d03e8dcd6f",
     "userId": "2ef6ba4b-cef4-4832-a00c-9d69959e9b06",
+=======
+    "applicationId": "9b46dde7-f8da-46f1-9bf0-09a8195a7eee",
+    "createdAt": "2025-12-08T18:06:38.365Z"
+  },
+  "2d99198e-91c4-4fb3-8f14-3509fbc35763": {
+    "id": "2d99198e-91c4-4fb3-8f14-3509fbc35763",
+    "userId": "6e474a67-ae04-49a9-8aee-f15a6d81c8fe",
+>>>>>>> 164f7752703f9b4c5eac58be119a02ede8f93472
     "type": "assignment",
     "title": "Application Assigned",
     "message": "Your application APP-2025-000001 has been automatically assigned to an official and is now being processed.",
     "read": false,
+<<<<<<< HEAD
     "applicationId": "1f888477-99a3-4e6c-b8c3-34addc1be364",
     "createdAt": "2025-12-09T09:41:18.391Z"
   }
 }
+=======
+    "applicationId": "9b46dde7-f8da-46f1-9bf0-09a8195a7eee",
+    "createdAt": "2025-12-08T18:06:38.387Z"
+  },
+  "3fc3a31a-c954-4b01-867f-de0c984412ff": {
+    "id": "3fc3a31a-c954-4b01-867f-de0c984412ff",
+    "userId": "e2819510-8e48-4438-b3b9-abfa510494d2",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000002 has been automatically assigned to you.",
+    "read": false,
+    "applicationId": "254c98c3-853b-4186-a930-155c3c732947",
+    "createdAt": "2025-12-08T19:10:54.658Z"
+  },
+  "17906e16-4f57-4927-b9be-78a68fe819bd": {
+    "id": "17906e16-4f57-4927-b9be-78a68fe819bd",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000002 has been automatically assigned to an official and is now being processed.",
+    "read": true,
+    "applicationId": "254c98c3-853b-4186-a930-155c3c732947",
+    "createdAt": "2025-12-08T19:10:54.719Z"
+  },
+  "63b5327d-72fe-4eae-b353-bbb22bf0e3a6": {
+    "id": "63b5327d-72fe-4eae-b353-bbb22bf0e3a6",
+    "userId": "66e7b3a4-c40b-4880-bf62-f231b8df04fe",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000003 has been automatically assigned to you.",
+    "read": true,
+    "applicationId": "48bcc421-8164-45fb-a872-619f819587cb",
+    "createdAt": "2025-12-08T19:16:21.787Z"
+  },
+  "2e0f65e1-4bb6-41a0-a9ab-aa3057a849be": {
+    "id": "2e0f65e1-4bb6-41a0-a9ab-aa3057a849be",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000003 has been automatically assigned to an official and is now being processed.",
+    "read": true,
+    "applicationId": "48bcc421-8164-45fb-a872-619f819587cb",
+    "createdAt": "2025-12-08T19:16:21.800Z"
+  },
+  "0e61ba78-9774-4664-ae36-7fab84484241": {
+    "id": "0e61ba78-9774-4664-ae36-7fab84484241",
+    "userId": "dac7d43e-1158-4c93-993a-6582b68940e6",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000004 has been automatically assigned to you.",
+    "read": true,
+    "applicationId": "4b93c630-c56f-40a4-aaaf-5c09476362ad",
+    "createdAt": "2025-12-08T19:21:37.000Z"
+  },
+  "e9b9db34-7b0a-4df3-9a73-d943b5f57af1": {
+    "id": "e9b9db34-7b0a-4df3-9a73-d943b5f57af1",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000004 has been automatically assigned to an official and is now being processed.",
+    "read": true,
+    "applicationId": "4b93c630-c56f-40a4-aaaf-5c09476362ad",
+    "createdAt": "2025-12-08T19:21:37.011Z"
+  },
+  "fcd7eed1-cd6e-49dd-afa5-facef32c78f1": {
+    "id": "fcd7eed1-cd6e-49dd-afa5-facef32c78f1",
+    "userId": "66e7b3a4-c40b-4880-bf62-f231b8df04fe",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000005 has been automatically assigned to you.",
+    "read": true,
+    "applicationId": "cf9fbee9-4c46-4bca-9263-9bdcc11018af",
+    "createdAt": "2025-12-08T20:20:36.184Z"
+  },
+  "9a4906c7-c986-4f6d-9f29-82919402fb52": {
+    "id": "9a4906c7-c986-4f6d-9f29-82919402fb52",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000005 has been automatically assigned to an official and is now being processed.",
+    "read": true,
+    "applicationId": "cf9fbee9-4c46-4bca-9263-9bdcc11018af",
+    "createdAt": "2025-12-08T20:20:36.202Z"
+  },
+  "4fccb373-49be-4a8a-9d7d-ea363442b1bf": {
+    "id": "4fccb373-49be-4a8a-9d7d-ea363442b1bf",
+    "userId": "66e7b3a4-c40b-4880-bf62-f231b8df04fe",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000006 has been automatically assigned to you.",
+    "read": true,
+    "applicationId": "032d56c6-551b-42b1-a919-e8f010e56740",
+    "createdAt": "2025-12-08T20:21:35.164Z"
+  },
+  "a59c50d3-18f7-47a0-8ebc-6eb0f77a00ca": {
+    "id": "a59c50d3-18f7-47a0-8ebc-6eb0f77a00ca",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000006 has been automatically assigned to an official and is now being processed.",
+    "read": true,
+    "applicationId": "032d56c6-551b-42b1-a919-e8f010e56740",
+    "createdAt": "2025-12-08T20:21:35.184Z"
+  },
+  "404ea226-4bfe-4cdd-9bf8-d1878abe6f21": {
+    "id": "404ea226-4bfe-4cdd-9bf8-d1878abe6f21",
+    "userId": "66e7b3a4-c40b-4880-bf62-f231b8df04fe",
+    "type": "warning",
+    "title": "Performance Warning",
+    "message": "h",
+    "read": true,
+    "applicationId": null,
+    "createdAt": "2025-12-08T20:22:00.315Z"
+  },
+  "05814143-c263-4fb9-9e08-13aa2bd58119": {
+    "id": "05814143-c263-4fb9-9e08-13aa2bd58119",
+    "userId": "66e7b3a4-c40b-4880-bf62-f231b8df04fe",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000007 has been automatically assigned to you.",
+    "read": true,
+    "applicationId": "31f1e3ba-60cd-4bad-9e11-4e33e6955e65",
+    "createdAt": "2025-12-08T20:48:36.938Z"
+  },
+  "a7dd2fe0-e1eb-4f69-b468-1f256abb387b": {
+    "id": "a7dd2fe0-e1eb-4f69-b468-1f256abb387b",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000007 has been automatically assigned to an official and is now being processed.",
+    "read": true,
+    "applicationId": "31f1e3ba-60cd-4bad-9e11-4e33e6955e65",
+    "createdAt": "2025-12-08T20:48:36.956Z"
+  },
+  "52087009-7df1-4834-b7bf-d3e9212878cc": {
+    "id": "52087009-7df1-4834-b7bf-d3e9212878cc",
+    "userId": "66e7b3a4-c40b-4880-bf62-f231b8df04fe",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000008 has been automatically assigned to you.",
+    "read": true,
+    "applicationId": "dd9931b2-2cd5-4675-9ad2-41277ab266cb",
+    "createdAt": "2025-12-08T20:49:00.037Z"
+  },
+  "a790ce2b-aca9-40ad-aa40-5efbd279302a": {
+    "id": "a790ce2b-aca9-40ad-aa40-5efbd279302a",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000008 has been automatically assigned to an official and is now being processed.",
+    "read": true,
+    "applicationId": "dd9931b2-2cd5-4675-9ad2-41277ab266cb",
+    "createdAt": "2025-12-08T20:49:00.053Z"
+  },
+  "676f8709-ac93-4e3b-aed7-ed678ebde94f": {
+    "id": "676f8709-ac93-4e3b-aed7-ed678ebde94f",
+    "userId": "66e7b3a4-c40b-4880-bf62-f231b8df04fe",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000009 has been automatically assigned to you.",
+    "read": true,
+    "applicationId": "205ea19f-1dc4-488b-87b9-bb30e1ee4971",
+    "createdAt": "2025-12-08T20:49:37.272Z"
+  },
+  "69d7cfc2-7caf-4634-a43c-e5af130a9b7e": {
+    "id": "69d7cfc2-7caf-4634-a43c-e5af130a9b7e",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000009 has been automatically assigned to an official and is now being processed.",
+    "read": true,
+    "applicationId": "205ea19f-1dc4-488b-87b9-bb30e1ee4971",
+    "createdAt": "2025-12-08T20:49:37.284Z"
+  },
+  "fd076f7f-b544-4b71-a521-ecfe0ab8e4cb": {
+    "id": "fd076f7f-b544-4b71-a521-ecfe0ab8e4cb",
+    "userId": "66e7b3a4-c40b-4880-bf62-f231b8df04fe",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000010 has been automatically assigned to you.",
+    "read": true,
+    "applicationId": "3a4a4e8f-7b2b-4c39-851d-64140e3126b2",
+    "createdAt": "2025-12-08T20:52:40.761Z"
+  },
+  "9066617f-c893-46a9-a748-9adc4d6c30da": {
+    "id": "9066617f-c893-46a9-a748-9adc4d6c30da",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000010 has been automatically assigned to an official and is now being processed.",
+    "read": true,
+    "applicationId": "3a4a4e8f-7b2b-4c39-851d-64140e3126b2",
+    "createdAt": "2025-12-08T20:52:40.799Z"
+  },
+  "d2773fe5-7b69-4b63-84ab-3fac7864a045": {
+    "id": "d2773fe5-7b69-4b63-84ab-3fac7864a045",
+    "userId": "66e7b3a4-c40b-4880-bf62-f231b8df04fe",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000011 has been automatically assigned to you.",
+    "read": true,
+    "applicationId": "90aeb3b3-b9ab-4b20-b7cb-3ab1e0fccd6b",
+    "createdAt": "2025-12-08T21:25:20.868Z"
+  },
+  "6907463a-0b5c-46c6-bdbb-8c3111da8815": {
+    "id": "6907463a-0b5c-46c6-bdbb-8c3111da8815",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000011 has been automatically assigned to an official and is now being processed.",
+    "read": true,
+    "applicationId": "90aeb3b3-b9ab-4b20-b7cb-3ab1e0fccd6b",
+    "createdAt": "2025-12-08T21:25:20.917Z"
+  },
+  "a94ae148-78b6-40ea-a75c-44230303b9ff": {
+    "id": "a94ae148-78b6-40ea-a75c-44230303b9ff",
+    "userId": "66e7b3a4-c40b-4880-bf62-f231b8df04fe",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000012 has been automatically assigned to you.",
+    "read": true,
+    "applicationId": "7adcbb64-9e5f-49ff-87f8-46b091c7a862",
+    "createdAt": "2025-12-08T21:25:35.981Z"
+  },
+  "216ccc55-e2e2-4880-bf47-75ef1b8db941": {
+    "id": "216ccc55-e2e2-4880-bf47-75ef1b8db941",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000012 has been automatically assigned to an official and is now being processed.",
+    "read": true,
+    "applicationId": "7adcbb64-9e5f-49ff-87f8-46b091c7a862",
+    "createdAt": "2025-12-08T21:25:36.081Z"
+  },
+  "9949bb4d-0e37-447c-a1cb-de45d3e957a1": {
+    "id": "9949bb4d-0e37-447c-a1cb-de45d3e957a1",
+    "userId": "e2819510-8e48-4438-b3b9-abfa510494d2",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000013 has been automatically assigned to you.",
+    "read": false,
+    "applicationId": "2ed5bc33-18da-4b7d-ba43-35af4283973e",
+    "createdAt": "2025-12-08T21:25:48.277Z"
+  },
+  "a90ced9e-9bcf-48ee-a210-cc08e70b2d09": {
+    "id": "a90ced9e-9bcf-48ee-a210-cc08e70b2d09",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000013 has been automatically assigned to an official and is now being processed.",
+    "read": true,
+    "applicationId": "2ed5bc33-18da-4b7d-ba43-35af4283973e",
+    "createdAt": "2025-12-08T21:25:48.355Z"
+  },
+  "febfe570-0b39-4cfa-babd-eeddd25f67be": {
+    "id": "febfe570-0b39-4cfa-babd-eeddd25f67be",
+    "userId": "66e7b3a4-c40b-4880-bf62-f231b8df04fe",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000014 has been automatically assigned to you.",
+    "read": true,
+    "applicationId": "0aee6a2b-b1ab-4eee-8883-e39589c2960d",
+    "createdAt": "2025-12-08T21:26:00.580Z"
+  },
+  "828092db-6a0d-497d-b7fd-5b788aadc8b3": {
+    "id": "828092db-6a0d-497d-b7fd-5b788aadc8b3",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000014 has been automatically assigned to an official and is now being processed.",
+    "read": true,
+    "applicationId": "0aee6a2b-b1ab-4eee-8883-e39589c2960d",
+    "createdAt": "2025-12-08T21:26:00.597Z"
+  },
+  "4453a754-65da-43c4-a71d-73aeb38f311b": {
+    "id": "4453a754-65da-43c4-a71d-73aeb38f311b",
+    "userId": "e2819510-8e48-4438-b3b9-abfa510494d2",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000015 has been automatically assigned to you.",
+    "read": false,
+    "applicationId": "a866eebb-804f-4884-a95b-370a4e1a22b4",
+    "createdAt": "2025-12-08T21:26:10.608Z"
+  },
+  "d73842a9-2509-47a2-b772-e7385850170a": {
+    "id": "d73842a9-2509-47a2-b772-e7385850170a",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000015 has been automatically assigned to an official and is now being processed.",
+    "read": true,
+    "applicationId": "a866eebb-804f-4884-a95b-370a4e1a22b4",
+    "createdAt": "2025-12-08T21:26:10.747Z"
+  },
+  "7f79755f-d979-45fa-87dc-a81053b14269": {
+    "id": "7f79755f-d979-45fa-87dc-a81053b14269",
+    "userId": "66e7b3a4-c40b-4880-bf62-f231b8df04fe",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000016 has been automatically assigned to you.",
+    "read": true,
+    "applicationId": "d3fef2ce-a948-4d38-96da-ec5b350a3f55",
+    "createdAt": "2025-12-08T21:26:22.496Z"
+  },
+  "65d6b4cf-d9db-4534-991e-e0d1b7b43a16": {
+    "id": "65d6b4cf-d9db-4534-991e-e0d1b7b43a16",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000016 has been automatically assigned to an official and is now being processed.",
+    "read": true,
+    "applicationId": "d3fef2ce-a948-4d38-96da-ec5b350a3f55",
+    "createdAt": "2025-12-08T21:26:22.527Z"
+  },
+  "3ab2dff3-f508-426c-b25b-1170cef49209": {
+    "id": "3ab2dff3-f508-426c-b25b-1170cef49209",
+    "userId": "e2819510-8e48-4438-b3b9-abfa510494d2",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000017 has been automatically assigned to you.",
+    "read": false,
+    "applicationId": "e084c33c-b85b-4508-a624-086babc2bcf2",
+    "createdAt": "2025-12-08T21:44:06.506Z"
+  },
+  "c049a7bc-5cb2-42a5-b315-1157628f1d6e": {
+    "id": "c049a7bc-5cb2-42a5-b315-1157628f1d6e",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000017 has been automatically assigned to an official and is now being processed.",
+    "read": false,
+    "applicationId": "e084c33c-b85b-4508-a624-086babc2bcf2",
+    "createdAt": "2025-12-08T21:44:06.560Z"
+  },
+  "1a86182e-3a03-49fd-b02f-d5204c19307f": {
+    "id": "1a86182e-3a03-49fd-b02f-d5204c19307f",
+    "userId": "66e7b3a4-c40b-4880-bf62-f231b8df04fe",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000018 has been automatically assigned to you.",
+    "read": true,
+    "applicationId": "2c38b28a-65c3-4bf9-8530-f93826747a54",
+    "createdAt": "2025-12-08T21:44:17.911Z"
+  },
+  "137e243f-9c2f-4623-92ba-40588cb4a156": {
+    "id": "137e243f-9c2f-4623-92ba-40588cb4a156",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000018 has been automatically assigned to an official and is now being processed.",
+    "read": false,
+    "applicationId": "2c38b28a-65c3-4bf9-8530-f93826747a54",
+    "createdAt": "2025-12-08T21:44:17.969Z"
+  },
+  "5768fe71-bc69-4d8a-b669-dcdeb2f74409": {
+    "id": "5768fe71-bc69-4d8a-b669-dcdeb2f74409",
+    "userId": "e2819510-8e48-4438-b3b9-abfa510494d2",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000019 has been automatically assigned to you.",
+    "read": false,
+    "applicationId": "8a9a2bed-c1e5-4b22-8bf2-e6f2a4a4ea44",
+    "createdAt": "2025-12-08T21:44:39.872Z"
+  },
+  "ed6e9975-7451-4358-a6c5-78f72463a599": {
+    "id": "ed6e9975-7451-4358-a6c5-78f72463a599",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000019 has been automatically assigned to an official and is now being processed.",
+    "read": false,
+    "applicationId": "8a9a2bed-c1e5-4b22-8bf2-e6f2a4a4ea44",
+    "createdAt": "2025-12-08T21:44:39.893Z"
+  },
+  "2ebad028-2e8e-4a22-9bf2-6b144fc0976c": {
+    "id": "2ebad028-2e8e-4a22-9bf2-6b144fc0976c",
+    "userId": "fa554fc5-8167-46a1-92ca-c04d15fca053",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000020 has been automatically assigned to you.",
+    "read": false,
+    "applicationId": "98cd65a0-b2d4-4a47-8a3e-d3e008cfc829",
+    "createdAt": "2025-12-08T21:56:57.357Z"
+  },
+  "58787781-64e9-42be-ae1f-5bf8bf674104": {
+    "id": "58787781-64e9-42be-ae1f-5bf8bf674104",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000020 has been automatically assigned to an official and is now being processed.",
+    "read": false,
+    "applicationId": "98cd65a0-b2d4-4a47-8a3e-d3e008cfc829",
+    "createdAt": "2025-12-08T21:56:57.385Z"
+  },
+  "62454083-052d-4793-a7df-775a502e49d6": {
+    "id": "62454083-052d-4793-a7df-775a502e49d6",
+    "userId": "fa554fc5-8167-46a1-92ca-c04d15fca053",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000021 has been automatically assigned to you.",
+    "read": false,
+    "applicationId": "9ac989c2-7bc5-4adc-b182-45316a1bb412",
+    "createdAt": "2025-12-08T21:57:10.005Z"
+  },
+  "d9578d9f-531a-4632-99df-4ddbac1b1149": {
+    "id": "d9578d9f-531a-4632-99df-4ddbac1b1149",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000021 has been automatically assigned to an official and is now being processed.",
+    "read": false,
+    "applicationId": "9ac989c2-7bc5-4adc-b182-45316a1bb412",
+    "createdAt": "2025-12-08T21:57:10.024Z"
+  },
+  "cf49cb93-359d-4d65-8037-06a74424c22e": {
+    "id": "cf49cb93-359d-4d65-8037-06a74424c22e",
+    "userId": "fa554fc5-8167-46a1-92ca-c04d15fca053",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000022 has been automatically assigned to you.",
+    "read": false,
+    "applicationId": "ec0fdc7d-6d66-41e6-8d0a-7235f6fd80ef",
+    "createdAt": "2025-12-08T21:57:29.536Z"
+  },
+  "38188d8f-2993-4102-bfab-13ba84d4cf55": {
+    "id": "38188d8f-2993-4102-bfab-13ba84d4cf55",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000022 has been automatically assigned to an official and is now being processed.",
+    "read": false,
+    "applicationId": "ec0fdc7d-6d66-41e6-8d0a-7235f6fd80ef",
+    "createdAt": "2025-12-08T21:57:29.556Z"
+  },
+  "19022285-c8f1-4c33-96f8-f6496dee9c45": {
+    "id": "19022285-c8f1-4c33-96f8-f6496dee9c45",
+    "userId": "fa554fc5-8167-46a1-92ca-c04d15fca053",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000023 has been automatically assigned to you.",
+    "read": false,
+    "applicationId": "bda6459d-71c7-436d-9af6-963a25dd536f",
+    "createdAt": "2025-12-08T21:57:41.843Z"
+  },
+  "05dbaf5f-6466-4706-b323-711ac5c74547": {
+    "id": "05dbaf5f-6466-4706-b323-711ac5c74547",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000023 has been automatically assigned to an official and is now being processed.",
+    "read": false,
+    "applicationId": "bda6459d-71c7-436d-9af6-963a25dd536f",
+    "createdAt": "2025-12-08T21:57:41.862Z"
+  },
+  "943e94d5-4574-4443-b556-612a3603fe91": {
+    "id": "943e94d5-4574-4443-b556-612a3603fe91",
+    "userId": "66e7b3a4-c40b-4880-bf62-f231b8df04fe",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000024 has been automatically assigned to you.",
+    "read": true,
+    "applicationId": "e350d9a5-93fc-4811-bb20-eb5f838028a9",
+    "createdAt": "2025-12-08T23:17:53.051Z"
+  },
+  "657b6271-eaa5-4833-9ecb-5c72693fdd34": {
+    "id": "657b6271-eaa5-4833-9ecb-5c72693fdd34",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000024 has been automatically assigned to an official and is now being processed.",
+    "read": false,
+    "applicationId": "e350d9a5-93fc-4811-bb20-eb5f838028a9",
+    "createdAt": "2025-12-08T23:17:53.081Z"
+  },
+  "0840a855-ac79-469c-ab56-abe9b372b925": {
+    "id": "0840a855-ac79-469c-ab56-abe9b372b925",
+    "userId": "66e7b3a4-c40b-4880-bf62-f231b8df04fe",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000025 has been automatically assigned to you.",
+    "read": true,
+    "applicationId": "e8a058ce-a2a1-4d09-9de4-3eb4909ce1d4",
+    "createdAt": "2025-12-08T23:18:04.624Z"
+  },
+  "0e08a0ff-15bf-4eb1-b28e-9808f6ebf1a4": {
+    "id": "0e08a0ff-15bf-4eb1-b28e-9808f6ebf1a4",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000025 has been automatically assigned to an official and is now being processed.",
+    "read": false,
+    "applicationId": "e8a058ce-a2a1-4d09-9de4-3eb4909ce1d4",
+    "createdAt": "2025-12-08T23:18:04.644Z"
+  },
+  "3335055b-f1dc-4aa5-becc-9bab10c02c32": {
+    "id": "3335055b-f1dc-4aa5-becc-9bab10c02c32",
+    "userId": "66e7b3a4-c40b-4880-bf62-f231b8df04fe",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000026 has been automatically assigned to you.",
+    "read": true,
+    "applicationId": "569faeb4-fc63-4beb-b930-83c5a926a08e",
+    "createdAt": "2025-12-08T23:18:16.670Z"
+  },
+  "2b490b84-42ad-4268-b2f7-318bb444f13a": {
+    "id": "2b490b84-42ad-4268-b2f7-318bb444f13a",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000026 has been automatically assigned to an official and is now being processed.",
+    "read": false,
+    "applicationId": "569faeb4-fc63-4beb-b930-83c5a926a08e",
+    "createdAt": "2025-12-08T23:18:16.690Z"
+  },
+  "e530626e-27e9-4c09-9661-759f0b5ff2b0": {
+    "id": "e530626e-27e9-4c09-9661-759f0b5ff2b0",
+    "userId": "66e7b3a4-c40b-4880-bf62-f231b8df04fe",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000027 has been automatically assigned to you.",
+    "read": true,
+    "applicationId": "4d7c7cff-430d-4d04-bdfe-faf9f23164c3",
+    "createdAt": "2025-12-09T00:55:20.310Z"
+  },
+  "13aa7fb8-4cf8-428e-9c11-3f08924c2e12": {
+    "id": "13aa7fb8-4cf8-428e-9c11-3f08924c2e12",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000027 has been automatically assigned to an official and is now being processed.",
+    "read": false,
+    "applicationId": "4d7c7cff-430d-4d04-bdfe-faf9f23164c3",
+    "createdAt": "2025-12-09T00:55:20.328Z"
+  },
+  "f1875377-a1d6-46cb-9380-47a625b2ef8c": {
+    "id": "f1875377-a1d6-46cb-9380-47a625b2ef8c",
+    "userId": "66e7b3a4-c40b-4880-bf62-f231b8df04fe",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000028 has been automatically assigned to you.",
+    "read": true,
+    "applicationId": "1fddb9c6-685a-4b60-b229-2a035c88c283",
+    "createdAt": "2025-12-09T01:10:19.729Z"
+  },
+  "0c743bc8-2bb0-49cb-9ad2-b8e070b87bd8": {
+    "id": "0c743bc8-2bb0-49cb-9ad2-b8e070b87bd8",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000028 has been automatically assigned to an official and is now being processed.",
+    "read": false,
+    "applicationId": "1fddb9c6-685a-4b60-b229-2a035c88c283",
+    "createdAt": "2025-12-09T01:10:19.767Z"
+  },
+  "0cdd4d0f-f0c2-4ca7-a257-b36c9b2fcac4": {
+    "id": "0cdd4d0f-f0c2-4ca7-a257-b36c9b2fcac4",
+    "userId": "66e7b3a4-c40b-4880-bf62-f231b8df04fe",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000029 has been automatically assigned to you.",
+    "read": true,
+    "applicationId": "d602e4e0-0577-4ff5-b9d1-02a53383c1e0",
+    "createdAt": "2025-12-09T01:15:15.138Z"
+  },
+  "d1c8a484-7d7a-43eb-8c34-ed2c4c4091c7": {
+    "id": "d1c8a484-7d7a-43eb-8c34-ed2c4c4091c7",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000029 has been automatically assigned to an official and is now being processed.",
+    "read": false,
+    "applicationId": "d602e4e0-0577-4ff5-b9d1-02a53383c1e0",
+    "createdAt": "2025-12-09T01:15:15.152Z"
+  },
+  "db8419fa-c85c-4114-8869-973b54102f1f": {
+    "id": "db8419fa-c85c-4114-8869-973b54102f1f",
+    "userId": "66e7b3a4-c40b-4880-bf62-f231b8df04fe",
+    "type": "assignment",
+    "title": "New Application Assigned",
+    "message": "A new application APP-2025-000030 has been automatically assigned to you.",
+    "read": true,
+    "applicationId": "a8b59b5e-506a-4309-b7ca-0a917e244256",
+    "createdAt": "2025-12-09T01:18:01.288Z"
+  },
+  "a2e77fb7-cf1e-4c80-8343-c7c4674b6a6c": {
+    "id": "a2e77fb7-cf1e-4c80-8343-c7c4674b6a6c",
+    "userId": "863682cb-65e3-421b-8ff3-f4ec8e8b6f72",
+    "type": "assignment",
+    "title": "Application Assigned",
+    "message": "Your application APP-2025-000030 has been automatically assigned to an official and is now being processed.",
+    "read": false,
+    "applicationId": "a8b59b5e-506a-4309-b7ca-0a917e244256",
+    "createdAt": "2025-12-09T01:18:01.304Z"
+  },
+  "b8e4a4d8-1a4e-4dd0-b217-4828abf6495e": {
+    "id": "b8e4a4d8-1a4e-4dd0-b217-4828abf6495e",
+    "userId": "a897cfcc-5922-4bf8-bd33-43f6e57f3fd2",
+    "type": "investigation_alert",
+    "title": "🚨 AI Investigation Alert: Officer X",
+    "message": "AI Engine detected suspicious behavior:\n\n• CRITICAL: Recent rejection rate is extremely high (70.0%)\n• Significant drop in processing speed. Averaging 8.0 files/day (Norm: 50.0/day)\n• Possible Bias Detected: 85.0% of recent rejections are from 'Tribal Belt' district.\n\nRecommendation: Immediate Inspection & Temporary Suspension Recommended",
+    "read": false,
+    "applicationId": null,
+    "createdAt": "2025-12-09T09:20:51.497Z"
+  }
+}
+>>>>>>> 997daaf (investigation)
+>>>>>>> 164f7752703f9b4c5eac58be119a02ede8f93472
