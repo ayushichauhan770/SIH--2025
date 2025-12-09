@@ -434,9 +434,6 @@ export default function Register() {
                           id="secretKey"
                           type={showSecretKey ? "text" : "password"}
                           placeholder={
-                              formData.role === "admin" ? "Enter Admin Secret Key" :
-                              formData.hierarchyLevel === "2" ? "Enter Key (supervisor@2025)" :
-                              formData.hierarchyLevel === "3" ? "Enter Key (director@2025)" :
                               "Enter Key (official@2025)"
                           }
                           value={(formData as any).secretKey || ""}
@@ -456,36 +453,7 @@ export default function Register() {
                   )}
 
 
-              {formData.role === "official" && (
-                <div className="space-y-4 p-4 rounded-2xl bg-[#F5F5F7] dark:bg-slate-800 mt-4">
-                  <div className="space-y-2">
-                     <Label htmlFor="hierarchyLevel" className="text-sm font-semibold text-[#1d1d1f] dark:text-white ml-1">Official Level *</Label>
-                     <select
-                        id="hierarchyLevel"
-                        value={formData.hierarchyLevel}
-                        onChange={(e) => setFormData({ ...formData, hierarchyLevel: e.target.value })}
-                        className="w-full h-12 rounded-xl bg-white dark:bg-slate-900 border-transparent focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all px-3"
-                        required
-                     >
-                        <option value="1">Level 1 - Junior Official (Field Officer)</option>
-                        <option value="2">Level 2 - Senior Official (Supervisor)</option>
-                        <option value="3">Level 3 - Head of Dept (Director)</option>
-                     </select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="designation" className="text-sm font-semibold text-[#1d1d1f] dark:text-white ml-1">Designation *</Label>
-                    <Input
-                       id="designation"
-                       type="text"
-                       placeholder="e.g. Junior Clerk, Senior Inspector"
-                       value={formData.designation || ""}
-                       onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
-                       className="h-12 rounded-xl bg-white dark:bg-slate-900 border-transparent focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
-                       required
-                    />
-                  </div>
-                </div>
-              )}
+
 
               <div className="space-y-2">
                 <Label htmlFor="documentType" className="text-sm font-semibold text-[#1d1d1f] dark:text-white ml-1">Document Type</Label>
