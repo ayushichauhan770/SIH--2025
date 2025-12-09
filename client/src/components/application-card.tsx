@@ -21,6 +21,7 @@ const statusConfig: Record<string, { color: string, bg: string, border: string }
   "Approved": { color: "text-green-600", bg: "bg-green-50 dark:bg-green-900/20", border: "border-green-200 dark:border-green-800" },
   "Rejected": { color: "text-red-600", bg: "bg-red-50 dark:bg-red-900/20", border: "border-red-200 dark:border-red-800" },
   "Auto-Approved": { color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-900/20", border: "border-emerald-200 dark:border-emerald-800" },
+  "Auto-Approved (Documents Verified by System)": { color: "text-teal-600", bg: "bg-teal-50 dark:bg-teal-900/20", border: "border-teal-200 dark:border-teal-800" },
 };
 
 const priorityConfig: Record<string, { color: string, bg: string }> = {
@@ -46,7 +47,7 @@ export function ApplicationCard({ application, onViewDetails, showActions, onAcc
       data-testid={`card-application-${application.id}`}
     >
       <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${status.bg.replace('bg-', 'bg-gradient-to-b from-')}-500 to-${status.bg.split('-')[1]}-600`} />
-      
+
       <CardHeader className="flex flex-row items-start justify-between gap-4 pb-3 pt-5 px-5">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
@@ -62,8 +63,8 @@ export function ApplicationCard({ application, onViewDetails, showActions, onAcc
           </h3>
         </div>
 
-        <Badge 
-          variant="secondary" 
+        <Badge
+          variant="secondary"
           className={`${status.bg} ${status.color} border-0 font-medium px-2.5 py-0.5 rounded-full text-[10px] tracking-wide uppercase`}
           data-testid={`badge-status-${application.status.toLowerCase().replace(/\s+/g, '-')}`}
         >
@@ -99,10 +100,10 @@ export function ApplicationCard({ application, onViewDetails, showActions, onAcc
       </CardContent>
 
       <CardFooter className="px-5 pb-5 pt-0 flex items-center justify-between gap-3">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={onViewDetails} 
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onViewDetails}
           className="text-[#86868b] hover:text-[#0071e3] hover:bg-transparent pl-0 pr-0 h-auto font-medium transition-all group/btn text-xs p-0"
           data-testid={`button-view-${application.id}`}
         >

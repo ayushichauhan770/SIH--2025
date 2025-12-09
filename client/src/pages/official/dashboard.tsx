@@ -33,7 +33,7 @@ export default function OfficialDashboard() {
       refetchOnWindowFocus: true, // Refetch when user switches back to tab
       refetchOnMount: true, // Always refetch when component mounts
       staleTime: 0, // Always consider data stale to ensure fresh data
-      cacheTime: 0, // Don't cache to ensure latest data
+      gcTime: 0, // Don't cache to ensure latest data (gcTime replaces cacheTime in newer versions)
    });
 
    const { data: notifications = [] } = useQuery<Notification[]>({
@@ -155,6 +155,47 @@ export default function OfficialDashboard() {
       app.approvedAt && new Date(app.approvedAt).toDateString() === new Date().toDateString()
    ).length;
 
+   // Count rejected and approved applications by this official
+   const rejectedCount = myApps.filter(app => app.status === "Rejected").length;
+   const approvedCount = myApps.filter(app => app.status === "Approved" || app.status === "Auto-Approved").length;
+
+   // Check for consecutive rejections: Sort applications by lastUpdatedAt (most recent first)
+   // If the last 5 applications (or recent ones) are all rejected, show warning
+   // But if the most recent application is approved, hide the warning
+   const sortedByUpdate = [...myApps].sort((a, b) =>
+      new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime()
+   );
+
+   // Check if there are 5 consecutive rejections in recent applications
+   const recentApps = sortedByUpdate.slice(0, 10); // Check last 10 applications
+   let consecutiveRejections = 0;
+   let foundConsecutiveRejections = false;
+
+   for (const app of recentApps) {
+      if (app.status === "Rejected") {
+         consecutiveRejections++;
+         if (consecutiveRejections >= 5) {
+            foundConsecutiveRejections = true;
+            break;
+         }
+      } else if (app.status === "Approved" || app.status === "Auto-Approved") {
+         // If we find an approval, reset the consecutive count
+         // But if we already found 5 consecutive rejections before this approval, keep the flag
+         if (consecutiveRejections < 5) {
+            consecutiveRejections = 0;
+         }
+      } else {
+         // For other statuses, reset count
+         if (consecutiveRejections < 5) {
+            consecutiveRejections = 0;
+         }
+      }
+   }
+
+   // Show warning if: 5+ consecutive rejections found AND most recent application is not approved
+   const mostRecentIsApproved = sortedByUpdate[0]?.status === "Approved" || sortedByUpdate[0]?.status === "Auto-Approved";
+   const showRejectionWarning = foundConsecutiveRejections && !mostRecentIsApproved;
+
    const filteredMyApps = myApps.filter(app => {
       if (searchQuery && !app.trackingId.toLowerCase().includes(searchQuery.toLowerCase())) {
          return false;
@@ -264,6 +305,36 @@ export default function OfficialDashboard() {
 
          {/* Main Content */}
          <main className="pt-32 px-6 max-w-7xl mx-auto space-y-8">
+
+            {/* Rejection Warning Banner - Shows when official has rejected 3+ applications */}
+            {showRejectionWarning && (
+               <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+                  <Card className="border-2 border-red-500 bg-gradient-to-br from-red-50 via-orange-50 to-amber-50 dark:from-red-950/40 dark:via-orange-950/30 dark:to-amber-950/40 shadow-lg rounded-[32px] overflow-hidden">
+                     <CardContent className="p-6">
+                        <div className="flex items-start gap-4">
+                           <div className="p-3 rounded-2xl bg-red-500 text-white shadow-lg flex-shrink-0">
+                              <AlertTriangle className="h-6 w-6" />
+                           </div>
+                           <div className="flex-1">
+                              <h3 className="text-xl font-bold text-red-700 dark:text-red-400 mb-2 flex items-center gap-2">
+                                 <AlertTriangle className="h-5 w-5" />
+                                 High Rejection Rate Warning
+                              </h3>
+                              <p className="text-red-800 dark:text-red-300 font-semibold text-lg mb-2">
+                                 You have rejected <span className="text-2xl font-bold text-red-600 dark:text-red-400">{rejectedCount}</span> application{rejectedCount !== 1 ? 's' : ''}.
+                              </p>
+                              <p className="text-red-700 dark:text-red-400 font-medium text-base mb-2">
+                                 ⚠️ If you reject more applications, action will be taken on you.
+                              </p>
+                              <p className="text-sm text-red-600 dark:text-red-500 mt-3 italic">
+                                 Please review your rejection decisions carefully and ensure they are justified. Consider providing detailed feedback to citizens.
+                              </p>
+                           </div>
+                        </div>
+                     </CardContent>
+                  </Card>
+               </div>
+            )}
 
             {/* Welcome Section */}
             <div className="flex flex-col md:flex-row justify-between items-end gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">

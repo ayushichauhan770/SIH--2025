@@ -112,7 +112,7 @@ export default function Login() {
       });
 
       // After successful OTP verification, request a token to complete login
-      const tokenResp = await apiRequest<{ user: User; token: string }>(
+      const tokenResp = await apiRequest<{ user: User; token: string; suspended?: boolean; suspendedUntil?: string; hoursRemaining?: number; suspensionReason?: string }>(
         "POST",
         "/api/auth/token",
         {
@@ -128,7 +128,18 @@ export default function Login() {
       sessionStorage.setItem("token", tokenResp.token);
       setUser(tokenResp.user);
 
-      toast({ title: "Welcome back!", description: "Logged in successfully" });
+      // Check for suspension
+      if (tokenResp.suspended) {
+        const hoursRemaining = tokenResp.hoursRemaining || 0;
+        toast({
+          title: "Account Suspended",
+          description: `You have reached the maximum submission limit for this department. Your account is temporarily suspended for 24 hours. ${hoursRemaining > 0 ? `${hoursRemaining} hours remaining.` : ''}`,
+          variant: "destructive",
+          duration: 10000, // Show for 10 seconds
+        });
+      } else {
+        toast({ title: "Welcome back!", description: "Logged in successfully" });
+      }
 
       // close OTP modal and clear temp state
       setShowOTP(false);
@@ -188,7 +199,7 @@ export default function Login() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card 
+            <Card
               className="group cursor-pointer border-0 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden"
               onClick={() => handleRoleSelect("citizen")}
             >
@@ -206,7 +217,7 @@ export default function Login() {
               </CardContent>
             </Card>
 
-            <Card 
+            <Card
               className="group cursor-pointer border-0 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden"
               onClick={() => handleRoleSelect("official")}
             >
@@ -224,7 +235,7 @@ export default function Login() {
               </CardContent>
             </Card>
 
-            <Card 
+            <Card
               className="group cursor-pointer border-0 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden"
               onClick={() => handleRoleSelect("admin")}
             >
@@ -284,10 +295,10 @@ export default function Login() {
         <Card className="border-0 shadow-lg bg-white dark:bg-slate-900 rounded-[32px] overflow-hidden">
           <CardContent className="p-8">
             <div className="flex items-center justify-between mb-8">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleBackToRoleSelection} 
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleBackToRoleSelection}
                 className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 -ml-2 text-[#86868b]"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -303,14 +314,14 @@ export default function Login() {
 
             <Tabs defaultValue="mobile" value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-8 p-1 bg-[#F5F5F7] dark:bg-slate-800 rounded-2xl">
-                <TabsTrigger 
-                  value="mobile" 
+                <TabsTrigger
+                  value="mobile"
                   className="rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm transition-all"
                 >
                   <Phone className="h-4 w-4 mr-2" /> Mobile
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="email" 
+                <TabsTrigger
+                  value="email"
                   className="rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm transition-all"
                 >
                   <Mail className="h-4 w-4 mr-2" /> Email

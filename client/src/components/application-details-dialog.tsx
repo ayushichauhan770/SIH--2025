@@ -89,23 +89,23 @@ export function ApplicationDetailsDialog({ application, open, onClose, canUpdate
                   if (application.trackingId) {
                         queryClient.invalidateQueries({ queryKey: ["/api/applications/track", application.trackingId, "location-history"] });
                   }
-                  
+
                   // Show success message
-                  const locationMessage = newLocation && newLocation.trim() 
+                  const locationMessage = newLocation && newLocation.trim()
                         ? "Status, remarks, and location history have been updated successfully."
                         : "The application has been updated successfully.";
-                  
+
                   toast({
                         title: "Application Updated",
                         description: locationMessage,
                   });
-                  
+
                   // Clear form fields but keep dialog open so official can see the update
                   setComment("");
                   if (newLocation && newLocation.trim()) {
                         setNewLocation("");
                   }
-                  
+
                   // Don't close dialog - let official see the updated location history
             } catch (error: any) {
                   toast({
@@ -121,7 +121,7 @@ export function ApplicationDetailsDialog({ application, open, onClose, canUpdate
       return (
             <Dialog open={open} onOpenChange={onClose}>
                   <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-[#F5F5F7] dark:bg-slate-950 rounded-[32px] border-0 shadow-2xl p-0 font-['Outfit',sans-serif]">
-                        
+
                         {/* Header */}
                         <div className="bg-white dark:bg-slate-900 p-6 border-b border-slate-100 dark:border-slate-800 sticky top-0 z-10">
                               <div className="flex items-center justify-between mb-2">
@@ -144,7 +144,7 @@ export function ApplicationDetailsDialog({ application, open, onClose, canUpdate
                                           </Badge>
                                     </div>
                               </div>
-                              
+
                               {(application.escalationLevel || 0) > 0 && (
                                     <div className="mt-4 flex items-center gap-2 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 border border-red-100 dark:border-red-900/30">
                                           <AlertTriangle className="h-4 w-4 animate-pulse" />
@@ -154,10 +154,10 @@ export function ApplicationDetailsDialog({ application, open, onClose, canUpdate
                         </div>
 
                         <div className="p-6 space-y-6">
-                              
+
                               {/* Grid Layout */}
                               <div className="grid md:grid-cols-2 gap-6">
-                                    
+
                                     {/* Citizen Information Card */}
                                     <div className="bg-white dark:bg-slate-900 p-6 rounded-[24px] shadow-sm">
                                           <h3 className="font-bold text-[#1d1d1f] dark:text-white mb-4 flex items-center gap-2">
@@ -223,7 +223,7 @@ export function ApplicationDetailsDialog({ application, open, onClose, canUpdate
                                     <p className="text-sm text-[#86868b] leading-relaxed whitespace-pre-wrap mb-6">
                                           {application.description}
                                     </p>
-                                    
+
                                     {application.image && (
                                           <div className="mt-4">
                                                 <h4 className="text-xs font-bold text-[#1d1d1f] dark:text-white uppercase tracking-wider mb-3">Attachment</h4>
@@ -233,6 +233,102 @@ export function ApplicationDetailsDialog({ application, open, onClose, canUpdate
                                           </div>
                                     )}
                               </div>
+
+                              {/* Mandatory Documents for Aadhaar Update */}
+                              {(() => {
+                                    const isAadhaarUpdate = application.department?.includes("Aadhaar") &&
+                                          application.subDepartment === "Aadhaar Update (Name/DOB/Address mismatch)";
+
+                                    if (!isAadhaarUpdate) return null;
+
+                                    // Parse documents from application data
+                                    let documents: { aadhaarCard?: string; addressProof?: string } = {};
+                                    try {
+                                          const appData = JSON.parse(application.data || "{}");
+                                          documents = appData.documents || {};
+                                    } catch (e) {
+                                          // If parsing fails, documents remain empty
+                                    }
+
+                                    const hasAadhaarCard = documents.aadhaarCard && documents.aadhaarCard.trim().length > 0;
+                                    const hasAddressProof = documents.addressProof && documents.addressProof.trim().length > 0;
+
+                                    if (!hasAadhaarCard && !hasAddressProof) return null;
+
+                                    return (
+                                          <div className="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 p-6 rounded-[24px] shadow-sm">
+                                                <div className="flex items-center gap-2 mb-4">
+                                                      <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                                      <h3 className="font-bold text-[#1d1d1f] dark:text-white">Mandatory Documents for Aadhaar Update</h3>
+                                                </div>
+                                                <p className="text-xs text-blue-800 dark:text-blue-200 mb-6">
+                                                      These documents were verified during submission. Both documents are required for auto-approval.
+                                                </p>
+
+                                                <div className="grid md:grid-cols-2 gap-6">
+                                                      {/* Aadhaar Card */}
+                                                      <div className="space-y-3">
+                                                            <div className="flex items-center gap-2">
+                                                                  <CheckCircle2 className={`h-4 w-4 ${hasAadhaarCard ? 'text-green-600' : 'text-red-600'}`} />
+                                                                  <Label className="text-sm font-semibold text-[#1d1d1f] dark:text-white">
+                                                                        Aadhaar Card Photo {hasAadhaarCard ? '(Verified)' : '(Missing)'}
+                                                                  </Label>
+                                                            </div>
+                                                            {hasAadhaarCard ? (
+                                                                  <div className="rounded-xl overflow-hidden border-2 border-green-200 dark:border-green-800 bg-white dark:bg-slate-900">
+                                                                        <img
+                                                                              src={documents.aadhaarCard}
+                                                                              alt="Aadhaar Card"
+                                                                              className="w-full max-h-64 object-contain bg-slate-50 dark:bg-slate-950"
+                                                                        />
+                                                                  </div>
+                                                            ) : (
+                                                                  <div className="rounded-xl border-2 border-dashed border-red-200 dark:border-red-800 p-8 text-center bg-red-50 dark:bg-red-900/10">
+                                                                        <AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-2" />
+                                                                        <p className="text-sm text-red-600 dark:text-red-400">Document not uploaded</p>
+                                                                  </div>
+                                                            )}
+                                                      </div>
+
+                                                      {/* Address Proof */}
+                                                      <div className="space-y-3">
+                                                            <div className="flex items-center gap-2">
+                                                                  <CheckCircle2 className={`h-4 w-4 ${hasAddressProof ? 'text-green-600' : 'text-red-600'}`} />
+                                                                  <Label className="text-sm font-semibold text-[#1d1d1f] dark:text-white">
+                                                                        Address Proof {hasAddressProof ? '(Verified)' : '(Missing)'}
+                                                                  </Label>
+                                                            </div>
+                                                            {hasAddressProof ? (
+                                                                  <div className="rounded-xl overflow-hidden border-2 border-green-200 dark:border-green-800 bg-white dark:bg-slate-900">
+                                                                        <img
+                                                                              src={documents.addressProof}
+                                                                              alt="Address Proof"
+                                                                              className="w-full max-h-64 object-contain bg-slate-50 dark:bg-slate-950"
+                                                                        />
+                                                                  </div>
+                                                            ) : (
+                                                                  <div className="rounded-xl border-2 border-dashed border-red-200 dark:border-red-800 p-8 text-center bg-red-50 dark:bg-red-900/10">
+                                                                        <AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-2" />
+                                                                        <p className="text-sm text-red-600 dark:text-red-400">Document not uploaded</p>
+                                                                  </div>
+                                                            )}
+                                                      </div>
+                                                </div>
+
+                                                {/* Auto-approval status */}
+                                                {hasAadhaarCard && hasAddressProof && (
+                                                      <div className="mt-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+                                                            <div className="flex items-center gap-2">
+                                                                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                                                                  <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                                                                        Both mandatory documents verified. This application is eligible for auto-approval.
+                                                                  </p>
+                                                            </div>
+                                                      </div>
+                                                )}
+                                          </div>
+                                    );
+                              })()}
 
                               {/* Action Section (Official Only) */}
                               {canUpdateStatus && (
@@ -338,8 +434,8 @@ export function ApplicationDetailsDialog({ application, open, onClose, canUpdate
                                     Close
                               </Button>
                               {canUpdateStatus && (
-                                    <Button 
-                                          onClick={handleUpdate} 
+                                    <Button
+                                          onClick={handleUpdate}
                                           disabled={!updateStatus}
                                           className="rounded-full h-12 px-8 bg-[#0071e3] hover:bg-[#0077ED] text-white shadow-lg shadow-blue-500/20 font-medium"
                                     >

@@ -380,7 +380,8 @@ export default function Register() {
                 />
               </div>
 
-              {(formData.role === "official" || formData.role === "admin") && (
+              {/* Department selection only for officials, not for admins */}
+              {formData.role === "official" && (
                 <div className="space-y-4 p-4 rounded-2xl bg-[#F5F5F7] dark:bg-slate-800">
                   <div className="space-y-2">
                     <Label htmlFor="department" className="text-sm font-semibold text-[#1d1d1f] dark:text-white ml-1">Department *</Label>
@@ -418,26 +419,30 @@ export default function Register() {
                       </select>
                     </div>
                   )}
-                  <div className="space-y-2">
-                    <Label htmlFor="secretKey" className="text-sm font-semibold text-[#1d1d1f] dark:text-white ml-1">Secret Key *</Label>
-                    <div className="relative">
-                      <Input
-                        id="secretKey"
-                        type={showSecretKey ? "text" : "password"}
-                        placeholder="Enter Secret Key"
-                        value={(formData as any).secretKey || ""}
-                        onChange={(e) => setFormData({ ...formData, secretKey: e.target.value } as any)}
-                        required
-                        className="h-12 rounded-xl bg-white dark:bg-slate-900 border-transparent focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all pr-10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowSecretKey(!showSecretKey)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white transition-colors"
-                      >
-                        {showSecretKey ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                      </button>
-                    </div>
+                </div>
+              )}
+
+              {/* Secret Key required for both officials and admins */}
+              {(formData.role === "official" || formData.role === "admin") && (
+                <div className="space-y-2">
+                  <Label htmlFor="secretKey" className="text-sm font-semibold text-[#1d1d1f] dark:text-white ml-1">Secret Key *</Label>
+                  <div className="relative">
+                    <Input
+                      id="secretKey"
+                      type={showSecretKey ? "text" : "password"}
+                      placeholder={formData.role === "admin" ? "Enter Admin Secret Key" : "Enter Official Secret Key"}
+                      value={(formData as any).secretKey || ""}
+                      onChange={(e) => setFormData({ ...formData, secretKey: e.target.value } as any)}
+                      required
+                      className="h-12 rounded-xl bg-[#F5F5F7] dark:bg-slate-800 border-transparent focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 transition-all pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSecretKey(!showSecretKey)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white transition-colors"
+                    >
+                      {showSecretKey ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
                   </div>
                 </div>
               )}

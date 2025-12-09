@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FileText, Users, AlertTriangle, LogOut, Eye, Star, Send, Building2, CheckCircle, XCircle, UserCheck, Menu, Search, Filter, ChevronRight, Shield } from "lucide-react";
+import { FileText, Users, AlertTriangle, LogOut, Eye, Star, Send, Building2, CheckCircle, XCircle, UserCheck, Menu, Search, Filter, ChevronRight, Shield, Clock } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Application, Notification, User as UserType } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
@@ -97,6 +97,7 @@ export default function AdminDashboard() {
   const [warningMessage, setWarningMessage] = useState("");
   const [isWarningOpen, setIsWarningOpen] = useState(false);
   const [isOfficialDetailOpen, setIsOfficialDetailOpen] = useState(false);
+  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(user?.department || null);
 
   const { data: deptStats } = useQuery<{
     totalApplications: number;
@@ -144,6 +145,33 @@ export default function AdminDashboard() {
   }>({
     queryKey: ["/api/officials", selectedOfficial?.id, "stats"],
     enabled: !!selectedOfficial,
+  });
+
+  // Get all departments for department list view
+  const { data: departments } = useQuery<Array<{ id: string; name: string; description: string | null }>>({
+    queryKey: ["/api/departments"],
+    refetchInterval: 10000,
+  });
+
+  // Get department details when a department is selected
+  const { data: departmentDetails } = useQuery<{
+    department: string;
+    officials: Array<UserType & { solvedCount: number; pendingCount: number; totalCount: number }>;
+    stats: {
+      totalApplications: number;
+      solved: number;
+      pending: number;
+      approved: number;
+      rejected: number;
+    };
+    applications: {
+      solved: Application[];
+      pending: Application[];
+    };
+  }>({
+    queryKey: ["/api/admin/department", selectedDepartment],
+    enabled: !!selectedDepartment,
+    refetchInterval: 5000,
   });
 
   const handleMarkAsRead = async (id: string) => {
@@ -197,7 +225,7 @@ export default function AdminDashboard() {
               <div className="hidden md:block">
                 <h1 className="text-sm font-bold text-[#1d1d1f] dark:text-white leading-tight">Admin Dashboard</h1>
                 <p className="text-[10px] text-[#86868b] font-medium tracking-wide uppercase">
-                  {user?.department?.split(/[–-]/)[0].trim() || "Department"}
+                  {selectedDepartment ? selectedDepartment.split(/[–-]/)[0].trim() : "Select Department"}
                 </p>
               </div>
             </div>
@@ -236,84 +264,118 @@ export default function AdminDashboard() {
       {/* Main Content */}
       <main className="flex-1 overflow-auto pt-28 pb-10 px-6">
         <div className="max-w-7xl mx-auto space-y-8">
-
-          {/* Header Section */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-[#1d1d1f] dark:text-white tracking-tight">
-                Overview
-              </h1>
-              <p className="text-[#86868b] mt-2 text-lg">
-                Monitoring performance for {user?.department?.split(/[–-]/)[0].trim()}
-              </p>
-            </div>
-          </div>
-
-          {/* Bento Grid Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { title: "Total Applications", value: deptStats?.totalApplications || 0, icon: FileText, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-900/20" },
-              { title: "Assigned", value: deptStats?.assignedCount || 0, icon: UserCheck, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-900/20" },
-              { title: "Approved", value: deptStats?.approvedCount || 0, icon: CheckCircle, color: "text-green-600", bg: "bg-green-50 dark:bg-green-900/20" },
-              { title: "Rejected", value: deptStats?.rejectedCount || 0, icon: XCircle, color: "text-red-600", bg: "bg-red-50 dark:bg-red-900/20" },
-            ].map((stat, i) => (
-              <div key={i} className="group relative border-0 overflow-hidden bg-gradient-to-br from-white via-slate-50/50 to-slate-100/50 dark:from-slate-900 dark:via-slate-800/50 dark:to-slate-900/50 p-6 rounded-[32px] shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
-                <div className="absolute inset-0 bg-gradient-to-br from-slate-400/5 to-slate-400/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                <div className="absolute top-0 right-0 w-32 h-32 bg-slate-400/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500" />
-                <div className="relative z-10 flex items-center justify-between mb-4">
-                  <div className={`p-3 rounded-2xl ${stat.bg} ${stat.color} group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
-                    <stat.icon className="h-6 w-6" />
-                  </div>
-                  <span className="text-xs font-bold text-[#86868b] dark:text-slate-400 uppercase tracking-wider">
-                    {stat.title}
-                  </span>
-                </div>
-                <div className="relative z-10 text-4xl font-bold text-[#1d1d1f] dark:text-white">
-                  {stat.value}
+          {!selectedDepartment ? (
+            /* Department List View */
+            <>
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                  <h1 className="text-3xl md:text-4xl font-bold text-[#1d1d1f] dark:text-white tracking-tight">
+                    Select Department
+                  </h1>
+                  <p className="text-[#86868b] mt-2 text-lg">
+                    Choose a department to view details and manage applications
+                  </p>
                 </div>
               </div>
-            ))}
-          </div>
 
-          {/* Department Officials Section */}
-          <div className="bg-white dark:bg-slate-900 rounded-[32px] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800">
-              <h2 className="text-xl font-bold text-[#1d1d1f] dark:text-white">Department Officials</h2>
-              <p className="text-sm text-[#86868b]">Click on an official to view details</p>
-            </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {departments?.map((dept) => (
+                  <Card
+                    key={dept.id}
+                    onClick={() => setSelectedDepartment(dept.name)}
+                    className="group cursor-pointer border-0 shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all duration-300 bg-gradient-to-br from-white via-slate-50/50 to-slate-100/50 dark:from-slate-900 dark:via-slate-800/50 dark:to-slate-900/50 rounded-[32px] overflow-hidden"
+                  >
+                    <CardContent className="p-6">
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                          <Building2 className="h-6 w-6" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-bold text-[#1d1d1f] dark:text-white text-lg">
+                            {dept.name.split('–')[0].trim()}
+                          </h3>
+                          {dept.name.includes('–') && (
+                            <p className="text-xs text-[#86868b] mt-1">
+                              {dept.name.split('–')[1]?.trim()}
+                            </p>
+                          )}
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-[#86868b] group-hover:text-[#0071e3] transition-colors" />
+                      </div>
+                      {dept.description && (
+                        <p className="text-sm text-[#86868b] line-clamp-2">{dept.description}</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </>
+          ) : (
+            /* Department Detail View */
+            <>
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-3 mb-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedDepartment(null)}
+                      className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+                    >
+                      ← Back to Departments
+                    </Button>
+                  </div>
+                  <h1 className="text-3xl md:text-4xl font-bold text-[#1d1d1f] dark:text-white tracking-tight">
+                    {selectedDepartment.split('–')[0].trim()}
+                  </h1>
+                  <p className="text-[#86868b] mt-2 text-lg">
+                    Department Overview & Management
+                  </p>
+                </div>
+              </div>
 
-            <div className="p-6">
-              {(() => {
-                const departmentOfficials = (officials || []).filter(o => {
-                  if (!o.department || !user?.department) return false;
-                  const officialDept = o.department.split(/[–-]/)[0].trim();
-                  const adminDept = user.department.split(/[–-]/)[0].trim();
-                  return officialDept === adminDept;
-                }).sort((a, b) => (b.rating || 0) - (a.rating || 0));
+              {/* Stats Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                {[
+                  { title: "Total Applications", value: departmentDetails?.stats.totalApplications || 0, icon: FileText, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-900/20" },
+                  { title: "Solved", value: departmentDetails?.stats.solved || 0, icon: CheckCircle, color: "text-green-600", bg: "bg-green-50 dark:bg-green-900/20" },
+                  { title: "Pending", value: departmentDetails?.stats.pending || 0, icon: Clock, color: "text-yellow-600", bg: "bg-yellow-50 dark:bg-yellow-900/20" },
+                  { title: "Approved", value: departmentDetails?.stats.approved || 0, icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-900/20" },
+                  { title: "Rejected", value: departmentDetails?.stats.rejected || 0, icon: XCircle, color: "text-red-600", bg: "bg-red-50 dark:bg-red-900/20" },
+                ].map((stat, i) => (
+                  <div key={i} className="group relative border-0 overflow-hidden bg-gradient-to-br from-white via-slate-50/50 to-slate-100/50 dark:from-slate-900 dark:via-slate-800/50 dark:to-slate-900/50 p-6 rounded-[32px] shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                    <div className="absolute inset-0 bg-gradient-to-br from-slate-400/5 to-slate-400/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <div className="relative z-10 flex items-center justify-between mb-4">
+                      <div className={`p-3 rounded-2xl ${stat.bg} ${stat.color} group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
+                        <stat.icon className="h-6 w-6" />
+                      </div>
+                      <span className="text-xs font-bold text-[#86868b] dark:text-slate-400 uppercase tracking-wider">
+                        {stat.title}
+                      </span>
+                    </div>
+                    <div className="relative z-10 text-4xl font-bold text-[#1d1d1f] dark:text-white">
+                      {stat.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
 
-                if (departmentOfficials.length === 0) {
-                  return (
+              {/* Officials List */}
+              <div className="bg-white dark:bg-slate-900 rounded-[32px] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+                <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+                  <h2 className="text-xl font-bold text-[#1d1d1f] dark:text-white">Department Officials</h2>
+                  <p className="text-sm text-[#86868b]">Click on an official to view details</p>
+                </div>
+
+                <div className="p-6">
+                  {departmentDetails?.officials.length === 0 ? (
                     <div className="text-center py-12">
                       <Users className="h-12 w-12 text-slate-200 dark:text-slate-800 mx-auto mb-4" />
-                      <p className="text-[#86868b] font-medium">No officials found</p>
+                      <p className="text-[#86868b] font-medium">No officials found in this department</p>
                     </div>
-                  );
-                }
-
-                return (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {departmentOfficials.map(official => {
-                      const officialApps = applications?.filter(app => app.officialId === official.id) || [];
-                      const solvedCount = officialApps.filter(app =>
-                        (app.status === "Approved" || app.status === "Auto-Approved") && app.isSolved === true
-                      ).length;
-                      const unsolvedCount = officialApps.filter(app =>
-                        ((app.status === "Approved" || app.status === "Auto-Approved") && (app.isSolved === false || app.isSolved === null)) ||
-                        app.status === "Rejected"
-                      ).length;
-                      const totalCount = officialApps.length;
-
-                      return (
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {departmentDetails?.officials.map(official => (
                         <div
                           key={official.id}
                           onClick={() => {
@@ -342,15 +404,15 @@ export default function AdminDashboard() {
                             <div className="space-y-2">
                               <div className="flex items-center justify-between text-sm">
                                 <span className="text-[#86868b]">Total Applications</span>
-                                <span className="font-bold text-[#1d1d1f] dark:text-white">{totalCount}</span>
+                                <span className="font-bold text-[#1d1d1f] dark:text-white">{official.totalCount}</span>
                               </div>
                               <div className="flex items-center justify-between text-sm">
                                 <span className="text-[#86868b]">Solved</span>
-                                <span className="font-semibold text-green-600 dark:text-green-400">{solvedCount}</span>
+                                <span className="font-semibold text-green-600 dark:text-green-400">{official.solvedCount}</span>
                               </div>
                               <div className="flex items-center justify-between text-sm">
-                                <span className="text-[#86868b]">Unsolved</span>
-                                <span className="font-semibold text-orange-600 dark:text-orange-400">{unsolvedCount}</span>
+                                <span className="text-[#86868b]">Pending</span>
+                                <span className="font-semibold text-orange-600 dark:text-orange-400">{official.pendingCount}</span>
                               </div>
                             </div>
                             <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
@@ -361,13 +423,91 @@ export default function AdminDashboard() {
                             </div>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Solved Applications */}
+              <div className="bg-white dark:bg-slate-900 rounded-[32px] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+                <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+                  <h2 className="text-xl font-bold text-[#1d1d1f] dark:text-white">Solved Applications</h2>
+                  <p className="text-sm text-[#86868b]">{departmentDetails?.applications.solved.length || 0} applications marked as solved</p>
+                </div>
+                <div className="p-6">
+                  {departmentDetails?.applications.solved.length === 0 ? (
+                    <div className="text-center py-8">
+                      <CheckCircle className="h-10 w-10 text-slate-200 dark:text-slate-800 mx-auto mb-2" />
+                      <p className="text-[#86868b]">No solved applications</p>
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tracking ID</TableHead>
+                          <TableHead>Citizen</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Submitted</TableHead>
+                          <TableHead>Details</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {departmentDetails?.applications.solved.slice(0, 10).map(app => (
+                          <ApplicationRowWithCitizen
+                            key={app.id}
+                            app={app}
+                            statusColors={statusColors}
+                            officialId={app.officialId || ''}
+                            onRowClick={(app) => setSelectedApp(app)}
+                          />
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </div>
+              </div>
+
+              {/* Pending Applications */}
+              <div className="bg-white dark:bg-slate-900 rounded-[32px] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+                <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+                  <h2 className="text-xl font-bold text-[#1d1d1f] dark:text-white">Pending Applications</h2>
+                  <p className="text-sm text-[#86868b]">{departmentDetails?.applications.pending.length || 0} applications pending review</p>
+                </div>
+                <div className="p-6">
+                  {departmentDetails?.applications.pending.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Clock className="h-10 w-10 text-slate-200 dark:text-slate-800 mx-auto mb-2" />
+                      <p className="text-[#86868b]">No pending applications</p>
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tracking ID</TableHead>
+                          <TableHead>Citizen</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Submitted</TableHead>
+                          <TableHead>Details</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {departmentDetails?.applications.pending.slice(0, 10).map(app => (
+                          <ApplicationRowWithCitizen
+                            key={app.id}
+                            app={app}
+                            statusColors={statusColors}
+                            officialId={app.officialId || ''}
+                            onRowClick={(app) => setSelectedApp(app)}
+                          />
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
 
         </div>
       </main>

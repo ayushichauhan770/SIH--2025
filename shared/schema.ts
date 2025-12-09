@@ -18,6 +18,8 @@ export const users = pgTable("users", {
   rating: integer("rating").default(0),
   assignedCount: integer("assigned_count").default(0),
   solvedCount: integer("solved_count").default(0),
+  suspendedUntil: timestamp("suspended_until"), // Suspension expiry timestamp
+  suspensionReason: text("suspension_reason"), // Reason for suspension
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -258,7 +260,7 @@ export const cases = pgTable("cases", {
   allocatedJudgeId: varchar("allocated_judge_id"), // FK to judges
   caseNumber: text("case_number").unique(),
   citizenId: varchar("citizen_id"), // Link to user
-  
+
   // Faceless Scrutiny Fields
   scrutinyOfficialId: varchar("scrutiny_official_id"),
   isAnonymized: boolean("is_anonymized").default(true),
